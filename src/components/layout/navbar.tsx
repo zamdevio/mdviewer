@@ -29,7 +29,7 @@ export function Navbar() {
                     <Link href="/editor" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                         Editor
                     </Link>
-                    <Link href="https://github.com/zamdevio/markdown" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                    <Link href="https://github.com/zamdevio/mdviewer" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                         GitHub
                     </Link>
                 </div>
@@ -69,7 +69,7 @@ export function Navbar() {
                             Editor
                         </Link>
                         <Link
-                            href="https://github.com/zamdevio/markdown"
+                            href="https://github.com/zamdevio/mdviewer"
                             target="_blank"
                             className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
                             onClick={() => setIsOpen(false)}
