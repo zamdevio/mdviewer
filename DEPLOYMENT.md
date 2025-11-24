@@ -38,7 +38,7 @@ This guide walks you through deploying both the frontend (Cloudflare Pages) and 
 6. **Note your Workers URL:**
    After deployment, you'll see a URL like:
    ```
-   https://markdown-share-api.your-subdomain.workers.dev
+   https://mdviewer-api.your-subdomain.workers.dev
    ```
    Copy this URL - you'll need it for the frontend.
 

@@ -15,10 +15,59 @@
 
 ---
 
+## 🌟 Share Your Markdown Instantly
+
+<div align="center">
+
+**✨ One-Click Sharing • 🔗 Instant URLs • 🚀 Edge-Powered**
+
+</div>
+
+Transform your markdown into shareable links with our **lightning-fast sharing feature**! Built on Cloudflare's edge network, your content is stored securely and delivered globally in milliseconds.
+
+### 🎯 What Makes It Amazing
+
+- **⚡ Instant Sharing** - Click the share button and get a URL in seconds
+- **🌍 Global Edge Network** - Your content is cached at 300+ locations worldwide for ultra-fast access
+- **🔒 Secure & Private** - Each share gets a unique, unguessable ID (URL-safe base64)
+- **💾 Persistent Storage** - Your shared content never expires (stored in Cloudflare R2)
+- **📤 Easy Upload** - Support for markdown and any text content up to 2MB
+- **🔄 Unlimited Views** - No download limits, share with as many people as you want
+- **🚦 Smart Rate Limiting** - Built with Durable Objects for fair usage (10 uploads/minute per IP)
+- **📱 Works Everywhere** - Share links work on any device, anywhere
+
+### 🚀 How It Works
+
+1. **Write your markdown** in the editor
+2. **Click the share button** (📤 icon in the sticky controls)
+3. **Get your shareable URL** instantly
+4. **Copy and share** with anyone, anywhere
+
+The shared content is stored securely in Cloudflare R2 and served through our Workers API, ensuring **blazing-fast performance** and **99.99% uptime**.
+
+### 🏗️ Architecture
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐
+│   Frontend  │ ───> │ Workers API  │ ───> │  R2 Storage │
+│ (Cloudflare │      │  (Edge)      │      │  (Global)   │
+│   Pages)    │ <─── │              │ <─── │             │
+└─────────────┘      └──────────────┘      └─────────────┘
+```
+
+**Tech Stack:**
+- **Frontend**: Next.js static export on Cloudflare Pages
+- **Backend**: Cloudflare Workers (edge computing)
+- **Storage**: Cloudflare R2 (S3-compatible object storage)
+- **Rate Limiting**: Durable Objects (distributed, no KV limits)
+
+---
+
 ## ✨ Features
 
 ### 🚀 Core Features
 
+- **🔗 Instant Sharing** - Share your markdown with one click, get shareable URLs powered by Cloudflare's edge network
 - **⚡ Lightning Fast** - Built on Next.js 16 with instant page loads and seamless navigation
 - **👁️ Real-time Preview** - See your markdown render instantly as you type with zero delay
 - **🎨 GitHub Style Rendering** - Matches GitHub's markdown rendering exactly for a familiar experience
@@ -61,8 +110,8 @@
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/zamdevio/markdown.git
-   cd markdown
+   git clone https://github.com/zamdevio/mdviewer.git
+   cd mdviewer
    ```
 
 2. **Install dependencies**:
@@ -118,13 +167,14 @@ On large screens, use the layout toggle to switch between:
 - **GitHub Flavored Markdown**: Task lists, tables, strikethrough, autolinks
 - **Syntax Highlighting**: Automatic language detection for code blocks
 - **Theme Switching**: Toggle between light and dark modes
+- **Share & Collaborate**: Generate shareable links for your markdown content
 
 ---
 
 ## 🏗️ Project Structure
 
 ```
-markdown/
+mdviewer/
 ├── public/                 # Static assets
 │   ├── favicon.svg        # Site favicon
 │   └── _redirects         # Cloudflare Pages redirects
@@ -142,9 +192,14 @@ markdown/
 │   │   ├── theme/         # Theme components
 │   │   └── ui/            # UI components
 │   └── lib/               # Utility functions
+├── workers-api/           # Cloudflare Workers API
+│   ├── src/               # API source code
+│   ├── wrangler.toml      # Workers configuration
+│   └── package.json       # API dependencies
 ├── next.config.ts         # Next.js configuration
 ├── package.json           # Dependencies
-└── README.md             # This file
+├── README.md             # This file
+└── DEPLOYMENT.md         # Deployment guide
 ```
 
 ---
@@ -172,23 +227,11 @@ The project includes:
 
 **Live Site**: [https://markview.pages.dev/](https://markview.pages.dev/)
 
-### Share Feature
+📖 **For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
 
-The share feature allows users to upload their markdown/text content and get a shareable URL. It uses a separate Cloudflare Workers API with R2 storage.
+### Share Feature Setup
 
-**Architecture:**
-```
-Frontend (Pages) → Workers API → R2 Storage
-```
-
-**Features:**
-- 📤 Upload markdown/text (2MB max)
-- 🚦 Rate limiting using Durable Objects (10 uploads/minute per IP)
-- 🔗 Shareable URLs
-- 💾 No database required (uses R2 storage)
-- 🔄 Unlimited downloads
-
-**Quick Setup:**
+To enable the share feature, you need to deploy the Workers API:
 
 1. **Deploy the Workers API:**
    ```bash
@@ -206,18 +249,6 @@ Frontend (Pages) → Workers API → R2 Storage
 3. **API Endpoints:**
    - `POST /upload` - Upload content (rate limited, 2MB max)
    - `GET /share/:id` - Retrieve shared content
-
-**Rate Limiting:**
-- Uses Durable Objects for distributed rate limiting
-- 10 uploads per minute per IP address
-- Works across all worker instances
-- No limits on downloads/views
-
-**Storage:**
-- Content stored in R2 bucket: `mdviewer`
-- Random ID generation (URL-safe base64)
-- No expiration (files persist indefinitely)
-- Public access via share URLs
 
 See `workers-api/README.md` for detailed API documentation.
 
