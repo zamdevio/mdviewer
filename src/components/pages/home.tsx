@@ -89,7 +89,7 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
               </Button>
             </Link>
-            <Link href="https://github.com/zamdevio" target="_blank" className="w-full sm:w-auto group">
+            <Link href="https://github.com/zamdevio/markdown" target="_blank" className="w-full sm:w-auto group">
               <Button 
                 variant="outline" 
                 size="lg" 
