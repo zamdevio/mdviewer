@@ -172,6 +172,55 @@ The project includes:
 
 **Live Site**: [https://markview.pages.dev/](https://markview.pages.dev/)
 
+### Share Feature
+
+The share feature allows users to upload their markdown/text content and get a shareable URL. It uses a separate Cloudflare Workers API with R2 storage.
+
+**Architecture:**
+```
+Frontend (Pages) → Workers API → R2 Storage
+```
+
+**Features:**
+- 📤 Upload markdown/text (2MB max)
+- 🚦 Rate limiting using Durable Objects (10 uploads/minute per IP)
+- 🔗 Shareable URLs
+- 💾 No database required (uses R2 storage)
+- 🔄 Unlimited downloads
+
+**Quick Setup:**
+
+1. **Deploy the Workers API:**
+   ```bash
+   cd workers-api
+   npm install
+   wrangler r2 bucket create mdviewer
+   npm run deploy
+   ```
+
+2. **Configure Frontend:**
+   - Update `src/lib/config.ts` with your Workers API URL
+   - Or set `NEXT_PUBLIC_API_URL` environment variable
+   - The editor will show a warning if the API isn't configured properly
+
+3. **API Endpoints:**
+   - `POST /upload` - Upload content (rate limited, 2MB max)
+   - `GET /share/:id` - Retrieve shared content
+
+**Rate Limiting:**
+- Uses Durable Objects for distributed rate limiting
+- 10 uploads per minute per IP address
+- Works across all worker instances
+- No limits on downloads/views
+
+**Storage:**
+- Content stored in R2 bucket: `mdviewer`
+- Random ID generation (URL-safe base64)
+- No expiration (files persist indefinitely)
+- Public access via share URLs
+
+See `workers-api/README.md` for detailed API documentation.
+
 ---
 
 ## 🎨 Customization

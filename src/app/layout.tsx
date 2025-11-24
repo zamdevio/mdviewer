@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme/provider";
 import { Navbar } from "@/components/layout/navbar";
+import { Footer } from "@/components/layout/footer";
+import { Toaster } from "@/components/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="h-full">
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -44,14 +46,16 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} flex flex-col min-h-screen`}>
         <ThemeProvider>
-          <div className="min-h-screen bg-background selection:bg-primary/20 selection:text-primary">
+          <div className="flex flex-col min-h-screen bg-background selection:bg-primary/20 selection:text-primary">
             <Navbar />
-            <main className="pt-24 pb-16 px-4 sm:px-8 max-w-7xl mx-auto">
+            <main className="flex-1 pt-4 pb-16 px-4 sm:px-8 max-w-7xl mx-auto w-full">
               {children}
             </main>
+            <Footer />
           </div>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
