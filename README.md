@@ -4,16 +4,16 @@
    
 **A premium, high-performance Markdown viewer built for the modern web**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-markview.pages.dev-blue?style=for-the-badge)](https://markview.pages.dev/)
+[![Live Demo (Primary)](https://img.shields.io/badge/Live%20Demo-mdviewer.zamdev.dev-success?style=for-the-badge)](https://mdviewer.zamdev.dev/)
+[![Live Demo (Fallback)](https://img.shields.io/badge/Fallback-markview.pages.dev-blue?style=for-the-badge)](https://markview.pages.dev/)
+
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 
-**[🌐 Live Demo](https://markview.pages.dev/)** • **[✍️ Editor](https://markview.pages.dev/editor/)** • **[📖 Documentation](#)**
+**[🌐 Live Site](https://mdviewer.zamdev.dev/)** • **[🌐 Fallback](https://markview.pages.dev/)** • **[✍️ Editor](https://mdviewer.zamdev.dev/editor/)** • **[📖 Documentation](#)**
 
 </div>
-
----
 
 ## 🌟 Share Your Markdown Instantly
 
@@ -149,7 +149,7 @@ npm run lint         # Run ESLint
 
 ### Editor
 
-1. Navigate to the [Editor](https://markview.pages.dev/editor/)
+1. Navigate to the Editor
 2. Start typing your markdown in the left panel
 3. See the live preview update in real-time on the right
 4. Your content is automatically saved to local storage
@@ -225,7 +225,7 @@ The project includes:
 - Custom 404 page handling
 - Redirects configuration for Cloudflare Pages
 
-**Live Site**: [https://markview.pages.dev/](https://markview.pages.dev/)
+**Live Site**: [https://mdviewer.zamdev.dev/](https://mdviewer.zamdev.dev/) • [https://markview.pages.dev/](https://markview.pages.dev/)
 
 📖 **For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
 
