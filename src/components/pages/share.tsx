@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
-import { Loader2, Copy, Check, ArrowLeft } from "lucide-react";
+import { Loader2, Copy, Check, ArrowLeft, GitFork } from "lucide-react";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ghcolors } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -181,25 +181,33 @@ export default function ShareViewPage(): React.JSX.Element {
                     >
                         {copied ? (
                             <>
-                                <Check className="w-4 h-4" /> Copied!
+                                <Check className="w-4 h-4" />
+                                <span className="hidden sm:inline">Copied!</span>
                             </>
                         ) : (
                             <>
-                                <Copy className="w-4 h-4" /> Copy URL
+                                <Copy className="w-4 h-4" />
+                                <span className="hidden sm:inline">Copy URL</span>
                             </>
                         )}
                     </Button>
-                    <Link href="/editor">
+                    <Link href={`/editor?load=${shareId}`}>
                         <Button variant="default" size="sm" className="gap-2">
+                            <GitFork className="w-4 h-4" />
+                            <span className="hidden sm:inline">Fork to Editor</span>
+                        </Button>
+                    </Link>
+                    <Link href="/editor">
+                        <Button variant="ghost" size="sm" className="gap-2">
                             <ArrowLeft className="w-4 h-4" />
-                            Editor
+                            <span className="hidden sm:inline">Editor</span>
                         </Button>
                     </Link>
                 </div>
             </div>
 
             <Card className="flex-1 p-6 overflow-auto border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm">
-                <article className="markdown-body">
+                <article className="markdown-body" data-share-content>
                     <ReactMarkdown 
                         remarkPlugins={[remarkGfm]}
                         components={{

@@ -197,8 +197,127 @@
     @apply border-border;
   }
 
+  html {
+    /* Prevent text selection on native (can be overridden per element) */
+    -webkit-tap-highlight-color: transparent;
+    /* Smooth scrolling */
+    scroll-behavior: smooth;
+    /* Remove default margins/padding */
+    margin: 0;
+    padding: 0;
+  }
+
   body {
     @apply bg-background text-foreground antialiased transition-colors duration-300;
+    /* Prevent zoom on input focus (iOS) */
+    touch-action: manipulation;
+    /* Prevent pull-to-refresh on iOS */
+    overscroll-behavior-y: none;
+    /* Remove default margins/padding */
+    margin: 0;
+    padding: 0;
+    /* Full height for native */
+    height: 100%;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Block text selection on ALL elements by default */
+  * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  /* Allow text selection ONLY in input fields, textareas, and editor content */
+  textarea,
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="number"],
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
+  [contenteditable="true"],
+  [contenteditable],
+  /* Editor content areas - allow selection */
+  [data-editor-section],
+  [data-preview-section],
+  [data-editor-section] *,
+  [data-preview-section] *,
+  /* Share page markdown content - allow selection */
+  [data-share-content],
+  [data-share-content] * {
+    -webkit-touch-callout: default !important; /* Allow native context menu (copy, share, select all) */
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Ensure inputs and textareas specifically allow context menus */
+  textarea,
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  input[type="url"],
+  input[type="number"],
+  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]) {
+    -webkit-touch-callout: default !important;
+    -webkit-user-select: auto !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    touch-action: auto !important; /* Allow native touch gestures including context menu */
+  }
+  
+  /* Share page content - allow selection in markdown container only */
+  [data-share-content] {
+    -webkit-touch-callout: default !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    touch-action: auto !important;
+  }
+  
+  /* Ensure share page container and its children allow selection */
+  [data-share-content] * {
+    -webkit-touch-callout: default !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+  }
+  
+  /* But prevent selection on buttons/links inside share content */
+  [data-share-content] a,
+  [data-share-content] button,
+  [data-share-content] [role="button"] {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Prevent selection on UI elements even if they're inside selectable areas */
+  a, button, [role="button"], nav, header, footer, nav *, header *, footer * {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+
+  /* Prevent image long-press save (but allow in markdown content) */
+  img:not(.markdown-body img):not([class*="editor"] img):not([class*="preview"] img) {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    pointer-events: auto;
   }
 }
 

@@ -16,13 +16,17 @@ import {
   Download,
   Share2,
   Lock,
-  CheckCircle2
+  CheckCircle2,
+  FolderOpen,
+  Search
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePlatform } from "@/hooks/use-platform";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const { isMobile } = usePlatform();
 
   useEffect(() => {
     setMounted(true);
@@ -47,7 +51,7 @@ export default function Home() {
             } border-transparent bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 backdrop-blur-sm`}
           >
             <Sparkles className="w-3 h-3 animate-spin-slow" />
-            v1.0.0 Now Available
+            v3.1.0 Now Available
           </div>
 
           {/* Main Heading */}
@@ -89,18 +93,37 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
               </Button>
             </Link>
-            <Link href="https://github.com/zamdevio/mdviewer" target="_blank" className="w-full sm:w-auto group">
+            <Link href="/files" className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} group`}>
               <Button 
                 variant="outline" 
                 size="lg" 
-                className="gap-2 w-full sm:w-auto h-14 text-base font-semibold group-hover:scale-105 group-hover:border-primary/50 transition-all duration-300 backdrop-blur-sm"
+                className={`gap-2 ${isMobile ? 'w-full' : 'w-full sm:w-auto'} h-14 text-base font-semibold group-hover:scale-105 group-hover:border-primary/50 transition-all duration-300 backdrop-blur-sm`}
               >
-                <Github className="w-5 h-5 group-hover:rotate-12 transition-transform" />
-                View on GitHub
+                <FolderOpen className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                Files
               </Button>
             </Link>
+            <Link href="/search" className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} group`}>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                className={`gap-2 ${isMobile ? 'w-full' : 'w-full sm:w-auto'} h-14 text-base font-semibold group-hover:scale-105 group-hover:border-primary/50 transition-all duration-300 backdrop-blur-sm`}
+              >
+                <Search className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                Search
+              </Button>
+            </Link>
+            <Link href="https://github.com/zamdevio/mdviewer" target="_blank" className={`${isMobile ? 'w-full' : 'w-full sm:w-auto'} group`}>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  className={`gap-2 ${isMobile ? 'w-full' : 'w-full sm:w-auto'} h-14 text-base font-semibold group-hover:scale-105 group-hover:border-primary/50 transition-all duration-300 backdrop-blur-sm`}
+                >
+                  <Github className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                  View on GitHub
+                </Button>
+              </Link>
           </div>
-
         </section>
 
         {/* Key Features Showcase */}
