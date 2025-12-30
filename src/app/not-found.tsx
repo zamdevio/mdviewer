@@ -6,6 +6,11 @@ import { Home, ArrowLeft } from "lucide-react";
 export const metadata: Metadata = {
   title: "404 - Page Not Found | Modern Markdown Viewer",
   description: "The page you're looking for doesn't exist. Return to the homepage or start writing markdown.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
 };
 
 export default function NotFound() {

@@ -3,15 +3,20 @@
 import Link from "next/link"
 import { ThemeToggle } from "@/components/theme"
 import { Button } from "@/components/ui/button"
-import { FileText, Menu, X } from "lucide-react"
+import { FileText, Menu, X, FolderOpen } from "lucide-react"
 import { useState } from "react"
+import { usePathname } from "next/navigation"
+import { usePlatform } from "@/hooks/use-platform"
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
+    const pathname = usePathname()
+    const isHomePage = pathname === "/"
+    const { isMobile } = usePlatform()
 
     return (
-        <header className="relative z-50 flex items-center justify-center p-4">
-            <nav className="relative flex items-center justify-between w-full max-w-5xl px-4 sm:px-6 py-3 bg-background/70 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
+        <header className={`relative z-50 flex items-center justify-center ${isMobile ? 'py-0 px-2' : 'p-4'}`}>
+            <nav className={`relative flex items-center justify-between w-full max-w-5xl ${isMobile ? 'px-3 py-2' : 'px-4 sm:px-6 py-3'} bg-background/70 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10`}>
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="p-2 bg-primary/10 rounded-xl">
                         <FileText className="w-6 h-6 text-primary" />
@@ -22,29 +27,43 @@ export function Navbar() {
                 </Link>
 
                 {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-6">
+                <div className={`hidden md:flex items-center gap-6`}>
                     <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                         Home
                     </Link>
                     <Link href="/editor" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                         Editor
                     </Link>
+                    <Link href="/files" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Files
+                    </Link>
+                    <Link href="/search" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Search
+                    </Link>
+                    <Link href="/shares" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Shares
+                    </Link>
+                    <Link href="/settings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Settings
+                    </Link>
                     <Link href="https://github.com/zamdevio/mdviewer" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
                         GitHub
                     </Link>
                 </div>
 
-                <div className="hidden md:flex items-center gap-2">
+                <div className={`hidden md:flex items-center gap-2`}>
                     <ThemeToggle />
-                    <Link href="/editor">
-                        <Button variant="default" size="sm">
-                            Get Started
-                        </Button>
-                    </Link>
+                    {isHomePage && (
+                        <Link href="/editor">
+                            <Button variant="default" size="sm">
+                                Get Started
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 {/* Mobile Menu Toggle */}
-                <div className="flex md:hidden items-center gap-2">
+                <div className={`${isMobile ? 'flex' : 'flex md:hidden'} items-center gap-2`}>
                     <ThemeToggle />
                     <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
                         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -69,6 +88,34 @@ export function Navbar() {
                             Editor
                         </Link>
                         <Link
+                            href="/files"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Files
+                        </Link>
+                        <Link
+                            href="/search"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Search
+                        </Link>
+                        <Link
+                            href="/shares"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Shares
+                        </Link>
+                        <Link
+                            href="/settings"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Settings
+                        </Link>
+                        <Link
                             href="https://github.com/zamdevio/mdviewer"
                             target="_blank"
                             className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
@@ -76,9 +123,11 @@ export function Navbar() {
                         >
                             GitHub
                         </Link>
-                        <Link href="/editor" onClick={() => setIsOpen(false)}>
-                            <Button className="w-full">Get Started</Button>
-                        </Link>
+                        {isHomePage && (
+                            <Link href="/editor" onClick={() => setIsOpen(false)}>
+                                <Button className="w-full">Get Started</Button>
+                            </Link>
+                        )}
                     </div>
                 )}
             </nav>
