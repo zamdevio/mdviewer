@@ -4,12 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme/provider";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
-import { Toaster } from "@/components/toaster";
-import { NativeLinkProtection } from "@/components/native-link-protection";
-import { DeepLinkHandler } from "@/components/deep-link-handler";
-import { GlobalKeyboardShortcuts } from "@/components/global-keyboard-shortcuts";
-import { BackButtonHandler } from "@/components/back-button-handler";
-import { NativePlatformDetector } from "@/components/native-platform-detector";
+import { Toaster } from "@/components/ui/toaster";
+import { GlobalKeyboardShortcuts } from "@/components/layout/global-keyboard-shortcuts";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -79,11 +75,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} flex flex-col min-h-screen m-0 p-0`}>
-        <NativeLinkProtection />
-        <DeepLinkHandler />
         <GlobalKeyboardShortcuts />
-        <BackButtonHandler />
-        <NativePlatformDetector />
         <ThemeProvider>
           <div className="flex flex-col min-h-screen bg-background selection:bg-primary/20 selection:text-primary m-0">
             <Navbar />
