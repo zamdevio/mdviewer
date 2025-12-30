@@ -8,13 +8,9 @@ import { Loader2, FileText, Trash2, Download, Edit3, Pencil, Check, X, Database,
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSettings, getEditingFile, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, setEditingFile, removeEditingFile, setContent, onStorageChange, setFileAsEditing, clearAllEditingFlags, type SavedFile } from "@/lib/storage";
-import { usePlatform } from "@/hooks/use-platform";
-
-// SavedFile interface is imported from @/lib/storage
+import { getSettings, getEditingFile, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, setEditingFile, onStorageChange, setFileAsEditing, clearAllEditingFlags, type SavedFile } from "@/lib/storage";
 
 export default function FilesPage(): React.JSX.Element {
-    const { isMobile } = usePlatform();
     const [files, setFiles] = useState<SavedFile[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingFile, setEditingFile] = useState<string | null>(null);
@@ -261,12 +257,8 @@ export default function FilesPage(): React.JSX.Element {
                 targetFileId = existingFile.id;
             }
             
-            // Mark this file as editing (clears all other editing flags)
-            setFileAsEditing(targetFileId);
-            
-            // Navigate to editor
-            router.push('/editor');
-            toast.success("File loaded to editor");
+            // Navigate to editor with file ID - editor will handle temp content warning
+            router.push(`/editor?file=${targetFileId}`);
         } catch (error) {
             toast.error("Failed to load file to editor");
         }
@@ -726,4 +718,3 @@ export default function FilesPage(): React.JSX.Element {
         </div>
     );
 }
-
