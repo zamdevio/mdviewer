@@ -11,6 +11,7 @@ export interface SettingsData {
     keyboardShortcuts: boolean;
     autoSave: boolean;
     itemsPerPage: number;
+    defaultEditorMode: 'both' | 'editor' | 'preview';
 }
 
 export interface SavedFile {
@@ -74,11 +75,12 @@ class StorageManager {
             
             // Return with defaults for missing values
             return {
-                showDefaultContent: parsed.showDefaultContent ?? false,
+                showDefaultContent: parsed.showDefaultContent ?? true,
                 theme: parsed.theme ?? 'system',
                 keyboardShortcuts: parsed.keyboardShortcuts ?? true,
                 autoSave: parsed.autoSave ?? true,
                 itemsPerPage: parsed.itemsPerPage ?? 12,
+                defaultEditorMode: parsed.defaultEditorMode ?? 'both',
             };
         } catch {
             return null;
@@ -91,13 +93,14 @@ class StorageManager {
     getSetting<K extends keyof SettingsData>(key: K): SettingsData[K] | null {
         const settings = this.getSettings();
         if (!settings) {
-            // Return default values
+            // Return default values (first app usage)
             const defaults: SettingsData = {
-                showDefaultContent: false,
+                showDefaultContent: true,
                 theme: 'system',
                 keyboardShortcuts: true,
                 autoSave: true,
                 itemsPerPage: 12,
+                defaultEditorMode: 'both',
             };
             return defaults[key];
         }
@@ -113,11 +116,12 @@ class StorageManager {
         try {
             const current = this.getSettings();
             const updated: SettingsData = {
-                showDefaultContent: settings.showDefaultContent ?? current?.showDefaultContent ?? false,
+                showDefaultContent: settings.showDefaultContent ?? current?.showDefaultContent ?? true,
                 theme: settings.theme ?? current?.theme ?? 'system',
                 keyboardShortcuts: settings.keyboardShortcuts ?? current?.keyboardShortcuts ?? true,
                 autoSave: settings.autoSave ?? current?.autoSave ?? true,
                 itemsPerPage: settings.itemsPerPage ?? current?.itemsPerPage ?? 12,
+                defaultEditorMode: settings.defaultEditorMode ?? current?.defaultEditorMode ?? 'both',
             };
             
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(updated));
@@ -148,11 +152,13 @@ class StorageManager {
     }
 
     /**
-     * Set current editor content
+     * Set current editor content (no event dispatch to avoid loops)
      */
     setContent(content: string): void {
         if (typeof window === 'undefined') return;
         localStorage.setItem(this.KEYS.CONTENT, content);
+        // Don't dispatch storage event here - it causes infinite loops
+        // Content is synced via editor state, not storage events
     }
 
     /**
@@ -478,30 +484,74 @@ class StorageManager {
     }
 
     /**
+     * Clear ALL user data - completely reset the application
+     * This removes:
+     * - All saved files and their content
+     * - Settings (resets to defaults)
+     * - Temp file content
+     * - Shared links
+     * - Editing file flags
+     * - Activate button dismissed state
+     * - Legacy content storage
+     */
+    clearAllData(): void {
+        if (typeof window === 'undefined') return;
+        
+        try {
+            // Clear all saved files and their content
+            const savedFiles = this.getSavedFiles();
+            for (const file of savedFiles) {
+                this.removeFileContent(file.filename);
+            }
+            localStorage.removeItem(this.KEYS.SAVED_FILES);
+            
+            // Clear all other storage keys
+            localStorage.removeItem(this.KEYS.CONTENT);
+            localStorage.removeItem(this.KEYS.EDITING_FILE);
+            localStorage.removeItem(this.KEYS.TEMP_FILE);
+            localStorage.removeItem(this.KEYS.SHARED_LINKS);
+            localStorage.removeItem(this.KEYS.ACTIVATE_DISMISSED);
+            
+            // Clear all editing flags from saved files
+            this.clearAllEditingFlags();
+            
+            // Reset settings to defaults (same as first app usage)
+            const defaultSettings: SettingsData = {
+                showDefaultContent: true,
+                theme: 'system',
+                keyboardShortcuts: true,
+                autoSave: true,
+                itemsPerPage: 12,
+                defaultEditorMode: 'both',
+            };
+            localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(defaultSettings));
+            
+            // Dispatch storage event for cross-component sync
+            window.dispatchEvent(new Event('storage'));
+        } catch (error) {
+            console.error('Error clearing all data:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Listen for storage changes (both cross-tab StorageEvent and same-window custom events)
      */
     onStorageChange(callback: (key: string | null) => void): () => void {
         if (typeof window === 'undefined') return () => {};
         
-        const storageHandler = (e: StorageEvent) => {
-            callback(e.key);
+        // Single handler for both cross-tab and same-window events
+        const storageHandler = (e: StorageEvent | Event) => {
+            // StorageEvent has a key property (cross-tab), custom events don't
+            const key = (e instanceof StorageEvent) ? e.key : null;
+            callback(key);
         };
         
-        // Listen for cross-tab storage events
+        // Listen for both cross-tab StorageEvent and custom events
         window.addEventListener('storage', storageHandler);
-        
-        // Also listen for custom storage events (same-window changes)
-        const customHandler = () => {
-            // When a custom storage event is fired, check all keys to see what changed
-            // For efficiency, we'll just call the callback with null and let the caller check
-            callback(null);
-        };
-        
-        window.addEventListener('storage', customHandler);
         
         return () => {
             window.removeEventListener('storage', storageHandler);
-            window.removeEventListener('storage', customHandler);
         };
     }
 }
@@ -544,6 +594,8 @@ export const clearSharedLinks = () => storage.clearSharedLinks();
 
 export const clearAllEditingFlags = () => storage.clearAllEditingFlags();
 export const setFileAsEditing = (fileId: string) => storage.setFileAsEditing(fileId);
+
+export const clearAllData = () => storage.clearAllData();
 export const getEditingFileFromSavedFiles = () => storage.getEditingFileFromSavedFiles();
 
 export const onStorageChange = (callback: (key: string | null) => void) => storage.onStorageChange(callback);

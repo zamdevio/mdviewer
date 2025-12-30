@@ -14,7 +14,7 @@ import { storage, type SavedFile, type SettingsData } from './index';
  * Get show default content setting
  */
 export const getShowDefaultContent = (): boolean => {
-    return storage.getSetting('showDefaultContent') ?? false;
+    return storage.getSetting('showDefaultContent') ?? true;
 };
 
 /**

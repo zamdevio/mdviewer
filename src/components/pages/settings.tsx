@@ -25,7 +25,7 @@ import {
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useImportExport } from "@/hooks/use-import-export";
-import { getSettings, setSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, setSavedFiles, removeContent, removeEditingFile, removeFileContent, type SettingsData } from "@/lib/storage";
+import { getSettings, setSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, setSavedFiles, removeContent, removeEditingFile, removeFileContent, clearAllData, type SettingsData } from "@/lib/storage";
 import { usePlatform } from "@/hooks/use-platform";
 import { encodeBase64, encryptData } from "@/lib/utils";
 
@@ -42,6 +42,7 @@ export default function SettingsPage(): React.JSX.Element {
     const [keyboardShortcuts, setKeyboardShortcuts] = useState(true);
     const [autoSave, setAutoSave] = useState(true);
     const [itemsPerPage, setItemsPerPage] = useState(12);
+    const [defaultEditorMode, setDefaultEditorMode] = useState<'both' | 'editor' | 'preview'>('both');
     const [exportPassword, setExportPassword] = useState("");
     const [importPassword, setImportPassword] = useState("");
     const [showExportPassword, setShowExportPassword] = useState(false);
@@ -71,6 +72,7 @@ export default function SettingsPage(): React.JSX.Element {
             setKeyboardShortcuts(settings.keyboardShortcuts);
             setAutoSave(settings.autoSave);
             setItemsPerPage(settings.itemsPerPage);
+            setDefaultEditorMode(settings.defaultEditorMode ?? 'both');
         }
     }, [mounted]);
     
@@ -87,6 +89,7 @@ export default function SettingsPage(): React.JSX.Element {
                     setKeyboardShortcuts(settings.keyboardShortcuts);
                     setAutoSave(settings.autoSave);
                     setItemsPerPage(settings.itemsPerPage);
+                    setDefaultEditorMode(settings.defaultEditorMode ?? 'both');
                 }
             }
         };
@@ -125,6 +128,7 @@ export default function SettingsPage(): React.JSX.Element {
             keyboardShortcuts: keyboardShortcuts,
             autoSave: autoSave,
             itemsPerPage: itemsPerPage,
+            defaultEditorMode: defaultEditorMode,
         });
         // Trigger storage event to notify editor
         window.dispatchEvent(new Event('storage'));
@@ -138,6 +142,7 @@ export default function SettingsPage(): React.JSX.Element {
         else if (key === 'keyboardShortcuts') setKeyboardShortcuts(value as boolean);
         else if (key === 'autoSave') setAutoSave(value as boolean);
         else if (key === 'itemsPerPage') setItemsPerPage(value as number);
+        else if (key === 'defaultEditorMode') setDefaultEditorMode(value as 'both' | 'editor' | 'preview');
         else if (key === 'theme') setTheme(value as 'light' | 'dark' | 'system');
         
         // Save immediately on user action
@@ -301,7 +306,7 @@ export default function SettingsPage(): React.JSX.Element {
                         <div className="flex-1">
                             <p className="text-sm font-medium mb-1">Auto Save</p>
                             <p className="text-xs text-muted-foreground">
-                                Automatically save files every 30 seconds when editing
+                                Automatically save files every 2 seconds when editing. Temp content is cleared if editor is empty for 2 seconds.
                             </p>
                         </div>
                         <Button
@@ -316,6 +321,28 @@ export default function SettingsPage(): React.JSX.Element {
                         >
                             {mounted ? (autoSave ? "On" : "Off") : "..."}
                         </Button>
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium mb-1">Default Editor Mode</p>
+                            <p className="text-xs text-muted-foreground">
+                                Choose the default view mode when the editor page loads. This setting only applies on page load. You can change the view mode anytime using the buttons in the editor (changes are session-only and won't be saved). Split view will automatically fallback to editor-only on mobile/small screens.
+                            </p>
+                        </div>
+                        <select
+                            value={mounted ? defaultEditorMode : 'both'}
+                            onChange={(e) => {
+                                const newValue = e.target.value as 'both' | 'editor' | 'preview';
+                                setDefaultEditorMode(newValue);
+                                updateSetting('defaultEditorMode', newValue);
+                            }}
+                            disabled={!mounted}
+                            className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        >
+                            <option value="both">Split View</option>
+                            <option value="editor">Editor Only</option>
+                            <option value="preview">Preview Only</option>
+                        </select>
                     </div>
                     <div className="flex items-center justify-between border-t pt-4">
                         <div className="flex-1">
@@ -666,28 +693,13 @@ export default function SettingsPage(): React.JSX.Element {
                                     setClearDataConfirmText("");
                                     
                                     try {
-                                        // Clear all file content from localStorage
-                                        const savedFiles = getSavedFiles();
-                                        for (const file of savedFiles) {
-                                            removeFileContent(file.filename);
-                                        }
-                                        
-                                        // Clear all storage
-                                        setSavedFiles([]);
-                                        removeContent();
-                                        removeEditingFile();
-                                        
-                                        // Reset settings to defaults
-                                        setSettings({
-                                            showDefaultContent: false,
-                                            theme: 'system',
-                                            keyboardShortcuts: true,
-                                            autoSave: true,
-                                            itemsPerPage: 12,
-                                        });
+                                        // Use the centralized clearAllData function
+                                        // This clears everything: files, settings, temp content, shared links, etc.
+                                        clearAllData();
                                         
                                         toast.success("All data cleared successfully");
                                     } catch (error) {
+                                        console.error('Error clearing all data:', error);
                                         toast.error("Failed to clear all data");
                                     }
                                 }}

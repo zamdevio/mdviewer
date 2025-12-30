@@ -31,6 +31,7 @@ export function useImportExport() {
                     autoSave: data.settings.autoSave ?? true,
                     theme: data.settings.theme || 'system',
                     itemsPerPage: data.settings.itemsPerPage ?? 12,
+                    defaultEditorMode: data.settings.defaultEditorMode ?? 'both',
                 };
                 updateSettings(settings);
                 // Call callback if provided

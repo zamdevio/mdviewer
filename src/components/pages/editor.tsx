@@ -1,228 +1,55 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import ReactMarkdown from "react-markdown";
 import { Eye, Edit3, LayoutGrid, Share2, Copy, Check, AlertCircle, X, ChevronLeft, ChevronRight, ArrowUp, Download, Loader2, Upload, FileDown, Save, FileText, Plus, Pencil, Trash2, AlertTriangle } from "lucide-react";
-import remarkGfm from "remark-gfm";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { ghcolors } from "react-syntax-highlighter/dist/esm/styles/prism";
-import type { CSSProperties } from "react";
 import { useTheme } from "next-themes";
+import { MarkdownViewer } from "@/components/markdown";
 import { uploadMarkdown, fetchSharedMarkdown } from "@/lib/api";
 import { isApiConfigured, config } from "@/lib/config";
 import { ThemeToggle } from "@/components/theme";
 import { toast } from "sonner";
-import { getSettings, getContent, setContent, getEditingFile, setEditingFile, removeEditingFile, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, upsertSavedFile, removeSavedFile, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, addSharedLink, getEditingFileFromSavedFiles, clearAllEditingFlags, type SavedFile, type SharedLink } from "@/lib/storage";
-import { getShowDefaultContent, getAutoSaveEnabled, getTempFile, setTempFile, clearTempFile } from "@/lib/storage/helpers";
+import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, addSharedLink, getEditingFileFromSavedFiles, clearAllEditingFlags, updateSetting, type SavedFile, type SharedLink } from "@/lib/storage";
+import { getShowDefaultContent, getTempFile, clearTempFile } from "@/lib/storage/helpers";
+import { 
+    getInitialEditorState, 
+    saveFile as saveFileToStorage, 
+    loadFile as loadFileFromStorage, 
+    createNewFile as createNewFileState, 
+    createNewFileFromUrl,
+    deleteFile as deleteFileFromStorage,
+    renameFile as renameFileInStorage,
+    hasUnsavedContent,
+    saveTempFile,
+    getSuggestedFilename,
+    DEFAULT_MARKDOWN,
+    type EditorState
+} from "@/lib/editor";
 import { usePlatform } from "@/hooks/use-platform";
 import { shareText } from "@/lib/utils";
-
-// GitHub Dark theme colors - exact match to GitHub's syntax highlighting
-// Using Prism token class names format for react-syntax-highlighter
-const githubDarkTheme: Record<string, CSSProperties> = {
-    'code[class*="language-"]': {
-        color: '#c9d1d9',
-        background: '#161b22',
-        textShadow: 'none',
-    },
-    'pre[class*="language-"]': {
-        color: '#c9d1d9',
-        background: '#161b22',
-        textShadow: 'none',
-        padding: '16px',
-        overflow: 'auto',
-        fontSize: '85%',
-        lineHeight: '1.45',
-        borderRadius: '6px',
-    },
-    comment: {
-        color: '#8b949e',
-        fontStyle: 'italic',
-    },
-    prolog: {
-        color: '#8b949e',
-    },
-    doctype: {
-        color: '#8b949e',
-    },
-    cdata: {
-        color: '#8b949e',
-    },
-    punctuation: {
-        color: '#c9d1d9',
-    },
-    property: {
-        color: '#79c0ff',
-    },
-    tag: {
-        color: '#ff7b72',
-    },
-    boolean: {
-        color: '#79c0ff',
-    },
-    number: {
-        color: '#79c0ff',
-    },
-    constant: {
-        color: '#79c0ff',
-    },
-    symbol: {
-        color: '#ff7b72',
-    },
-    deleted: {
-        color: '#ffdcd7',
-        backgroundColor: 'rgba(248,81,73,0.15)',
-    },
-    selector: {
-        color: '#79c0ff',
-    },
-    'attr-name': {
-        color: '#79c0ff',
-    },
-    string: {
-        color: '#a5d6ff',
-    },
-    char: {
-        color: '#a5d6ff',
-    },
-    builtin: {
-        color: '#ffa657',
-    },
-    inserted: {
-        color: '#7ee787',
-        backgroundColor: 'rgba(46,160,67,0.15)',
-    },
-    operator: {
-        color: '#ff7b72',
-    },
-    entity: {
-        color: '#79c0ff',
-        cursor: 'help',
-    },
-    url: {
-        color: '#58a6ff',
-    },
-    'attr-value': {
-        color: '#a5d6ff',
-    },
-    keyword: {
-        color: '#ff7b72',
-    },
-    function: {
-        color: '#d2a8ff',
-    },
-    'class-name': {
-        color: '#ffa657',
-    },
-    regex: {
-        color: '#a5d6ff',
-    },
-    important: {
-        color: '#79c0ff',
-        fontWeight: 'bold',
-    },
-    variable: {
-        color: '#79c0ff',
-    },
-    atrule: {
-        color: '#ff7b72',
-    },
-    bold: {
-        fontWeight: 'bold',
-    },
-    italic: {
-        fontStyle: 'italic',
-    },
-    'template-string': {
-        color: '#a5d6ff',
-    },
-};
-
-const DEFAULT_MARKDOWN = `# Welcome to MDViewer Editor
-
-Start typing to see your markdown render in real-time!
-
-## Features
-
-### Core Features
-- **Real-time Preview**: See changes instantly as you type
-- **Auto-save**: Your work is automatically saved to localStorage
-- **GitHub-style Preview**: Matches GitHub's markdown rendering exactly
-- **Syntax Highlighting**: Beautiful code highlighting with GitHub Dark theme support
-
-### View Modes
-- **Split View**: Edit and preview side-by-side (desktop)
-- **Editor Only**: Focus on writing with expanding textarea
-- **Preview Only**: Full-screen preview of your rendered markdown
-- **Scroll Synchronization**: Scroll positions preserved when switching modes
-
-### Sharing & Collaboration
-- **Share Markdown**: Generate shareable links for your content
-- **Cloudflare Workers API**: Fast, edge-deployed sharing backend
-- **Copy Share URL**: One-click copy to clipboard
-
-### User Experience
-- **Sticky Controls**: Always accessible editor controls that stay visible
-- **Collapse/Expand**: Minimize controls for a cleaner view
-- **Theme Toggle**: Switch between light and dark modes
-- **Scroll to Top**: Quick navigation button when scrolled down
-- **Responsive Design**: Works seamlessly on mobile, tablet, and desktop
-- **Toast Notifications**: Beautiful notifications for actions and errors
-
-### Code Example
-\`\`\`javascript
-function greet(name) {
-  console.log(\`Hello, \${name}!\`);
-}
-greet("World");
-\`\`\`
-
-### Python Example
-\`\`\`python
-def fibonacci(n):
-    if n <= 1:
-        return n
-    return fibonacci(n-1) + fibonacci(n-2)
-\`\`\`
-
-> This is a blockquote demonstrating the styling.
-
-- List item 1
-- List item 2
-- List item 3
-
-**Happy writing!** 🚀
-`;
-
-type SoloMode = "both" | "editor" | "preview";
+import { ScrollManager, type SoloMode } from "@/lib/scroll";
 
 export default function EditorPage() {
     const { isMobile } = usePlatform();
-    const [markdown, setMarkdown] = useState(() => {
-        if (typeof window !== "undefined") {
-            // Always check for temp file first (unsaved content takes priority)
-            const tempContent = getTempFile();
-            if (tempContent) return tempContent;
-            
-            // Check if we have a file being edited - if so, don't load from content
-            const editingFile = getEditingFile();
-            if (!editingFile) {
-                const saved = getContent();
-                if (saved) return saved;
-                // Check if should show default content
-                return getShowDefaultContent() ? DEFAULT_MARKDOWN : "";
-            }
-            // If editing a file, start with empty - will be loaded in useEffect
-            return "";
-        }
-        return "";
-    });
+
+    // Initialize editor state
+    const [editorState, setEditorState] = useState<EditorState>(() => getInitialEditorState());
+    const { markdown, currentFileName, currentFileId, isUntitled, isForked } = editorState;
+    
+    // Update markdown state when editorState changes
+    const updateMarkdown = (newMarkdown: string) => {
+        setEditorState(prev => ({ ...prev, markdown: newMarkdown }));
+    };
     const [isPreview, setIsPreview] = useState(false);
     const [soloMode, setSoloMode] = useState<SoloMode>("both");
-    const previousModeRef = useRef<SoloMode>("both");
+    const [defaultEditorMode, setDefaultEditorMode] = useState<SoloMode>("both");
+    
+    // Computed mode: apply mobile fallback (split -> editor on mobile) but use current soloMode (user can change freely)
+    // soloMode is the actual current view mode (can be changed by user via buttons, independent of settings)
+    // defaultEditorMode is just the setting value (for reference, doesn't restrict user)
+    const effectiveMode: SoloMode = (isMobile && soloMode === 'both') ? 'editor' : soloMode;
     const [mounted, setMounted] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -240,71 +67,185 @@ export default function EditorPage() {
     const [showLoadDialog, setShowLoadDialog] = useState(false);
     const [loadShareId, setLoadShareId] = useState<string | null>(null);
     const [loadingSharedContent, setLoadingSharedContent] = useState(false);
-    const [currentFileName, setCurrentFileName] = useState<string | null>(null);
-    const [currentFileId, setCurrentFileId] = useState<string | null>(null);
+    const [showLoadFileDialog, setShowLoadFileDialog] = useState(false);
+    const [pendingFileId, setPendingFileId] = useState<string | null>(null);
     const [showSaveDialog, setShowSaveDialog] = useState(false);
     const [saveFileName, setSaveFileName] = useState("");
     const [saveDialogMode, setSaveDialogMode] = useState<'save' | 'new' | 'rename'>('save');
     const [pendingNewFile, setPendingNewFile] = useState(false);
     const [saveDialogInitialValue, setSaveDialogInitialValue] = useState("");
-    const [isUntitled, setIsUntitled] = useState(false);
-    const [isForked, setIsForked] = useState(false); // Track if content is forked from share/search
     const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+    const [showEmptySaveDialog, setShowEmptySaveDialog] = useState(false);
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
     const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [timeSinceSave, setTimeSinceSave] = useState<number>(0);
     const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
-    const tempSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const autoRenameTimerRef = useRef<NodeJS.Timeout | null>(null);
     const { resolvedTheme } = useTheme();
     const editorRef = useRef<HTMLDivElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
-    const soloTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
     
-    // Unified scroll position tracker for all modes
-    const scrollPositionsRef = useRef<{
-        editor: number;
-        preview: number;
-        page: number;
-    }>({
-        editor: 0,
-        preview: 0,
-        page: 0,
-    });
+    // Focus on editor function - used by split and edit-only buttons
+    const focusOnEditor = () => {
+        if (textareaRef.current) {
+            textareaRef.current.focus();
+            // Scroll into view if needed
+            textareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    };
+    
+    // Shared function for auto-resize and scroll handling in editor mode
+    const handleEditorModeResize = useCallback(() => {
+        if (!textareaRef.current || effectiveMode !== "editor") return;
+        
+        const textarea = textareaRef.current;
+        
+        // Get cursor position from ScrollManager if available (lightweight - already tracked)
+        const cursorPos = scrollManagerRef.current?.getCursorPosition();
+        
+        // Save current scroll position BEFORE resize
+        const scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Resize the textarea
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+        
+        // After resize, check if cursor needs to be scrolled into view
+        requestAnimationFrame(() => {
+            if (cursorPos) {
+                const rect = textarea.getBoundingClientRect();
+                const textareaHeight = textarea.offsetHeight; // Actual auto-resized height
+                const textareaTop = rect.top + window.scrollY;
+                const textareaBottom = textareaTop + textareaHeight;
+                const viewportTop = window.scrollY;
+                const viewportBottom = viewportTop + window.innerHeight;
+                
+                // Check if the textarea (with its actual resized height) is visible in viewport
+                const isVisible = textareaTop >= viewportTop && textareaBottom <= viewportBottom;
+                
+                // If textarea is not fully visible, scroll cursor into view (uses built-in method - lightweight)
+                if (!isVisible) {
+                    // Use built-in scrollIntoView - no heavy calculations needed
+                    textarea.scrollIntoView({});
+                    return;
+                }
+            }
+            
+            // Cursor is aligned or no cursor position, just restore scroll
+            window.scrollTo({ 
+                top: scrollY, 
+                behavior: 'instant' as ScrollBehavior 
+            });
+        });
+    }, [effectiveMode]);
+    
+    // Scroll Manager - handles all scroll logic
+    const scrollManagerRef = useRef<ScrollManager | null>(null);
+    
+    // Initialize scroll manager
+    useEffect(() => {
+        if (mounted && !scrollManagerRef.current) {
+            scrollManagerRef.current = new ScrollManager({
+                textareaRef,
+                editorRef,
+                previewRef,
+                effectiveMode,
+                onModeChangeComplete: () => {
+                    // Mode change complete callback
+                },
+            });
+        }
+        
+        // Update scroll manager config when effectiveMode changes
+        if (scrollManagerRef.current) {
+            (scrollManagerRef.current as any).config.effectiveMode = effectiveMode;
+        }
+    }, [mounted, effectiveMode]);
 
-    // Avoid hydration mismatch - necessary for client-side only rendering
+    // Auto-resize textarea when switching to editor mode and scroll to cursor if needed
+    useEffect(() => {
+        if (!mounted || effectiveMode !== "editor" || !textareaRef.current) return;
+        
+        // Use shared function for resize and scroll handling
+        handleEditorModeResize();
+    }, [mounted, effectiveMode, handleEditorModeResize]);
+
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setMounted(true);
     }, []);
 
-    // Check for load and new query parameters
+    // Load default editor mode from settings on mount and apply mobile fallback
+    // After mount, user can freely change view mode via buttons (session-only)
+    useEffect(() => {
+        if (!mounted) return;
+        
+        const settings = getSettings();
+        const savedMode = settings?.defaultEditorMode ?? 'both';
+        setDefaultEditorMode(savedMode);
+        
+        // Apply mobile fallback: if split mode is set but we're on mobile, use editor
+        // But keep the actual setting value intact
+        if (isMobile && savedMode === 'both') {
+            setSoloMode('editor');
+        } else {
+            // Use the actual setting value
+            setSoloMode(savedMode);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mounted]); // Only run on mount - mode changes via buttons are session-only and independent
+
+    // Check for load, new, and file query parameters
     useEffect(() => {
         if (!mounted) return;
 
         const urlParams = new URLSearchParams(window.location.search);
         const loadId = urlParams.get('load');
         const newParam = urlParams.get('new');
+        const fileId = urlParams.get('file');
         
         if (newParam !== null) {
-            // Clear all editing flags
+            // Create new file state - this already clears editing flags in createNewFileFromUrl
+            const newState = createNewFileFromUrl();
+            setEditorState(newState);
+            // Ensure editing flags are cleared (no file in editing mode for new file)
             clearAllEditingFlags();
-            // Create new untitled file with empty content
-            setCurrentFileName('untitled');
-            setCurrentFileId(null); // Will be generated on first save
-            setIsUntitled(true);
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = newState.markdown;
+                }
+            }, 0);
             // Load auto-save setting from storage
             const settings = getSettings();
             setAutoSaveEnabled(settings?.autoSave ?? true);
-            setEditingFile('untitled');
-            setMarkdown(""); // Empty content for new files
-            // Save untitled file initially (will generate new ID)
-            setTimeout(() => {
-                saveFile('untitled', false);
-            }, 100);
             // Remove query param immediately
             const url = new URL(window.location.href);
             url.searchParams.delete('new');
+            window.history.replaceState({}, '', url.toString());
+            return;
+        }
+        
+        if (fileId) {
+            // Check if there's temp content that would be lost
+            const tempContent = getTempFile();
+            const hasTempContent = tempContent && tempContent.trim();
+            
+            if (hasTempContent) {
+                // Show warning dialog - user has unsaved temp content
+                setPendingFileId(fileId);
+                setShowLoadFileDialog(true);
+            } else {
+                // No temp content, load file directly
+                loadFileContentByFileId(fileId, '', false);
+            }
+            
+            // Remove query param
+            const url = new URL(window.location.href);
+            url.searchParams.delete('file');
             window.history.replaceState({}, '', url.toString());
             return;
         }
@@ -325,57 +266,77 @@ export default function EditorPage() {
     }, [mounted]);
 
     // Function to load file content by file ID (primary method)
-    const loadFileContentByFileId = async (fileId: string, filename: string, isInitialLoad: boolean = false) => {
-        const nameWithoutExt = filename.replace(/\.md$/i, '');
-        setCurrentFileName(nameWithoutExt);
-        setCurrentFileId(fileId);
+    const loadFileContentByFileId = async (fileId: string, filename: string, isInitialLoad: boolean = false, clearTemp: boolean = true) => {
+        // Reset undo/redo history when loading a file
+        // Clear temp content when loading a file (only if explicitly requested)
+        if (clearTemp) {
+            clearTempFile();
+        }
+        
         // Load auto-save setting from storage
         const settings = getSettings();
         setAutoSaveEnabled(settings?.autoSave ?? true);
         
-        // Load the file content using filename (content is stored by filename)
-        try {
-            // Load from storage
-            const content = getFileContent(filename);
-            
-            if (content !== null) {
-                // If content is empty and showDefaultContent is enabled, show default
-                const showDefault = getShowDefaultContent();
-                setMarkdown(content || (showDefault ? DEFAULT_MARKDOWN : ""));
-                // Mark as not untitled since we're loading an existing file
-                setIsUntitled(false);
-                // Don't show toast on initial load to avoid noise
-                if (!isInitialLoad) {
-                    toast.success("File loaded");
+        const result = loadFileFromStorage(fileId);
+        if (result.success && result.state) {
+            const loadedState = result.state;
+            setEditorState(loadedState);
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = loadedState.markdown;
                 }
-            } else {
-                // File not found, clear the editing file
-                clearAllEditingFlags();
-                setCurrentFileName(null);
-                setCurrentFileId(null);
-                // Load from content as fallback
-                const saved = getContent();
-                if (saved) {
-                    setMarkdown(saved);
-                } else {
-                    const showDefault = getShowDefaultContent();
-                    setMarkdown(showDefault ? DEFAULT_MARKDOWN : "");
+            }, 0);
+            if (!isInitialLoad) {
+                toast.success("File loaded");
+            }
+        } else {
+            // File not found, reset to default state
+            const newState = getInitialEditorState();
+            setEditorState(newState);
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = newState.markdown;
                 }
+            }, 0);
+            if (!isInitialLoad) {
+                toast.error(result.error || "Failed to load file");
             }
-        } catch (error) {
-            // On error, clear editing file and load from content
-            clearAllEditingFlags();
-            setCurrentFileName(null);
-            setCurrentFileId(null);
-            const saved = getContent();
-            if (saved) {
-                setMarkdown(saved);
-            } else {
-                const showDefault = getShowDefaultContent();
-                setMarkdown(showDefault ? DEFAULT_MARKDOWN : "");
-            }
-            toast.error("Failed to load file");
         }
+    };
+
+    // Handle loading file after user confirms (when temp content exists)
+    const handleLoadFileConfirm = async (saveCurrent: boolean) => {
+        if (!pendingFileId) return;
+        
+        const fileId = pendingFileId;
+        setPendingFileId(null);
+        setShowLoadFileDialog(false);
+        
+        // Save current temp content if requested
+        if (saveCurrent) {
+            const tempContent = getTempFile();
+            if (tempContent && tempContent.trim()) {
+                // Save temp content as a file before loading
+                const suggestedName = getSuggestedFilename(tempContent) || 'untitled';
+                const result = saveFileToStorage(suggestedName, tempContent, null);
+                if (result.success) {
+                    toast.success(`Current content saved as ${suggestedName}.md`);
+                }
+            }
+        }
+        
+        // Clear temp and load file
+        clearTempFile();
+        await loadFileContentByFileId(fileId, '', false, false); // Don't clear temp again (already cleared)
+        
+        // Remove query param
+        const url = new URL(window.location.href);
+        url.searchParams.delete('file');
+        window.history.replaceState({}, '', url.toString());
     };
 
     // Load file marked as editing on mount
@@ -386,10 +347,13 @@ export default function EditorPage() {
         const tempContent = getTempFile();
         if (tempContent) {
             // Temp file exists, use it and don't load editing file
-            setMarkdown(tempContent);
-            setCurrentFileName(null);
-            setCurrentFileId(null);
-            setIsUntitled(false);
+            setEditorState({
+                markdown: tempContent,
+                currentFileName: null,
+                currentFileId: null,
+                isUntitled: false,
+                isForked: false,
+            });
             const settings = getSettings();
             setAutoSaveEnabled(settings?.autoSave ?? true);
             return;
@@ -399,22 +363,12 @@ export default function EditorPage() {
         const editingFileData = getEditingFileFromSavedFiles();
         
         if (editingFileData) {
-            // Load the file that is marked as editing - use file ID, not name
-            setCurrentFileId(editingFileData.id);
-            const nameWithoutExt = editingFileData.filename.replace(/\.md$/i, '');
-            setCurrentFileName(nameWithoutExt);
+            // Load the file that is marked as editing
             loadFileContentByFileId(editingFileData.id, editingFileData.filename, true);
         } else {
-            // No file marked as editing, check settings for default content
-            const showDefault = getShowDefaultContent();
-            if (showDefault) {
-                setMarkdown(DEFAULT_MARKDOWN);
-            } else {
-                setMarkdown(""); // Empty new file
-            }
-            setCurrentFileName(null);
-            setCurrentFileId(null);
-            setIsUntitled(false);
+            // No file marked as editing, use initial state
+            const initialState = getInitialEditorState();
+            setEditorState(initialState);
             // Load auto-save setting
             const settings = getSettings();
             setAutoSaveEnabled(settings?.autoSave ?? true);
@@ -422,40 +376,63 @@ export default function EditorPage() {
     }, [mounted]);
 
     // Listen for editing file changes (when loading from files page)
+    // Use ref to prevent infinite loops
+    const checkingFileRef = useRef(false);
+    
     useEffect(() => {
         if (!mounted) return;
 
         const checkEditingFile = () => {
-            const editingFileData = getEditingFileFromSavedFiles();
-            if (editingFileData && editingFileData.id !== currentFileId) {
-                // Editing file changed, load the new file by ID
-                setCurrentFileId(editingFileData.id);
-                const nameWithoutExt = editingFileData.filename.replace(/\.md$/i, '');
-                setCurrentFileName(nameWithoutExt);
-                loadFileContentByFileId(editingFileData.id, editingFileData.filename, false);
-            } else if (!editingFileData && currentFileId) {
-                // Editing file was cleared
-                setCurrentFileName(null);
-                setCurrentFileId(null);
-                setIsUntitled(false);
+            // Prevent concurrent checks
+            if (checkingFileRef.current) return;
+            checkingFileRef.current = true;
+            
+            try {
+                const editingFileData = getEditingFileFromSavedFiles();
+                if (editingFileData && editingFileData.id !== currentFileId) {
+                    // Editing file changed, load the new file by ID
+                    loadFileContentByFileId(editingFileData.id, editingFileData.filename, false);
+                } else if (!editingFileData && currentFileId) {
+                    // Editing file was cleared, reset to default state
+                    const newState = createNewFileState();
+                    setEditorState(newState);
+                }
+            } finally {
+                // Use setTimeout to allow state updates to complete
+                setTimeout(() => {
+                    checkingFileRef.current = false;
+                }, 100);
             }
         };
 
-        // Check immediately in case file was set before this effect ran
-        checkEditingFile();
-
-        // Listen for storage changes
+        // Debounce storage change checks to avoid excessive calls
+        let checkTimeout: NodeJS.Timeout | null = null;
+        
+        // Listen for storage changes with debouncing
         const unsubscribe = onStorageChange((key) => {
-            // Check editing file on any storage change (key might be null for custom events)
-            if (key === 'mdviewer_saved_files' || key === null) {
-                checkEditingFile();
+            // Only check on saved_files changes, ignore other keys
+            if (key === 'mdviewer_saved_files') {
+                if (checkTimeout) {
+                    clearTimeout(checkTimeout);
+                }
+                checkTimeout = setTimeout(() => {
+                    checkEditingFile();
+                    checkTimeout = null;
+                }, 300); // Debounce by 300ms
             }
         });
         
         // Check when page becomes visible (user navigated back to editor)
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                checkEditingFile();
+                // Debounce visibility checks too
+                if (checkTimeout) {
+                    clearTimeout(checkTimeout);
+                }
+                checkTimeout = setTimeout(() => {
+                    checkEditingFile();
+                    checkTimeout = null;
+                }, 300);
             }
         };
         
@@ -464,6 +441,9 @@ export default function EditorPage() {
         return () => {
             unsubscribe();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+            if (checkTimeout) {
+                clearTimeout(checkTimeout);
+            }
         };
     }, [mounted, currentFileId]);
 
@@ -475,20 +455,11 @@ export default function EditorPage() {
         }
 
         // Save to storage with timestamp
-        const timestamp = new Date().toISOString();
-        const savedFiles = getSavedFiles();
-        const filename = `saved-${Date.now()}.md`;
-        const fileId = `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-        const fileData: SavedFile = {
-            id: fileId,
-            filename,
-            timestamp,
-        };
-        savedFiles.push(fileData);
-        setSavedFiles(savedFiles);
-        setFileContent(filename, markdown);
-        return filename;
-        
+        const filename = `saved-${Date.now()}`;
+        const result = saveFileToStorage(filename, markdown, null);
+        if (result.success && result.file) {
+            return result.file.filename;
+        }
         return null;
     };
 
@@ -507,15 +478,26 @@ export default function EditorPage() {
 
             // Load shared content
             const content = await fetchSharedMarkdown(shareId);
-            setMarkdown(content);
             
-            // Mark as forked and clear temp file (this is new content)
-            setIsForked(true);
-            setIsUntitled(true);
-            setCurrentFileName(null);
-            setCurrentFileId(null);
-            clearTempFile(); // Clear any existing temp file
-            setTempFile(content); // Save as temp file
+            // Clear temp file before loading shared content (prevents showing old temp content)
+            clearTempFile();
+            
+            // Mark as forked (this is new content)
+            setEditorState({
+                markdown: content,
+                currentFileName: null,
+                currentFileId: null,
+                isUntitled: true,
+                isForked: true,
+            });
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = content;
+                }
+            }, 0);
+            // Auto-save will handle saving this content every 2 seconds if enabled
             
             toast.success("Shared content loaded! Please save with a filename to share or save again.");
 
@@ -540,58 +522,71 @@ export default function EditorPage() {
         setActivateButtonDismissed(true);
     };
 
+    // Auto-save content every 2 seconds (based on autoSaveEnabled setting)
+    // Saves to file if file is open, or to temp file if unsaved content
+    // Clears temp file if content is empty for 2 seconds
     useEffect(() => {
-        if (mounted) {
-            setContent(markdown);
-            
-            // Reset share URL when content changes (user edits after sharing)
-            if (shareUrl && markdown.trim()) {
-                setShareUrl(null);
-                setCopied(false);
-            }
-        }
-    }, [markdown, mounted, shareUrl]);
-
-    // Auto-save to temp file (works regardless of auto-save settings)
-    useEffect(() => {
-        if (!mounted) {
+        if (!mounted || !autoSaveEnabled) {
             return;
         }
 
         // Clear existing timer
-        if (tempSaveTimerRef.current) {
-            clearTimeout(tempSaveTimerRef.current);
-            tempSaveTimerRef.current = null;
+        if (autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
         }
 
-        // Only save to temp file if no file is open (unsaved content)
-        if (!currentFileName) {
-            if (markdown.trim()) {
-                // Debounce temp file saves to avoid excessive writes
-                tempSaveTimerRef.current = setTimeout(() => {
-                    try {
-                        setTempFile(markdown);
-                    } catch (error) {
-                        console.error('Error saving temp file:', error);
+        // Auto-save every 2 seconds
+        autoSaveTimerRef.current = setTimeout(() => {
+            if (currentFileName && currentFileId) {
+                // File is open, save to file (only if content is not empty)
+                if (markdown.trim()) {
+                    const result = saveFileToStorage(currentFileName, markdown, currentFileId);
+                    if (result.success) {
+                        setLastSaved(new Date());
+                        // Update state with file ID if it was generated
+                        if (result.file && result.file.id !== currentFileId) {
+                            setEditorState(prev => ({ ...prev, currentFileId: result.file!.id }));
+                        }
                     }
-                    tempSaveTimerRef.current = null;
-                }, 1500); // Save after 1.5 seconds of no typing
+                }
             } else {
-                // Clear temp file if content is empty
-                clearTempFile();
+                // No file open, handle temp file
+                if (markdown.trim()) {
+                    // Save to temp file if content exists
+                    try {
+                        saveTempFile(markdown);
+                    } catch (error) {
+                        toast.error(`Error saving temp file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                } else {
+                    // Clear temp file if content is empty
+                    try {
+                        clearTempFile();
+                    } catch (error) {
+                        toast.error(`Error clearing temp file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    }
+                }
             }
-        } else {
-            // Clear temp file when a file is open
-            clearTempFile();
-        }
+            autoSaveTimerRef.current = null;
+        }, 2000); // Save every 2 seconds
 
         return () => {
-            if (tempSaveTimerRef.current) {
-                clearTimeout(tempSaveTimerRef.current);
-                tempSaveTimerRef.current = null;
+            if (autoSaveTimerRef.current) {
+                clearTimeout(autoSaveTimerRef.current);
+                autoSaveTimerRef.current = null;
             }
         };
-    }, [markdown, mounted, currentFileName]);
+    }, [markdown, mounted, autoSaveEnabled, currentFileName, currentFileId]);
+
+    // Reset share URL when content changes (user edits after sharing)
+    useEffect(() => {
+        if (!mounted) return;
+        
+        if (shareUrl && markdown.trim()) {
+            setShareUrl(null);
+            setCopied(false);
+        }
+    }, [markdown, mounted, shareUrl]);
 
     // Save temp file on unmount if there's unsaved content
     useEffect(() => {
@@ -599,7 +594,7 @@ export default function EditorPage() {
             // Save temp file on component unmount if there's unsaved content
             if (!currentFileName && markdown.trim()) {
                 try {
-                    setTempFile(markdown);
+                    saveTempFile(markdown);
                 } catch (error) {
                     toast.error(`Error saving temp file on unmount: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 }
@@ -610,7 +605,7 @@ export default function EditorPage() {
     // Auto-rename and auto-save untitled files based on first 20 chars
     useEffect(() => {
         const showDefault = getShowDefaultContent();
-        if (!mounted || !isUntitled || currentFileName !== 'untitled' || !markdown.trim() || (showDefault && markdown === DEFAULT_MARKDOWN)) {
+        if (!mounted || !isUntitled || currentFileName !== null || !markdown.trim() || (showDefault && markdown === DEFAULT_MARKDOWN)) {
             return;
         }
 
@@ -620,30 +615,37 @@ export default function EditorPage() {
 
         if (!hasFirstLine) return;
 
-        // Debounce auto-rename and auto-save
-        const renameTimer = setTimeout(() => {
-            const suggestedName = firstLine
-                .substring(0, 20)
-                .replace(/[^a-zA-Z0-9\s-_]/g, '')
-                .trim()
-                .replace(/\s+/g, '-')
-                .toLowerCase();
+        // Clear existing timer
+        if (autoRenameTimerRef.current) {
+            clearTimeout(autoRenameTimerRef.current);
+        }
+
+        // Debounce auto-rename and auto-save (only once per file)
+        autoRenameTimerRef.current = setTimeout(() => {
+            const suggestedName = getSuggestedFilename(markdown);
             
-            if (suggestedName && suggestedName.length > 0 && suggestedName !== 'untitled') {
-                // Truncate if too long and add ellipsis
-                const finalName = suggestedName.length > 17 ? suggestedName.substring(0, 17) + '...' : suggestedName;
-                setCurrentFileName(finalName);
-                setIsUntitled(false);
-                setEditingFile(finalName);
-                // Auto-save with new name immediately
-                saveFile(finalName, false);
-            } else {
-                // Even if name is invalid, auto-save the untitled file after first word
-                saveFile('untitled', false);
+            if (suggestedName && suggestedName !== 'untitled') {
+                // Auto-save with suggested name (only once)
+                const result = saveFileToStorage(suggestedName, markdown, null);
+                if (result.success && result.file) {
+                    setEditorState({
+                        markdown,
+                        currentFileName: suggestedName,
+                        currentFileId: result.file.id,
+                        isUntitled: false,
+                        isForked: false,
+                    });
+                }
             }
-        }, 2000); // Wait 2 seconds after user stops typing
+            autoRenameTimerRef.current = null;
+        }, 3000); // Wait 3 seconds after user stops typing (longer to avoid excessive saves)
         
-        return () => clearTimeout(renameTimer);
+        return () => {
+            if (autoRenameTimerRef.current) {
+                clearTimeout(autoRenameTimerRef.current);
+                autoRenameTimerRef.current = null;
+            }
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [markdown, mounted, isUntitled, currentFileName]);
 
@@ -688,8 +690,17 @@ export default function EditorPage() {
                     return;
                 }
                 
-                // Always handle save in editor
-                handleSave();
+                // Check if content is empty before saving
+                const showDefault = getShowDefaultContent();
+                const isEmpty = !markdown.trim() || (showDefault && markdown === DEFAULT_MARKDOWN);
+                
+                if (isEmpty) {
+                    // Show dialog telling user there's nothing to save
+                    setShowEmptySaveDialog(true);
+                } else {
+                    // Always handle save in editor
+                    handleSave();
+                }
                 return false;
             }
             
@@ -738,6 +749,10 @@ export default function EditorPage() {
 
             // Escape - Close dialogs
             if (e.key === 'Escape') {
+                if (showEmptySaveDialog) {
+                    setShowEmptySaveDialog(false);
+                    return;
+                }
                 if (showSaveDialog) {
                     setShowSaveDialog(false);
                     setSaveFileName("");
@@ -753,7 +768,7 @@ export default function EditorPage() {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mounted, keyboardShortcutsEnabled, soloMode, showSaveDialog, showLoadDialog]);
+    }, [mounted, keyboardShortcutsEnabled, soloMode, showSaveDialog, showLoadDialog, showLoadFileDialog, showEmptySaveDialog, markdown]);
 
     // Real-time timer for "saved Xs ago"
     useEffect(() => {
@@ -775,152 +790,28 @@ export default function EditorPage() {
         return () => clearInterval(interval);
     }, [lastSaved]);
 
-    // Auto-save to file (every 30 seconds if enabled and file is open)
+    // Note: Auto-save is now handled in the unified 2-second timer above
+    // This old 30-second timer has been removed - auto-save now works every 2 seconds
+    // for both saved files and unsaved content, controlled by autoSaveEnabled setting
+
+    // Setup scroll listeners for continuous scroll position tracking
     useEffect(() => {
-        if (!mounted || !autoSaveEnabled || !currentFileName || !markdown.trim()) {
-            return;
-        }
-
-        // Clear existing timer
-        if (autoSaveTimerRef.current) {
-            clearTimeout(autoSaveTimerRef.current);
-        }
-
-        // Set new timer for auto-save
-        autoSaveTimerRef.current = setTimeout(async () => {
-            const success = await saveFile(currentFileName, false); // Silent save
-            if (success) {
-                // Update lastSaved to trigger timer display
-                setLastSaved(new Date());
-            }
-            // Trigger storage event for files page sync
-            window.dispatchEvent(new Event('storage'));
-        }, 30000); // 30 seconds
-
-        return () => {
-            if (autoSaveTimerRef.current) {
-                clearTimeout(autoSaveTimerRef.current);
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [markdown, currentFileName, autoSaveEnabled, mounted]);
-
-    // Save scroll position BEFORE mode changes
-    useEffect(() => {
-        if (!mounted) return;
+        if (!mounted || !scrollManagerRef.current) return;
         
-        // Save current scroll positions before any mode change
-        const saveScrollPositions = () => {
-            // Save editor scroll position (split view)
-            if (editorRef.current) {
-                scrollPositionsRef.current.editor = editorRef.current.scrollTop;
-            }
-            
-            // Save preview scroll position (split view or preview-only)
-            if (previewRef.current) {
-                scrollPositionsRef.current.preview = previewRef.current.scrollTop;
-            }
-            
-            // Save page scroll position (editor-only mode uses page scroll)
-            scrollPositionsRef.current.page = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-        };
+        const cleanup = scrollManagerRef.current.setupScrollListeners();
+        return cleanup;
+    }, [mounted, soloMode, isPreview, effectiveMode]);
 
-        // Save positions continuously during scrolling
-        const editorElement = editorRef.current;
-        const previewElement = previewRef.current;
-
-        if (editorElement) {
-            editorElement.addEventListener('scroll', saveScrollPositions, { passive: true });
-        }
-        if (previewElement) {
-            previewElement.addEventListener('scroll', saveScrollPositions, { passive: true });
-        }
-        window.addEventListener('scroll', saveScrollPositions, { passive: true });
-
-        return () => {
-            if (editorElement) {
-                editorElement.removeEventListener('scroll', saveScrollPositions);
-            }
-            if (previewElement) {
-                previewElement.removeEventListener('scroll', saveScrollPositions);
-            }
-            window.removeEventListener('scroll', saveScrollPositions);
-        };
-    }, [mounted, soloMode, isPreview]);
-
-    // Restore scroll positions after mode changes
+    // Restore scroll positions after mode changes (EXCLUSIVE: only triggers on actual mode change)
+    // This effect ONLY runs when soloMode changes, and ScrollManager ensures it only restores on actual changes
     useEffect(() => {
-        if (!mounted) return;
+        if (!mounted || !scrollManagerRef.current) return;
         
-        // When switching from duo to editor-only, convert editor scroll to page scroll
-        // We need to calculate where the editor content would be on the page
-        const restoreScroll = () => {
-            if (soloMode === "both") {
-                // Restore editor scroll in split view
-                if (editorRef.current) {
-                    editorRef.current.scrollTop = scrollPositionsRef.current.editor;
-                }
-                // Restore preview scroll in split view
-                if (previewRef.current) {
-                    previewRef.current.scrollTop = scrollPositionsRef.current.preview;
-                }
-            } else if (soloMode === "editor") {
-                // When switching from duo to editor-only:
-                // If we have an editor scroll position but no page scroll, convert it
-                // The editor scroll position needs to be converted to page scroll
-                if (scrollPositionsRef.current.editor > 0 && scrollPositionsRef.current.page === 0) {
-                    // Get the position of the editor section on the page
-                    const editorSection = document.querySelector('[data-editor-section]');
-                    if (editorSection) {
-                        const rect = editorSection.getBoundingClientRect();
-                        const scrollTop = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
-                        // Convert editor scroll to approximate page scroll position
-                        const targetScroll = scrollTop + rect.top + scrollPositionsRef.current.editor;
-                        window.scrollTo({
-                            top: targetScroll,
-                            behavior: 'instant' as ScrollBehavior
-                        });
-                    } else {
-                        // Fallback: use saved page scroll
-                        window.scrollTo({
-                            top: scrollPositionsRef.current.page,
-                            behavior: 'instant' as ScrollBehavior
-                        });
-                    }
-                } else {
-                    // Restore page scroll in editor-only mode
-                    window.scrollTo({
-                        top: scrollPositionsRef.current.page,
-                        behavior: 'instant' as ScrollBehavior
-                    });
-                }
-            } else if (soloMode === "preview") {
-                // Restore preview scroll in preview-only mode
-                if (previewRef.current) {
-                    previewRef.current.scrollTop = scrollPositionsRef.current.preview;
-                }
-            }
-        };
-
-        // Use requestAnimationFrame to ensure DOM is ready, then restore
-        const rafId = requestAnimationFrame(() => {
-            setTimeout(restoreScroll, 0);
-        });
-
-        return () => cancelAnimationFrame(rafId);
-    }, [soloMode, isPreview, mounted]);
-
-    // Auto-resize textarea in solo editor mode
-    useEffect(() => {
-        if (!mounted || !soloTextareaRef.current) return;
-        
-        // Resize in editor-only mode
-        if (soloMode === "editor") {
-            const textarea = soloTextareaRef.current;
-            textarea.style.height = 'auto';
-            textarea.style.height = `${textarea.scrollHeight}px`;
-        }
-    }, [markdown, mounted, soloMode]);
+        // EXCLUSIVE: Only restore scroll when mode actually changes
+        // ScrollManager.restoreScroll() has internal checks to prevent restoration during editing
+        // It compares previousMode with newMode and returns early if they're the same
+        scrollManagerRef.current.restoreScroll(effectiveMode);
+    }, [effectiveMode, mounted]); // Restore based on actual layout mode
 
     // Check API configuration on mount
     useEffect(() => {
@@ -1091,12 +982,32 @@ export default function EditorPage() {
                     }
                 }
                 
+                // Clear temp content when importing
+                clearTempFile();
+                
                 // Set current file name from imported file
                 const importedFileName = file.name.replace(/\.(md|txt)$/i, '');
-                setCurrentFileName(importedFileName);
-                setEditingFile(importedFileName);
-                
-                setMarkdown(text);
+                // Save the imported file
+                const result = saveFileToStorage(importedFileName, text, null);
+                if (result.success && result.file) {
+                    setEditorState({
+                        markdown: text,
+                        currentFileName: importedFileName,
+                        currentFileId: result.file.id,
+                        isUntitled: false,
+                        isForked: false,
+                    });
+                } else {
+                    // If save failed, just set the content
+                    setEditorState(prev => ({ ...prev, markdown: text }));
+                }
+                // Reset undo/redo history
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        textareaRef.current.value = '';
+                        textareaRef.current.value = text;
+                    }
+                }, 0);
                 toast.success("File imported successfully!");
             } catch (error) {
                 toast.error("Failed to import file");
@@ -1105,89 +1016,58 @@ export default function EditorPage() {
         input.click();
     };
 
-    // Save file function
-    // Generate unique ID for files
-    const generateFileId = (): string => {
-        return `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-    };
-
+    // Save file function (wrapper for editor.ts saveFile)
     const saveFile = async (filename: string, showToast: boolean = true): Promise<boolean> => {
-        if (!markdown.trim()) {
-            if (showToast) toast.error("No content to save");
-            return false;
-        }
-
-        try {
-            const timestamp = new Date().toISOString();
-            const fullFilename = `${filename}.md`;
-            
-            // Find file by ID if we have currentFileId, otherwise by filename
-            const savedFiles = getSavedFiles();
-            let existingFile: SavedFile | null = null;
-            
-            if (currentFileId) {
-                // Use file ID to find the file (primary method)
-                existingFile = savedFiles.find((f: SavedFile) => f.id === currentFileId) || null;
-            } else {
-                // Fallback to filename (for backward compatibility)
-                existingFile = savedFiles.find((f: SavedFile) => f.filename === fullFilename) || null;
-            }
-            
-            const fileData: SavedFile = {
-                id: existingFile?.id || currentFileId || generateFileId(),
-                filename: fullFilename,
-                timestamp,
-            };
-            
-            // Set the file ID if we didn't have it before
-            if (!currentFileId && fileData.id) {
-                setCurrentFileId(fileData.id);
-            }
-            
-            // Save to storage
-            upsertSavedFile(fileData);
-            setFileContent(fullFilename, markdown);
-            
-            // Clear temp file when file is saved
+        const result = saveFileToStorage(filename, markdown, currentFileId);
+        
+        if (result.success && result.file) {
+            // Clear temp content after saving
             clearTempFile();
-            setIsForked(false);
-            setIsUntitled(false);
+            
+            // Update editor state with saved file info
+            setEditorState({
+                markdown,
+                currentFileName: filename,
+                currentFileId: result.file.id,
+                isUntitled: false,
+                isForked: false,
+            });
             
             if (showToast) {
                 toast.success("File saved!");
             }
             setLastSaved(new Date());
+            // Storage event is already dispatched in saveFileToStorage
             return true;
-        } catch (error) {
+        } else {
             if (showToast) {
-                toast.error("Failed to save file");
+                toast.error(result.error || "Failed to save file");
             }
             return false;
         }
     };
 
-    // Check if there's unsaved content that needs saving
-    const hasUnsavedContent = (): boolean => {
-        const showDefault = getShowDefaultContent();
-        if (showDefault) {
-            return markdown.trim().length > 0 && markdown !== DEFAULT_MARKDOWN;
-        }
-        return markdown.trim().length > 0;
+    // Check if content is empty
+    const isContentEmpty = () => {
+        return !markdown.trim();
     };
 
     // Handle new file button click
     const handleNewFile = () => {
-        // Clear all editing flags first
-        clearAllEditingFlags();
+        // Block if content is empty (already have a new empty file)
+        if (isContentEmpty()) {
+            toast.info("You already have an empty new file open. Add some content first!");
+            return;
+        }
+        
         // Check if there's unsaved content
-        if (hasUnsavedContent()) {
+        if (hasUnsavedContent(markdown)) {
             // If editing a file, save it first
             if (currentFileName) {
-                // File is already saved, just clear and create new
-                setCurrentFileName(null);
-                setCurrentFileId(null);
-                removeEditingFile();
-                setMarkdown(""); // Empty content for new files
+                // File is already saved, clear editing flags and create new
+                clearAllEditingFlags(); // Clear editing flags (no file in editing mode)
+                const newState = createNewFileState();
+                setEditorState(newState);
                 toast.success("New file created");
             } else {
                 // Unsaved content, ask to save first
@@ -1198,11 +1078,17 @@ export default function EditorPage() {
                 setShowSaveDialog(true);
             }
         } else {
-            // No content, just create new file with empty content
-            setCurrentFileName(null);
-            setCurrentFileId(null);
-            removeEditingFile();
-            setMarkdown(""); // Empty content for new files
+            // No content, clear editing flags and create new file with empty content
+            clearAllEditingFlags(); // Clear editing flags (no file in editing mode)
+            const newState = createNewFileState();
+            setEditorState(newState);
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = newState.markdown;
+                }
+            }, 0);
             toast.success("New file created");
         }
     };
@@ -1214,51 +1100,41 @@ export default function EditorPage() {
     };
 
     const handleDeleteConfirm = async () => {
-        if (!currentFileName) return;
+        if (!currentFileName || !currentFileId) return;
         setShowDeleteWarning(false);
 
-        try {
-            // Use file ID to delete (primary method)
-            if (currentFileId) {
-                const savedFiles = getSavedFiles();
-                const fileToDelete = savedFiles.find((f: SavedFile) => f.id === currentFileId);
-                
-                if (fileToDelete) {
-                    removeFileContent(fileToDelete.filename);
-                    removeSavedFile(currentFileId);
+        const result = deleteFileFromStorage(currentFileId, `${currentFileName}.md`);
+        
+        if (result.success) {
+                // Clear editor state
+            const newState = createNewFileState();
+            setEditorState(newState);
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = newState.markdown;
                 }
-            } else if (currentFileName) {
-                // Fallback to filename if no ID (for backward compatibility)
-                removeFileContent(`${currentFileName}.md`);
-                const savedFiles = getSavedFiles();
-                const fileToDelete = savedFiles.find((f: SavedFile) => f.filename === `${currentFileName}.md`);
-                if (fileToDelete?.id) {
-                    removeSavedFile(fileToDelete.id);
-                } else {
-                    const updated = savedFiles.filter((f: SavedFile) => f.filename !== `${currentFileName}.md`);
-                    setSavedFiles(updated);
-                }
-            }
-
-            // Clear editor
-            setCurrentFileName(null);
-            setCurrentFileId(null);
-            setIsUntitled(false);
-            clearAllEditingFlags();
-            removeEditingFile();
-            setMarkdown("");
+            }, 0);
             setShareUrl(null);
             setLastSaved(null);
-            
             toast.success("File deleted");
-        } catch (error) {
-            toast.error("Failed to delete file");
+            // Storage event is dispatched in deleteFileFromStorage
+        } else {
+            toast.error(result.error || "Failed to delete file");
         }
     };
 
 
     // Handle save button click
     const handleSave = async () => {
+        // Check if content is empty
+        if (isContentEmpty()) {
+            // Show dialog telling user there's nothing to save
+            setShowEmptySaveDialog(true);
+            return;
+        }
+        
         // If content is forked (from share/search), require filename
         if (isForked && !currentFileName) {
             setSaveDialogMode('save');
@@ -1295,49 +1171,24 @@ export default function EditorPage() {
         
         if (saveDialogMode === 'rename' && currentFileId) {
             // Rename: Update filename but preserve file ID
-            const savedFiles = getSavedFiles();
-            const fileToRename = savedFiles.find((f: SavedFile) => f.id === currentFileId);
+            const result = renameFileInStorage(currentFileId, cleanName, markdown);
             
-            if (fileToRename) {
-                const oldFilename = fileToRename.filename;
-                const newFilename = `${cleanName}.md`;
-                
-                // Get content from old filename
-                const content = getFileContent(oldFilename);
-                
-                if (content !== null) {
-                    // Update file metadata with new filename but same ID
-                    const updatedFile: SavedFile = {
-                        ...fileToRename,
-                        filename: newFilename,
-                        timestamp: new Date().toISOString(),
-                    };
-                    upsertSavedFile(updatedFile);
-                    
-                    // Save content with new filename
-                    setFileContent(newFilename, content);
-                    // Remove old filename content
-                    removeFileContent(oldFilename);
-                    
-                    // Update editor state
-                    setCurrentFileName(cleanName);
-                    // File ID stays the same
-                    setEditingFile(cleanName);
-                    setShowSaveDialog(false);
-                    setSaveFileName("");
-                    setSaveDialogInitialValue("");
-                    
-                    // Clear temp file and forked flag when renamed
-                    clearTempFile();
-                    setIsForked(false);
-                    setIsUntitled(false);
-                    
-                    toast.success("File renamed");
-                } else {
-                    toast.error("Failed to load file content for rename");
-                }
+            if (result.success && result.file) {
+                // Update editor state
+                setEditorState({
+                    markdown,
+                    currentFileName: cleanName,
+                    currentFileId: result.file.id,
+                    isUntitled: false,
+                    isForked: false,
+                });
+                setShowSaveDialog(false);
+                setSaveFileName("");
+                setSaveDialogInitialValue("");
+                toast.success("File renamed");
+                // Storage event is dispatched in renameFileInStorage
             } else {
-                toast.error("File not found");
+                toast.error(result.error || "Failed to rename file");
             }
         } else {
             // Save or new file
@@ -1349,24 +1200,15 @@ export default function EditorPage() {
             setSaveDialogInitialValue("");
             
             if (success) {
-                setCurrentFileName(cleanName);
-                // File ID is set in saveFile function
-                setEditingFile(cleanName);
-                
-                // Clear temp file and forked flag when saved
-                clearTempFile();
-                setIsForked(false);
-                setIsUntitled(false);
+                // State is already updated in saveFile function
                 
                 // If this was for creating a new file, clear and create new
                 if (pendingNewFile) {
                     setPendingNewFile(false);
                     // Small delay to show save success, then create new
                     setTimeout(() => {
-                        setCurrentFileName(null);
-                        setCurrentFileId(null);
-                        removeEditingFile();
-                        setMarkdown("");
+                        const newState = createNewFileState();
+                        setEditorState(newState);
                         toast.success("New file created");
                     }, 500);
                 }
@@ -1374,21 +1216,8 @@ export default function EditorPage() {
         }
     };
 
-    // Load file from files page
-    const loadFileToEditor = (filename: string, content: string) => {
-        // Save current content if exists
-        if (markdown.trim() && markdown !== DEFAULT_MARKDOWN && currentFileName) {
-            saveFile(currentFileName, false);
-        }
-        
-        setCurrentFileName(filename.replace(/\.md$/i, ''));
-        setEditingFile(filename.replace(/\.md$/i, ''));
-        setMarkdown(content);
-        // Load auto-save setting from storage
-        const settings = getSettings();
-        setAutoSaveEnabled(settings?.autoSave ?? true);
-        toast.success("File loaded to editor");
-    };
+    // Load file from files page (this function is not used anymore, files page uses setFileAsEditing)
+    // Keeping for backward compatibility but it's handled by the storage listener
 
     if (!mounted) return null;
 
@@ -1426,6 +1255,71 @@ export default function EditorPage() {
                         </Button>
                     </div>
                 </Card>
+            )}
+
+            {showLoadFileDialog && pendingFileId && typeof document !== 'undefined' && createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowLoadFileDialog(false);
+                            setPendingFileId(null);
+                            const url = new URL(window.location.href);
+                            url.searchParams.delete('file');
+                            window.history.replaceState({}, '', url.toString());
+                        }
+                    }}
+                >
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
+                    <Card className="relative bg-background border border-border rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col transform transition-all p-6 overflow-y-auto">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-lg mb-1 text-yellow-600 dark:text-yellow-400">
+                                    Unsaved Content Warning
+                                </h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    You have unsaved content in the editor. Loading this file will replace your current content. Would you like to save it first?
+                                </p>
+                                <div className="flex flex-col gap-2">
+                                    <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => handleLoadFileConfirm(true)}
+                                        className="gap-2 w-full"
+                                    >
+                                        <Save className="w-4 h-4" />
+                                        Save & Load File
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleLoadFileConfirm(false)}
+                                        className="w-full"
+                                    >
+                                        Load Without Saving
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setShowLoadFileDialog(false);
+                                            setPendingFileId(null);
+                                            const url = new URL(window.location.href);
+                                            url.searchParams.delete('file');
+                                            window.history.replaceState({}, '', url.toString());
+                                        }}
+                                        className="w-full"
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>,
+                document.body
             )}
 
             {showLoadDialog && loadShareId && typeof document !== 'undefined' && createPortal(
@@ -1564,8 +1458,9 @@ export default function EditorPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleNewFile}
+                        disabled={isContentEmpty()}
                         className="gap-2"
-                        title="Create new file"
+                        title={isContentEmpty() ? "You already have an empty new file open" : "Create new file"}
                     >
                         <Plus className="w-4 h-4" />
                         <span className="hidden sm:inline">New</span>
@@ -1584,9 +1479,9 @@ export default function EditorPage() {
                         variant={currentFileName ? (autoSaveEnabled ? "default" : "outline") : "outline"}
                         size="sm"
                         onClick={handleSave}
-                        disabled={!markdown.trim() || !!(currentFileName && autoSaveEnabled)}
+                        disabled={!markdown.trim()}
                         className="gap-2"
-                        title={currentFileName ? (autoSaveEnabled ? "Auto-save enabled (file saves automatically)" : "Save file") : "Save as new file"}
+                        title={currentFileName ? (autoSaveEnabled ? "Auto-save enabled (file saves automatically every 2 seconds)" : "Save file") : "Save as new file"}
                     >
                         <Save className="w-4 h-4" />
                         <span className="hidden sm:inline">
@@ -1735,6 +1630,24 @@ export default function EditorPage() {
                                         <ArrowUp className="w-4 h-4" />
                                     </Button>
                                 )}
+                                {/* Copy All Content Button */}
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={async () => {
+                                        try {
+                                            await navigator.clipboard.writeText(markdown);
+                                            toast.success("All content copied to clipboard!");
+                                        } catch (err) {
+                                            toast.error("Failed to copy content");
+                                        }
+                                    }}
+                                    disabled={!markdown.trim()}
+                                    className="h-8 w-8 p-0 flex-shrink-0"
+                                    title="Copy all content"
+                                >
+                                    <Copy className="w-4 h-4" />
+                                </Button>
                                 {/* Share Button */}
                                 <Button
                                     variant={shareUrl ? "default" : "default"}
@@ -1757,10 +1670,11 @@ export default function EditorPage() {
                                 {/* Desktop solo mode toggle - only visible on large screens */}
                                 <div className="hidden md:flex gap-2 border rounded-lg p-1 bg-muted/50">
                                     <Button
-                                        variant={soloMode === "both" ? "default" : "ghost"}
+                                        variant={effectiveMode === "both" ? "default" : "ghost"}
                                         size="sm"
                                         onClick={() => {
                                             setSoloMode("both");
+                                            setTimeout(focusOnEditor, 100);
                                         }}
                                         className="h-8 w-8 p-0"
                                         title="Split View"
@@ -1768,10 +1682,11 @@ export default function EditorPage() {
                                         <LayoutGrid className="w-4 h-4" />
                                     </Button>
                                     <Button
-                                        variant={soloMode === "editor" ? "default" : "ghost"}
+                                        variant={effectiveMode === "editor" ? "default" : "ghost"}
                                         size="sm"
                                         onClick={() => {
                                             setSoloMode("editor");
+                                            setTimeout(focusOnEditor, 100);
                                         }}
                                         className="h-8 w-8 p-0"
                                         title="Editor Only"
@@ -1779,7 +1694,7 @@ export default function EditorPage() {
                                         <Edit3 className="w-4 h-4" />
                                     </Button>
                                     <Button
-                                        variant={soloMode === "preview" ? "default" : "ghost"}
+                                        variant={effectiveMode === "preview" ? "default" : "ghost"}
                                         size="sm"
                                         onClick={() => {
                                             setSoloMode("preview");
@@ -1793,11 +1708,12 @@ export default function EditorPage() {
                                 {/* Mobile solo mode toggle - show editor and preview only (no duo mode) */}
                                 <div className="flex md:hidden gap-2 border rounded-lg p-1 bg-muted/50">
                                     <Button
-                                        variant={soloMode === "editor" ? "default" : "ghost"}
+                                        variant={effectiveMode === "editor" ? "default" : "ghost"}
                                         size="sm"
                                         onClick={() => {
                                             setSoloMode("editor");
                                             setIsPreview(false);
+                                            setTimeout(focusOnEditor, 100);
                                         }}
                                         className="h-8 w-8 p-0"
                                         title="Editor Only"
@@ -1805,7 +1721,7 @@ export default function EditorPage() {
                                         <Edit3 className="w-4 h-4" />
                                     </Button>
                                     <Button
-                                        variant={soloMode === "preview" ? "default" : "ghost"}
+                                        variant={effectiveMode === "preview" ? "default" : "ghost"}
                                         size="sm"
                                         onClick={() => {
                                             setSoloMode("preview");
@@ -1823,17 +1739,6 @@ export default function EditorPage() {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => {
-                                            setIsCollapsed(!isCollapsed);
-                                        }}
-                                        className="h-8 w-8 p-0"
-                                        title="Collapse"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => {
                                             setIsClosed(true);
                                             // Reset dismiss state when closing so activate button shows
                                             setIsActivateButtonDismissed(false);
@@ -1846,6 +1751,17 @@ export default function EditorPage() {
                                         title="Close Live Editor"
                                     >
                                         <X className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                            setIsCollapsed(!isCollapsed);
+                                        }}
+                                        className="h-8 w-8 p-0"
+                                        title="Collapse"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
                                     </Button>
                                 </div>
                             </div>
@@ -1872,7 +1788,7 @@ export default function EditorPage() {
 
             {/* Editor Content */}
             <div className={`grid gap-6 ${
-                soloMode === "both" 
+                effectiveMode === "both" 
                     ? "flex-1 grid-cols-1 md:grid-cols-2 min-h-[600px]" 
                     : "grid-cols-1"
             }`}>
@@ -1880,58 +1796,84 @@ export default function EditorPage() {
                 <div 
                     data-editor-section
                     className={`flex flex-col gap-2 ${
-                        soloMode === "both" ? "h-full" : ""
+                        effectiveMode === "both" ? "h-full" : ""
                     } ${
                         // Mobile (< md): show based on isPreview state
                         isPreview ? "hidden md:flex" : "flex"
                     } ${
-                        // Desktop (>= md): show based on soloMode state
-                        soloMode === "preview" ? "md:hidden" : ""
+                        // Desktop (>= md): show based on effectiveMode state
+                        effectiveMode === "preview" ? "md:hidden" : ""
                     }`}>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium px-1">
                         <Edit3 className="w-4 h-4" /> Editor
                     </div>
                     <Card className={`p-0 border-primary/20 shadow-lg bg-background/50 backdrop-blur-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all ${
-                        soloMode === "both" && typeof window !== 'undefined' && window.innerWidth >= 768 ? "flex-1 overflow-hidden" : ""
+                        effectiveMode === "both" && typeof window !== 'undefined' && window.innerWidth >= 768 ? "flex-1 overflow-hidden" : ""
                     }`}>
-                        {soloMode === "both" && typeof window !== 'undefined' && window.innerWidth >= 768 && !isPreview ? (
-                            // Split view on desktop (md and above) - use scroll container
-                            <div ref={editorRef} className="h-full overflow-y-auto">
-                                <textarea
-                                    value={markdown}
-                                    onChange={(e) => setMarkdown(e.target.value)}
-                                    className="w-full p-6 resize-none bg-transparent border-none focus:ring-0 font-mono text-sm leading-relaxed outline-none block"
-                                    placeholder="Type your markdown here..."
-                                    spellCheck={false}
-                                    style={{ 
-                                        minHeight: '100%',
-                                        height: 'auto',
-                                        overflow: 'hidden'
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            // Solo editor mode OR mobile/small screens - expand naturally
-                            <textarea
-                                ref={soloTextareaRef}
-                                value={markdown}
-                                onChange={(e) => {
-                                    setMarkdown(e.target.value);
-                                    // Auto-resize textarea to fit content
+                        <textarea
+                            ref={textareaRef}
+                            value={markdown}
+                            onChange={(e) => {
+                                const newValue = e.target.value;
+                                updateMarkdown(newValue);
+                                
+                                // Auto-resize for editor mode using shared function
+                                if (effectiveMode === "editor") {
+                                    handleEditorModeResize();
+                                }
+                                
+                                // Track cursor position (but don't trigger scroll during edits)
+                                if (scrollManagerRef.current) {
                                     const textarea = e.target as HTMLTextAreaElement;
-                                    textarea.style.height = 'auto';
-                                    textarea.style.height = `${textarea.scrollHeight}px`;
-                                }}
-                                className="w-full p-6 resize-none bg-transparent border-none focus:ring-0 font-mono text-sm leading-relaxed outline-none block"
-                                placeholder="Type your markdown here..."
-                                spellCheck={false}
-                                style={{ 
-                                    minHeight: '600px',
-                                    overflow: 'visible',
-                                    display: 'block'
-                                }}
-                            />
-                        )}
+                                    scrollManagerRef.current.updateCursorPosition({
+                                        selectionStart: textarea.selectionStart,
+                                        selectionEnd: textarea.selectionEnd,
+                                    });
+                                }
+                            }}
+                            onSelect={(e) => {
+                                // Track cursor position for scroll-to-cursor
+                                if (scrollManagerRef.current) {
+                                    const textarea = e.target as HTMLTextAreaElement;
+                                    scrollManagerRef.current.updateCursorPosition({
+                                        selectionStart: textarea.selectionStart,
+                                        selectionEnd: textarea.selectionEnd,
+                                    });
+                                }
+                            }}
+                            onKeyUp={(e) => {
+                                // Track cursor position on key events
+                                if (scrollManagerRef.current) {
+                                    const textarea = e.target as HTMLTextAreaElement;
+                                    scrollManagerRef.current.updateCursorPosition({
+                                        selectionStart: textarea.selectionStart,
+                                        selectionEnd: textarea.selectionEnd,
+                                    });
+                                }
+                            }}
+                            onClick={(e) => {
+                                // Track cursor position on click
+                                if (scrollManagerRef.current) {
+                                    const textarea = e.target as HTMLTextAreaElement;
+                                    scrollManagerRef.current.updateCursorPosition({
+                                        selectionStart: textarea.selectionStart,
+                                        selectionEnd: textarea.selectionEnd,
+                                    });
+                                }
+                            }}
+                            className="w-full p-6 resize-none bg-transparent border-none focus:ring-0 font-mono text-sm leading-relaxed outline-none block"
+                            placeholder="Type your markdown here..."
+                            spellCheck={false}
+                            style={effectiveMode === "both" ? {
+                                minHeight: '100%',
+                                height: '100%',
+                                overflow: 'auto'
+                            } : {
+                                minHeight: '600px',
+                                overflow: 'visible',
+                                display: 'block'
+                            }}
+                        />
                     </Card>
                 </div>
 
@@ -1939,60 +1881,73 @@ export default function EditorPage() {
                 <div 
                     data-preview-section
                     className={`flex flex-col gap-2 ${
-                        soloMode === "both" ? "h-full" : ""
+                        effectiveMode === "both" ? "h-full" : ""
                     } ${
                         // Mobile (< md): show based on isPreview state
                         !isPreview ? "hidden md:flex" : "flex"
                     } ${
-                        // Desktop (>= md): show based on soloMode state
-                        soloMode === "editor" ? "md:hidden" : ""
+                        // Desktop (>= md): show based on effectiveMode state
+                        effectiveMode === "editor" ? "md:hidden" : ""
                     }`}>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium px-1">
                         <Eye className="w-4 h-4" /> Preview
                     </div>
                     <Card className={`p-6 overflow-hidden border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm ${
-                        soloMode === "both" ? "flex-1" : ""
+                        effectiveMode === "both" ? "flex-1" : ""
                     }`}>
-                        <div ref={soloMode === "both" ? previewRef : undefined} className={`overflow-y-auto ${
-                            soloMode === "both" ? "h-full" : "min-h-[600px]"
+                        <div ref={effectiveMode === "both" ? previewRef : undefined} className={`overflow-y-auto ${
+                            effectiveMode === "both" ? "h-full" : "min-h-[600px]"
                         }`}>
-                            <article className="markdown-body">
-                            <ReactMarkdown 
-                                remarkPlugins={[remarkGfm]}
-                                components={{
-                                    code(props) {
-                                        const { children, className, ...rest } = props;
-                                        const match = /language-(\w+)/.exec(className || "");
-                                        const language = match ? match[1] : "";
-                                        const inline = !match;
-                                        return !inline && language ? (
-                                            <SyntaxHighlighter
-                                                style={resolvedTheme === "dark" ? githubDarkTheme : ghcolors}
-                                                language={language}
-                                                PreTag="div"
-                                                customStyle={{
-                                                    margin: 0,
-                                                    borderRadius: "6px",
-                                                    backgroundColor: resolvedTheme === "dark" ? "#161b22" : undefined,
-                                                }}
-                                            >
-                                                {String(children).replace(/\n$/, "")}
-                                            </SyntaxHighlighter>
-                                        ) : (
-                                            <code className={className} {...rest}>
-                                                {children}
-                                            </code>
-                                        );
-                                    },
-                                }}
-                            >
-                                {markdown}
-                            </ReactMarkdown>
-                        </article>
+                            <MarkdownViewer content={markdown} />
                         </div>
                     </Card>
                 </div>
             </div>
+
+            {showEmptySaveDialog && typeof document !== 'undefined' && createPortal(
+                <div
+                    className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowEmptySaveDialog(false);
+                        }
+                    }}
+                >
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" />
+                    <Card className="relative bg-background border border-border rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] flex flex-col transform transition-all p-6 overflow-y-auto">
+                        <div className="flex items-start gap-3 mb-4">
+                            <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-lg mb-1">
+                                    Nothing to Save
+                                </h3>
+                                <p className="text-sm text-muted-foreground mb-2">
+                                    The editor is empty. There's nothing to save. Add some content first!
+                                </p>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowEmptySaveDialog(false)}
+                                className="h-6 w-6 p-0 flex-shrink-0"
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                variant="default"
+                                onClick={() => setShowEmptySaveDialog(false)}
+                                className="w-full"
+                            >
+                                Got it
+                            </Button>
+                        </div>
+                    </Card>
+                </div>,
+                document.body
+            )}
 
             {showDeleteWarning && currentFileName && typeof document !== 'undefined' && createPortal(
                 <div

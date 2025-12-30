@@ -198,126 +198,13 @@
   }
 
   html {
-    /* Prevent text selection on native (can be overridden per element) */
-    -webkit-tap-highlight-color: transparent;
     /* Smooth scrolling */
     scroll-behavior: smooth;
-    /* Remove default margins/padding */
-    margin: 0;
-    padding: 0;
   }
 
   body {
     @apply bg-background text-foreground antialiased transition-colors duration-300;
-    /* Prevent zoom on input focus (iOS) */
-    touch-action: manipulation;
-    /* Prevent pull-to-refresh on iOS */
-    overscroll-behavior-y: none;
-    /* Remove default margins/padding */
     margin: 0;
-    padding: 0;
-    /* Full height for native */
-    height: 100%;
-    width: 100%;
-    overflow-x: hidden;
-  }
-
-  /* Block text selection on ALL elements by default */
-  * {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-  }
-
-  /* Allow text selection ONLY in input fields, textareas, and editor content */
-  textarea,
-  input[type="text"],
-  input[type="search"],
-  input[type="email"],
-  input[type="password"],
-  input[type="url"],
-  input[type="number"],
-  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]),
-  [contenteditable="true"],
-  [contenteditable],
-  /* Editor content areas - allow selection */
-  [data-editor-section],
-  [data-preview-section],
-  [data-editor-section] *,
-  [data-preview-section] *,
-  /* Share page markdown content - allow selection */
-  [data-share-content],
-  [data-share-content] * {
-    -webkit-touch-callout: default !important; /* Allow native context menu (copy, share, select all) */
-    -webkit-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
-  }
-  
-  /* Ensure inputs and textareas specifically allow context menus */
-  textarea,
-  input[type="text"],
-  input[type="search"],
-  input[type="email"],
-  input[type="password"],
-  input[type="url"],
-  input[type="number"],
-  input:not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="checkbox"]):not([type="radio"]) {
-    -webkit-touch-callout: default !important;
-    -webkit-user-select: auto !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-    touch-action: auto !important; /* Allow native touch gestures including context menu */
-  }
-  
-  /* Share page content - allow selection in markdown container only */
-  [data-share-content] {
-    -webkit-touch-callout: default !important;
-    -webkit-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-    touch-action: auto !important;
-  }
-  
-  /* Ensure share page container and its children allow selection */
-  [data-share-content] * {
-    -webkit-touch-callout: default !important;
-    -webkit-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-  }
-  
-  /* But prevent selection on buttons/links inside share content */
-  [data-share-content] a,
-  [data-share-content] button,
-  [data-share-content] [role="button"] {
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-  }
-
-  /* Prevent selection on UI elements even if they're inside selectable areas */
-  a, button, [role="button"], nav, header, footer, nav *, header *, footer * {
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-    -webkit-touch-callout: none !important;
-  }
-
-  /* Prevent image long-press save (but allow in markdown content) */
-  img:not(.markdown-body img):not([class*="editor"] img):not([class*="preview"] img) {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    pointer-events: auto;
   }
 }
 
@@ -464,6 +351,26 @@
   @apply mb-2;
 }
 
+/* Task list styling */
+.markdown-body ul.task-list {
+  @apply list-none pl-0;
+}
+
+.markdown-body .task-list-item {
+  @apply flex items-start gap-2 mb-2;
+}
+
+.markdown-body .task-list-item input[type="checkbox"] {
+  @apply mt-1 h-4 w-4 rounded-sm border border-border;
+  accent-color: hsl(var(--primary));
+}
+
+.markdown-body .task-list-item:has(input[type="checkbox"]:checked) {
+  @apply text-muted-foreground;
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+
 .markdown-body blockquote {
   @apply border-l-4 border-border pl-4 my-4 text-muted-foreground;
 }
@@ -548,4 +455,69 @@
 
 .markdown-body table tr:nth-child(even) {
   @apply bg-muted/50;
+}
+
+/* Strikethrough styling */
+.markdown-body del,
+.markdown-body s {
+  text-decoration: line-through !important;
+  text-decoration-thickness: 2.5px !important;
+  text-decoration-color: currentColor !important;
+  text-decoration-style: solid !important;
+  opacity: 0.75;
+  position: relative;
+}
+
+/* Ensure strikethrough is visible even with nested elements */
+.markdown-body del *,
+.markdown-body s * {
+  text-decoration: line-through !important;
+  text-decoration-thickness: 2.5px !important;
+  opacity: inherit;
+}
+
+/* KaTeX Math styling */
+.markdown-body .katex {
+  font-size: 1.1em;
+}
+
+.markdown-body .katex-display {
+  margin: 1em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.markdown-body .katex-display > .katex {
+  display: inline-block;
+  text-align: initial;
+}
+
+/* Ensure math doesn't break layout */
+.markdown-body .katex,
+.markdown-body .katex-display {
+  max-width: 100%;
+}
+
+/* Mermaid diagram styling - better line visibility in dark mode */
+.markdown-body .mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Enhance line visibility in dark mode for Mermaid */
+.markdown-body .mermaid-container[data-mermaid-theme="dark"] svg path,
+.markdown-body .mermaid-container[data-mermaid-theme="dark"] svg line,
+.markdown-body .mermaid-container[data-mermaid-theme="dark"] svg polyline {
+  stroke-width: 2px;
+}
+
+/* Ensure text is readable in dark mode */
+.markdown-body .mermaid-container[data-mermaid-theme="dark"] svg text {
+  fill: #c9d1d9;
+}
+
+/* Make arrowheads more visible in dark mode */
+.markdown-body .mermaid-container[data-mermaid-theme="dark"] svg marker path {
+  fill: #58a6ff;
+  stroke: #58a6ff;
 }
