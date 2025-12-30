@@ -25,7 +25,30 @@ export function ThemeToggle() {
     }
 
     const toggleTheme = () => {
-        setTheme(theme === "light" ? "dark" : "light")
+        const newTheme = theme === "light" ? "dark" : "light";
+        setTheme(newTheme);
+        
+        // Sync to localStorage (mdviewer_settings)
+        try {
+            const settings = localStorage.getItem('mdviewer_settings');
+            if (settings) {
+                const parsed = JSON.parse(settings);
+                parsed.theme = newTheme;
+                localStorage.setItem('mdviewer_settings', JSON.stringify(parsed));
+            } else {
+                // Create new settings if doesn't exist
+                localStorage.setItem('mdviewer_settings', JSON.stringify({
+                    showDefaultContent: false,
+                    theme: newTheme,
+                    keyboardShortcuts: true,
+                    autoSave: true,
+                }));
+            }
+            // Trigger storage event
+            window.dispatchEvent(new Event('storage'));
+        } catch (e) {
+            // Ignore errors
+        }
     }
 
     return (
