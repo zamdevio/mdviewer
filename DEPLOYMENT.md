@@ -1,6 +1,6 @@
 # Deployment Guide
 
-This guide walks you through deploying both the frontend (Cloudflare Pages) and the API (Cloudflare Workers).
+This comprehensive guide walks you through deploying both the frontend (Cloudflare Pages) and the API (Cloudflare Workers), including environment variable configuration.
 
 ## Prerequisites
 
@@ -44,15 +44,17 @@ This guide walks you through deploying both the frontend (Cloudflare Pages) and 
 
 ## Step 2: Configure Frontend
 
-1. **Set the API URL:**
-   
-   Option A: Environment variable (recommended for production)
-   - In Cloudflare Pages dashboard, go to Settings > Environment Variables
-   - Add: `NEXT_PUBLIC_API_URL` = `https://your-api.workers.dev`
+### Required Environment Variables
 
-   Option B: Update the code directly
-   - Edit `src/lib/api.ts`
-   - Change the `API_BASE_URL` constant to your Workers URL
+**Important**: The app requires these environment variables. No defaults are provided to prevent mismatches.
+
+1. **Set Environment Variables in Cloudflare Pages:**
+   
+   Go to Cloudflare Pages dashboard > Your Project > Settings > Environment Variables
+   
+   Add these variables:
+   - `API_URL` = `https://mdviewer-api.your-subdomain.workers.dev` (your Workers API URL)
+   - `FRONTEND_URL` = `https://your-domain.com` (your frontend website URL)
 
 2. **Build and deploy the frontend:**
    ```bash
@@ -64,37 +66,90 @@ This guide walks you through deploying both the frontend (Cloudflare Pages) and 
    - Connect your GitHub repository
    - Build command: `npm run build`
    - Output directory: `out`
-   - Add environment variable: `NEXT_PUBLIC_API_URL`
+   - Add environment variables:
+     - `API_URL` = `https://mdviewer-api.your-subdomain.workers.dev`
+     - `FRONTEND_URL` = `https://your-domain.com`
+
+### Local Development Setup
+
+For local development, create a `.env.local` file:
+
+```bash
+API_URL=http://localhost:8787
+FRONTEND_URL=http://localhost:3000
+```
+
+**Note**: The app will fail to start if these variables are not set.
 
 ## Step 3: Test
 
 1. Visit your deployed site
 2. Go to the editor
-3. Click "Share" button
-4. Copy the share URL
-5. Open the share URL in a new tab to verify it works
+3. Click "Share" button (should auto-copy URL)
+4. Verify the share URL works in a new tab
+5. Test deep links: `https://your-domain.com/editor?new`
+6. Test search: `https://your-domain.com/search`
+7. Test export/import:
+   - Go to Settings page
+   - Create some test files in the editor
+   - Export data with a password
+   - Clear browser data or use incognito mode
+   - Import the exported file and verify all data is restored
+   - Test password panel appears for encrypted files
+   - Verify conflict resolution works when importing files with existing names
 
-## Troubleshooting
+### Environment Variable Errors
 
-### API returns 404
+**Error: "API_URL environment variable is required"**
+- Solution: Set `API_URL` in Cloudflare Pages environment variables
+- Or create `.env.local` file for local development
+
+**Error: "FRONTEND_URL environment variable is required"**
+- Solution: Set `FRONTEND_URL` in Cloudflare Pages environment variables
+- Or create `.env.local` file for local development
+
+**Build fails with environment variable errors**
+- Ensure all required variables are set before building
+- Check that variable names are correct (case-sensitive)
+
+### API Issues
+
+**API returns 404**
 - Make sure the R2 bucket exists: `wrangler r2 bucket list`
 - Check that the bucket name in `wrangler.toml` matches the created bucket (should be `mdviewer`)
+- Verify the API is deployed: `wrangler deployments list`
 
-### CORS errors
+**CORS errors**
 - The API already includes CORS headers
-- Make sure `NEXT_PUBLIC_API_URL` is set correctly
+- Make sure `API_URL` is set correctly
+- Check that the API URL matches the deployed Workers URL
 
-### Rate limit errors
+**Rate limit errors**
 - Default is 10 uploads per minute per IP
 - Uses Durable Objects for distributed rate limiting
 - Works across all worker instances
 - No read/write limits (unlike KV)
 
-### File too large
+**File too large**
 - Maximum file size is 2MB
 - Check the content size before uploading
 
 ## Production Considerations
+
+### Environment Variables
+
+1. **Always Set in Production:**
+   - `API_URL` - Your production Workers API URL
+   - `FRONTEND_URL` - Your production frontend URL
+   - Never use localhost URLs in production
+   - No defaults are provided to prevent accidental misconfiguration
+
+2. **Cloudflare Pages:**
+   - Set environment variables in dashboard (Settings > Environment Variables)
+   - Variables are embedded at build time
+   - Different values can be set for production, preview, and branch deployments
+
+### API Configuration
 
 1. **Rate Limiting:**
    - Uses Durable Objects for distributed rate limiting
@@ -109,9 +164,22 @@ This guide walks you through deploying both the frontend (Cloudflare Pages) and 
 
 3. **Custom Domain:**
    - Add a custom domain to your Workers API
-   - Update `NEXT_PUBLIC_API_URL` accordingly
+   - Update `API_URL` accordingly
+   - Update `FRONTEND_URL` if using custom domain
 
 4. **Monitoring:**
    - Use `wrangler tail` to monitor API logs
    - Set up Cloudflare Analytics for usage tracking
+   - Monitor R2 bucket usage and costs
 
+### Security
+
+1. **Environment Variables:**
+   - Never commit `.env.local` to git
+   - Use Cloudflare Pages environment variables for production
+   - Rotate API keys and secrets regularly
+
+2. **API Security:**
+   - Rate limiting prevents abuse
+   - Content is stored securely in R2
+   - No authentication required (public sharing)

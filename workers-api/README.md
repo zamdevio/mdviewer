@@ -24,7 +24,7 @@ npm install
 
 ```bash
 # Create the R2 bucket
-wrangler r2 bucket create mdviewer
+npx wrangler r2 bucket create mdviewer
 ```
 
 ### 3. Configure Wrangler
@@ -59,7 +59,7 @@ Upload markdown/text content.
 
 **Request:**
 ```bash
-curl -X POST https://your-api.workers.dev/upload \
+curl -X POST https://api.mdviewer.your-domain.com/upload \
   -H "Content-Type: text/plain" \
   -d "# Hello World"
 ```
@@ -68,7 +68,7 @@ curl -X POST https://your-api.workers.dev/upload \
 ```json
 {
   "id": "abc123...",
-  "shareUrl": "https://your-api.workers.dev/share/abc123...",
+  "shareUrl": "https://api.mdviewer.your-domain.com/share?id=abc123...",
   "size": 13,
   "uploadedAt": "2024-01-01T00:00:00.000Z"
 }
@@ -88,7 +88,7 @@ Retrieve shared content.
 
 **Request:**
 ```bash
-curl https://your-api.workers.dev/share/abc123...
+curl https://api.mdviewer.your-domain.com/share?id=abc123...
 ```
 
 **Response:**
@@ -116,8 +116,11 @@ Each IP address gets its own Durable Object instance, ensuring accurate rate lim
 Update your frontend `.env.local` or environment variables:
 
 ```env
-NEXT_PUBLIC_API_URL=https://your-api.workers.dev
+API_URL=https://api.mdviewer.your-domain.com
+FRONTEND_URL=https://mdviewer.your-domain.com
 ```
+
+Both environment variables are required for the frontend to function properly.
 
 ## Deployment
 
@@ -131,7 +134,7 @@ NEXT_PUBLIC_API_URL=https://your-api.workers.dev
    npm run deploy
    ```
 
-3. Note your Workers URL (e.g., `https://markdown-share-api.your-subdomain.workers.dev`)
+3. Note your Workers URL (e.g., `https://api.mdviewer.your-domain.com`)
 
 4. Update your frontend with this URL.
 
