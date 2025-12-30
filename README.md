@@ -76,6 +76,12 @@ The shared content is stored securely in Cloudflare R2 and served through our Wo
 - **💾 Auto-Save** - Your work is automatically saved to local storage, never lose your progress
 - **📱 Responsive Design** - Works beautifully on all devices, from mobile to desktop
 - **🔄 Solo Mode** - Toggle between editor-only, preview-only, or split-view for large screens
+- **📁 File Management** - Save, load, rename, and delete markdown files with a native-like experience
+- **🔍 Search & Filter** - Find files quickly with search, sorting, and pagination
+- **⚙️ Settings Page** - Customize theme, auto-save, keyboard shortcuts, and more
+- **📤 Secure Export/Import** - Backup and restore all your files and settings with AES-GCM encryption
+- **⌨️ Keyboard Shortcuts** - Power user shortcuts for save, new file, import, and export
+- **🔗 Deep Linking** - Open editor and shared content directly via URLs
 
 ### 🎯 Additional Features
 
@@ -83,6 +89,8 @@ The shared content is stored securely in Cloudflare R2 and served through our Wo
 - **🔒 Privacy First** - Everything runs client-side, your content never leaves your browser
 - **🎭 Custom 404 Page** - Elegant error page with helpful navigation
 - **⚙️ Zero Configuration** - Start writing immediately, no signup required
+- **🌐 Platform-Aware UI** - Automatically adapts UI for web, mobile, and desktop environments
+- **💾 Centralized Storage** - Unified storage system prevents data mismatches and errors
 
 ---
 
@@ -119,12 +127,28 @@ The shared content is stored securely in Cloudflare R2 and served through our Wo
    npm install
    ```
 
-3. **Run the development server**:
+3. **Set up environment variables**:
+   
+   Create a `.env.local` file in the project root:
+   ```bash
+   API_URL=https://mdviewer-api.your-subdomain.workers.dev
+   FRONTEND_URL=https://your-domain.com
+   ```
+   
+   For local development:
+   ```bash
+   API_URL=http://localhost:8787
+   FRONTEND_URL=http://localhost:3000
+   ```
+   
+   **Important**: These environment variables are required. The app will not work without them.
+
+4. **Run the development server**:
    ```bash
    npm run dev
    ```
 
-4. **Open [http://localhost:3000](http://localhost:3000)** in your browser
+5. **Open [http://localhost:3000](http://localhost:3000)** in your browser
 
 ### Available Scripts
 
@@ -152,7 +176,24 @@ npm run lint         # Run ESLint
 1. Navigate to the Editor
 2. Start typing your markdown in the left panel
 3. See the live preview update in real-time on the right
-4. Your content is automatically saved to local storage
+4. Your content is automatically saved to local storage (if auto-save is enabled)
+
+### File Management
+
+- **Save Files**: Click the Save button to save your markdown as a file
+- **New File**: Click the New button to create a new markdown file
+- **Load Files**: Go to the Files page to see all your saved files
+- **Rename Files**: Click the pencil icon next to a filename to rename it
+- **Delete Files**: Click the trash icon to delete a file (with confirmation)
+- **Auto-Rename**: Untitled files automatically rename based on the first 20 characters of content
+
+### Keyboard Shortcuts
+
+- `Ctrl+S` / `Cmd+S` - Save current file
+- `Ctrl+N` / `Cmd+N` - Create new file
+- `Ctrl+E` / `Cmd+E` - Export all data (opens settings export)
+- `Ctrl+O` / `Cmd+O` - Import backup file (opens file picker)
+- `Ctrl+/` / `Cmd+/` - Toggle keyboard shortcuts help
 
 ### Solo Mode
 
@@ -161,6 +202,110 @@ On large screens, use the layout toggle to switch between:
 - **Editor Only** - Focus on writing
 - **Preview Only** - Focus on reading
 
+### Settings
+
+Access settings from the navbar to configure:
+- **Theme**: Light, dark, or system preference
+- **Auto-Save**: Enable/disable automatic saving
+- **Keyboard Shortcuts**: Enable/disable keyboard shortcuts
+- **Default Content**: Show default markdown template for new files
+- **Items Per Page**: Configure pagination for files page
+- **Clear All Data**: Permanently delete all files and settings (with confirmation)
+
+### Secure Export & Import
+
+Export and import functionality allows you to backup and restore all your markdown files and settings with enterprise-grade encryption.
+
+#### How Export Works
+
+1. **Navigate to Settings** - Click the Settings icon in the navbar
+2. **Export Section** - Scroll to the "Export Data" section
+3. **Optional Password Protection** - Enter a password to encrypt your backup (recommended)
+4. **Click Export** - A JSON file downloads containing:
+   - All your saved markdown files (filenames, content, timestamps)
+   - Current editor content and active file
+   - All settings (theme, auto-save preferences, etc.)
+   - Export metadata (version, date)
+
+#### Encryption Details
+
+When you provide a password during export:
+- **AES-GCM Encryption** - Uses 256-bit AES-GCM encryption (industry standard)
+- **PBKDF2 Key Derivation** - Password is processed with 100,000 iterations using SHA-256
+- **Random Salt & IV** - Each export generates unique cryptographic values
+- **Authenticated Encryption** - GCM mode ensures data integrity and authenticity
+- **Base64 Encoding** - Encrypted data is safely encoded for JSON storage
+
+The encrypted file contains:
+- Random 16-byte salt (unique per export)
+- Random 12-byte initialization vector (unique per export)
+- Encrypted JSON data
+- Authentication tag (built into GCM)
+
+#### How Import Works
+
+1. **Navigate to Settings** - Click the Settings icon in the navbar
+2. **Import Section** - Scroll to the "Import Data" section
+3. **Select Backup File** - Click "Import" and select your exported JSON file
+4. **Password Entry** - If the file is encrypted, a password panel appears automatically
+5. **Unlimited Retries** - You can try the password as many times as needed
+6. **Conflict Resolution** - If files with the same name or ID exist, choose to:
+   - **Skip** - Keep existing file, don't import
+   - **Replace** - Overwrite existing file with imported version
+   - **Keep Both** - Import with a new name (e.g., `file-1.md`)
+7. **Validation** - Invalid files are automatically filtered and reported
+8. **Success** - All valid files are imported and ready to use
+
+#### Password Panel Features
+
+When importing an encrypted file:
+- **Automatic Detection** - The app detects encrypted files automatically
+- **Password Panel** - Opens automatically if no password was entered
+- **Unlimited Attempts** - Try passwords as many times as needed
+- **Error Messages** - Clear feedback for incorrect passwords or corrupted files
+- **Manual Close Only** - Panel only closes when you click the X button (prevents accidental closure)
+- **Enter Key Support** - Press Enter to submit password quickly
+
+#### File Format Support
+
+The export/import system supports:
+- **Plain JSON** - Unencrypted backups (for convenience)
+- **AES-GCM Encrypted** - Password-protected backups (recommended)
+- **Legacy Format** - Backward compatible with older export format
+
+#### Data Included in Export
+
+- **Files**: All saved markdown files with:
+  - Unique IDs
+  - Filenames
+  - Full content
+  - Creation timestamps
+- **Current State**: 
+  - Active editor content
+  - Currently editing file reference
+- **Settings**:
+  - Theme preference
+  - Auto-save setting
+  - Keyboard shortcuts preference
+  - Default content setting
+  - Items per page setting
+
+#### Storage Location
+
+All data is stored locally in your browser using `localStorage`:
+- **No Server Upload** - Your data never leaves your device
+- **Browser Storage** - Uses browser's built-in storage mechanism
+- **Persistent** - Data persists across browser sessions
+- **Private** - Only accessible from your browser
+
+#### Best Practices
+
+- **Regular Backups** - Export your data regularly to prevent loss
+- **Use Strong Passwords** - Longer, complex passwords provide better security
+- **Store Passwords Safely** - Remember or securely store your export passwords
+- **Test Imports** - Periodically test importing backups to ensure they work
+- **Multiple Backups** - Keep multiple backup files for redundancy
+
 ### Features in Action
 
 - **Markdown Support**: Headers, lists, code blocks, tables, blockquotes, links, images
@@ -168,6 +313,8 @@ On large screens, use the layout toggle to switch between:
 - **Syntax Highlighting**: Automatic language detection for code blocks
 - **Theme Switching**: Toggle between light and dark modes
 - **Share & Collaborate**: Generate shareable links for your markdown content
+- **Search Shared Content**: Search for shared markdown by ID or URL
+- **Fork Shared Content**: Import shared markdown into your editor
 
 ---
 
@@ -177,21 +324,39 @@ On large screens, use the layout toggle to switch between:
 mdviewer/
 ├── public/                 # Static assets
 │   ├── favicon.svg        # Site favicon
-│   └── _redirects         # Cloudflare Pages redirects
+│   └── icon.png           # Generated app icon (from favicon.svg)
 ├── src/
 │   ├── app/               # Next.js App Router
-│   │   ├── layout.tsx     # Root layout
+│   │   ├── layout.tsx     # Root layout with theme prevention
 │   │   ├── page.tsx       # Home page
-│   │   ├── editor/
-│   │   │   └── page.tsx   # Editor page
+│   │   ├── editor/        # Editor page
+│   │   ├── files/         # Files management page
+│   │   ├── search/        # Search shared content page
+│   │   ├── settings/       # Settings page
+│   │   ├── share/[id]/    # Share page
 │   │   ├── not-found.tsx  # 404 page
 │   │   └── globals.css    # Global styles
 │   ├── components/
 │   │   ├── pages/         # Page components
-│   │   ├── layout/        # Layout components
+│   │   ├── layout/        # Layout components (navbar, footer)
 │   │   ├── theme/         # Theme components
-│   │   └── ui/            # UI components
-│   └── lib/               # Utility functions
+│   │   ├── ui/            # UI components (button, card)
+│   │   ├── deep-link-handler.tsx      # Deep link routing
+│   │   ├── global-keyboard-shortcuts.tsx  # Global shortcuts
+│   │   └── native-link-protection.tsx     # Native link protection
+│   ├── hooks/
+│   │   ├── use-import-export.ts  # Export/import logic with encryption
+│   │   └── use-platform.ts      # Responsive design detection
+│   └── lib/
+│       ├── api.ts         # API client
+│       ├── config.ts      # App configuration (env vars only)
+│       ├── utils.ts       # Encryption and utility functions
+│       └── storage/       # Centralized storage system
+│           ├── index.ts   # StorageManager class
+│           └── helpers.ts # Storage helper functions
+├── scripts/
+│   ├── generate-icons.js  # Generate app icons from favicon
+│   └── README-ICONS.md    # Icon generation guide
 ├── workers-api/           # Cloudflare Workers API
 │   ├── src/               # API source code
 │   ├── wrangler.toml      # Workers configuration
@@ -229,6 +394,21 @@ The project includes:
 
 📖 **For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
 
+### Environment Variables
+
+**Required**: The app requires these environment variables to be set:
+
+- `API_URL` - Cloudflare Workers API URL
+- `FRONTEND_URL` - Frontend website URL
+
+Create a `.env.local` file:
+```bash
+API_URL=https://mdviewer-api.your-subdomain.workers.dev
+FRONTEND_URL=https://your-domain.com
+```
+
+**Important**: No defaults are provided to prevent mismatches. The app will fail with clear errors if these are not set.
+
 ### Share Feature Setup
 
 To enable the share feature, you need to deploy the Workers API:
@@ -242,8 +422,8 @@ To enable the share feature, you need to deploy the Workers API:
    ```
 
 2. **Configure Frontend:**
-   - Update `src/lib/config.ts` with your Workers API URL
-   - Or set `NEXT_PUBLIC_API_URL` environment variable
+   - Set `API_URL` environment variable to your Workers API URL
+   - Set `FRONTEND_URL` environment variable to your frontend URL
    - The editor will show a warning if the API isn't configured properly
 
 3. **API Endpoints:**
