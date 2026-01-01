@@ -439,7 +439,7 @@
 /* Badge images (shields.io, etc.) - GitHub-style badges */
 .markdown-body .markdown-badge,
 .markdown-body .markdown-badge-img {
-  height: 22px !important;
+  height: 28px !important;
   width: auto !important;
   max-width: none !important;
   vertical-align: middle;
@@ -447,9 +447,9 @@
 }
 
 .markdown-body .markdown-badge-img {
-  height: 22px !important;
+  height: 28px !important;
   width: auto !important;
-  max-height: 22px !important;
+  max-height: 28px !important;
   object-fit: contain;
   display: inline-block;
   vertical-align: middle;
