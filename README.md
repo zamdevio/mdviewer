@@ -170,7 +170,7 @@ npm run lint         # Run ESLint
 
 ### Editor
 
-1. Navigate to the [Editor](https://markview.pages.dev/editor/)
+1. Navigate to the Editor Page
 2. Start typing your markdown in the left panel
 3. See the live preview update in real-time on the right
 4. Your content is automatically saved to local storage (if auto-save is enabled)
@@ -387,7 +387,7 @@ The project includes:
 - Custom 404 page handling
 - Redirects configuration for Cloudflare Pages
 
-**Live Site**: [https://markview.pages.dev/](https://markview.pages.dev/)
+**Live Site**: [Primary](https://mdviewer.zamdev.dev) • [Fallback](https://markview.pages.dev/)
 
 📖 **For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
 
