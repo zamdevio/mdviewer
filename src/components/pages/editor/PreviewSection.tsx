@@ -31,7 +31,7 @@ export function PreviewSection({
             </div>
             <Card className={`p-0 overflow-hidden border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm ${effectiveMode === "both" ? "flex-1 flex flex-col" : ""
                 }`}>
-                {/* Editor Status Bar For Preview Section - Optional To Add later if you decide to mak eit have it's own setitngs for easy on/off for user to follow their own preferences */}
+                {/* Editor Status Bar For Preview Section - Optional To Add later if you decide to make it have it's own setitngs for easy on/off for user to follow their own preferences */}
                 {/* //{showEditorStatusBar && ( */}
                 {/* <EditorStatusBar
                     markdown={markdown}
