@@ -89,6 +89,17 @@ export function GlobalKeyboardShortcuts() {
                 toast.info("Toggle preview shortcut (Ctrl+/) only works on the Editor page.");
                 return;
             }
+
+            // Ctrl+M or Cmd+M - Toggle Live Editor collapse (only works on editor page)
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm') {
+                if (pathname === '/editor') {
+                    // Let editor handle it
+                    return;
+                }
+                e.preventDefault();
+                toast.info("Toggle Live Editor collapse shortcut (Ctrl+M) only works on the Editor page.");
+                return;
+            }
         };
 
         window.addEventListener('keydown', handleKeyDown, true);
