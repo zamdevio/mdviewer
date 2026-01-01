@@ -69,16 +69,20 @@ The shared content is stored securely in Cloudflare R2 and served through our Wo
 - **👁️ Real-time Preview** - See your markdown render instantly as you type with zero delay
 - **🎨 GitHub Style Rendering** - Matches GitHub's markdown rendering exactly for a familiar experience
 - **💻 Syntax Highlighting** - Rich code block support with automatic language detection and GitHub-themed syntax highlighting
+- **📊 Mermaid Diagrams** - Render flowcharts, sequence diagrams, and more with Mermaid.js integration
 - **🌓 Dark Mode** - Beautiful light and dark themes with smooth transitions
 - **💾 Auto-Save** - Your work is automatically saved to local storage, never lose your progress
 - **📱 Responsive Design** - Works beautifully on all devices, from mobile to desktop
 - **🔄 Solo Mode** - Toggle between editor-only, preview-only, or split-view for large screens
 - **📁 File Management** - Save, load, rename, and delete markdown files with a native-like experience
 - **🔍 Search & Filter** - Find files quickly with search, sorting, and pagination
-- **⚙️ Settings Page** - Customize theme, auto-save, keyboard shortcuts, and more
+- **⚙️ Settings Page** - Customize theme, auto-save, keyboard shortcuts, editor mode, and more
 - **📤 Secure Export/Import** - Backup and restore all your files and settings with AES-GCM encryption
-- **⌨️ Keyboard Shortcuts** - Power user shortcuts for save, new file, import, and export
+- **⌨️ Keyboard Shortcuts** - Power user shortcuts for save, new file, import, export, and view modes
 - **🔗 Deep Linking** - Open editor and shared content directly via URLs
+- **📝 Live Editor** - Collapsible sticky editor bar with expand/collapse/close states for quick access
+- **✏️ Spell Checker** - Built-in browser spell checking with toggle control
+- **📊 Editor Statistics** - Word count, character count, and reading time estimates
 
 ### 🎯 Additional Features
 
@@ -186,11 +190,16 @@ npm run lint         # Run ESLint
 
 ### Keyboard Shortcuts
 
+**Editor Page:**
 - `Ctrl+S` / `Cmd+S` - Save current file
-- `Ctrl+N` / `Cmd+N` - Create new file
-- `Ctrl+E` / `Cmd+E` - Export all data (opens settings export)
-- `Ctrl+O` / `Cmd+O` - Import backup file (opens file picker)
-- `Ctrl+/` / `Cmd+/` - Toggle keyboard shortcuts help
+- `Ctrl+Alt+N` / `Cmd+Alt+N` - Create new file
+- `Ctrl+E` / `Cmd+E` - Export current file
+- `Ctrl+O` / `Cmd+O` - Import markdown file
+- `Ctrl+/` / `Cmd+/` - Cycle view modes (Editor → Preview → Split → Editor)
+- `Ctrl+M` / `Cmd+M` - Cycle Live Editor states (Expand → Collapse → Close → Expand)
+
+**All Pages:**
+- `Esc` - Close dialogs and modals
 
 ### Solo Mode
 
@@ -202,11 +211,24 @@ On large screens, use the layout toggle to switch between:
 ### Settings
 
 Access settings from the navbar to configure:
-- **Theme**: Light, dark, or system preference
-- **Auto-Save**: Enable/disable automatic saving
-- **Keyboard Shortcuts**: Enable/disable keyboard shortcuts
-- **Default Content**: Show default markdown template for new files
-- **Items Per Page**: Configure pagination for files page
+
+**Theme:**
+- **Appearance**: Light, dark, or system preference
+
+**Editor:**
+- **Show Default Content**: Show example markdown content when creating new files or when editor is empty
+- **Auto Save**: Automatically save files every 2 seconds when editing. Temp content is cleared if editor is empty for 2 seconds
+- **Default Editor Mode**: Choose the default view mode when the editor page loads (Split View, Editor Only, or Preview Only)
+- **Show Editor Status Bar**: Show the status bar with word count, character count, and save status in the editor
+- **Show Spell Checker**: Show the spell checker toggle button in the editor toolbar and enable browser spell checking
+- **Keyboard Shortcuts**: Enable/disable keyboard shortcuts globally
+
+**Files:**
+- **Items Per Page**: Number of files to show per page in the Files page (6, 12, 24, 48, or 96)
+
+**Data Management:**
+- **Export Data**: Backup all files and settings with optional AES-GCM encryption
+- **Import Data**: Restore files and settings from backup with conflict resolution
 - **Clear All Data**: Permanently delete all files and settings (with confirmation)
 
 ### Secure Export & Import
@@ -305,13 +327,18 @@ All data is stored locally in your browser using `localStorage`:
 
 ### Features in Action
 
-- **Markdown Support**: Headers, lists, code blocks, tables, blockquotes, links, images
-- **GitHub Flavored Markdown**: Task lists, tables, strikethrough, autolinks
-- **Syntax Highlighting**: Automatic language detection for code blocks
-- **Theme Switching**: Toggle between light and dark modes
+- **Markdown Support**: Headers, lists, code blocks, tables, blockquotes, links, images, badges
+- **GitHub Flavored Markdown**: Task lists, tables, strikethrough, autolinks, emoji support
+- **Syntax Highlighting**: Automatic language detection for code blocks with copy buttons
+- **Mermaid Diagrams**: Flowcharts, sequence diagrams, Gantt charts, and more with error handling
+- **Theme Switching**: Toggle between light and dark modes with system preference support
 - **Share & Collaborate**: Generate shareable links for your markdown content
 - **Search Shared Content**: Search for shared markdown by ID or URL
 - **Fork Shared Content**: Import shared markdown into your editor
+- **Image Lightbox**: Click images to view in full-screen lightbox with scroll support
+- **Code Block Features**: Copy code button, language labels, and automatic language detection
+- **Live Editor Controls**: Sticky editor bar with theme toggle, copy, share, and view mode buttons
+- **Cursor Management**: Auto-focus and cursor position restoration when switching editor modes
 
 ---
 
@@ -348,9 +375,26 @@ mdviewer/
 │       ├── api.ts         # API client
 │       ├── config.ts      # App configuration (env vars only)
 │       ├── utils.ts       # Encryption and utility functions
-│       └── storage/       # Centralized storage system
-│           ├── index.ts   # StorageManager class
-│           └── helpers.ts # Storage helper functions
+│       ├── storage/       # Centralized storage system
+│       │   ├── index.ts   # StorageManager class
+│       │   └── helpers.ts # Storage helper functions
+│       └── editor/        # Editor business logic module
+│           ├── index.ts              # Central export point
+│           ├── constants.ts          # Constants (DEFAULT_MARKDOWN)
+│           ├── state.ts              # State management
+│           ├── file-operations.ts    # File CRUD operations
+│           ├── validation.ts        # Content validation
+│           ├── temp-file.ts          # Temporary file operations
+│           ├── utils.ts              # Utility functions
+│           ├── state-checks.ts       # State validation
+│           ├── file-helpers.ts       # File operation helpers
+│           ├── url-helpers.ts       # URL parameter management
+│           ├── auto-save.ts          # Auto-save logic
+│           ├── handler-configs.ts   # Handler configuration factories
+│           ├── business-logic.ts    # Core business logic
+│           ├── share-handlers.ts    # Share functionality
+│           ├── file-handlers.ts    # File operations handlers
+│           └── load-handlers.ts     # Load handlers
 ├── scripts/
 │   ├── generate-icons.js  # Generate app icons from favicon
 │   └── README-ICONS.md    # Icon generation guide
