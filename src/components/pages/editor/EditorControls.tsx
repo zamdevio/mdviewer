@@ -60,7 +60,7 @@ export function EditorControls({
                             Live Editor
                         </h1>
                     </div>
-                    <div className={`flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto ${!isMobile ? 'justify-end' : ''}`}>
+                    <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto sm:justify-end">
                         {/* Theme Toggle - Only show when navbar is scrolled out of view */}
                         {showThemeToggle && (
                             <div className="flex items-center flex-shrink-0">
