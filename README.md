@@ -4,12 +4,9 @@
    
 **A premium, high-performance Markdown viewer built for the modern web**
 
-[![Live Demo (Primary)](https://img.shields.io/badge/Live%20Demo-mdviewer.zamdev.dev-success?style=for-the-badge)](https://mdviewer.zamdev.dev/)
-[![Live Demo (Fallback)](https://img.shields.io/badge/Fallback-markview.pages.dev-blue?style=for-the-badge)](https://markview.pages.dev/)
+[![Live Demo (Primary)](https://img.shields.io/badge/Live%20Demo-mdviewer.zamdev.dev-success?style=for-the-badge)](https://mdviewer.zamdev.dev/) [![Live Demo (Fallback)](https://img.shields.io/badge/Fallback-markview.pages.dev-blue?style=for-the-badge)](https://markview.pages.dev/)
 
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=next.js)](https://nextjs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
 
 **[🌐 Live Site](https://mdviewer.zamdev.dev/)** • **[🌐 Fallback](https://markview.pages.dev/)** • **[✍️ Editor](https://mdviewer.zamdev.dev/editor/)** • **[📖 Documentation](#)**
 
