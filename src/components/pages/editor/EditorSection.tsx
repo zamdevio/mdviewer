@@ -15,6 +15,7 @@ export function EditorSection({
     showSpellChecker,
     textareaRef,
     onMarkdownChange,
+    onCursorChange,
 }: {
     markdown: string;
     effectiveMode: SoloMode;
@@ -27,6 +28,7 @@ export function EditorSection({
     showSpellChecker: boolean;
     textareaRef: React.RefObject<HTMLTextAreaElement | null>;
     onMarkdownChange: (value: string) => void;
+    onCursorChange?: () => void;
 }) {
     return (
         <div
@@ -62,6 +64,20 @@ export function EditorSection({
                         value={markdown}
                         onChange={(e) => {
                             onMarkdownChange(e.target.value);
+                        }}
+                        onSelect={() => {
+                            // Track cursor position on selection change
+                            onCursorChange?.();
+                        }}
+                        onKeyUp={(e) => {
+                            // Also track on arrow key movements
+                            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                                onCursorChange?.();
+                            }
+                        }}
+                        onMouseUp={() => {
+                            // Track cursor position on mouse click
+                            onCursorChange?.();
                         }}
                         className="w-full p-6 resize-none bg-transparent border-none focus:ring-0 font-mono text-sm leading-relaxed outline-none block"
                         placeholder="Type your markdown here..."
