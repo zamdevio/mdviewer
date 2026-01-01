@@ -66,9 +66,21 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
     const badge = isBadge(cleanUrl);
 
     const handleImageClick = (e: React.MouseEvent) => {
+        // For badges, allow default link behavior (don't prevent default)
+        // Badges are usually inside links and should be clickable
+        if (badge) {
+            // Check if the badge is inside a link - if so, allow default behavior
+            const target = e.currentTarget as HTMLElement;
+            const parentLink = target.closest('a');
+            if (parentLink) {
+                // Badge is inside a link - allow the link to work
+                return;
+            }
+        }
+        
+        // For non-badge images or badges not in links, prevent default and show lightbox
         e.preventDefault();
         e.stopPropagation();
-        // Don't show lightbox for badges (they're small and don't need it)
         if (!badge) {
             setLightboxImageError(false); // Reset error state when opening lightbox
             setShowLightbox(true);
@@ -101,10 +113,10 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
         };
     }, [showLightbox]);
 
-    // For badges, use GitHub-style dimensions (~22px height for better visibility)
+    // For badges, use larger dimensions for better visibility
     // For regular images, use larger defaults
-    const imageWidth: number = width || (badge ? 100 : 800);
-    const imageHeight: number = height || (badge ? 30 : 600);
+    const imageWidth: number = width || (badge ? 120 : 800);
+    const imageHeight: number = height || (badge ? 28 : 600);
 
     const containerStyle: React.CSSProperties = {
         display: 'inline-block',
@@ -113,7 +125,7 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
         ...(width && { width: `${width}px` }),
         ...(height && { height: `${height}px` }),
         ...(badge && { 
-            height: '30px',
+            height: '28px',
             verticalAlign: 'middle',
         }),
     };
@@ -138,7 +150,7 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
                         height={imageHeight}
                         style={{
                             maxWidth: '100%',
-                            height: badge ? '30px' : 'auto',
+                            height: badge ? '28px' : 'auto',
                             width: badge ? 'auto' : undefined,
                             display: 'block',
                             ...(width && !badge && { width: width }),
