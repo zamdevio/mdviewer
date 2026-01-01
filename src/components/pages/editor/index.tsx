@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { getApiConfigStatus } from "@/lib/config";
 import { toast } from "sonner";
 import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing } from "@/lib/storage";
@@ -57,9 +57,22 @@ export default function EditorPage() {
     const { markdown, currentFileName, currentFileId, isUntitled, isForked } = editorState;
 
     // Update markdown state when editorState changes
+    // Also track cursor position for auto-focus restoration
     const updateMarkdown = (newMarkdown: string) => {
         setEditorState(prev => ({ ...prev, markdown: newMarkdown }));
+        
+        // Store cursor position when markdown changes
+        if (textareaRef.current) {
+            lastCursorPositionRef.current = textareaRef.current.selectionStart;
+        }
     };
+
+    // Track cursor position even when just moving cursor (not typing)
+    const trackCursorPosition = useCallback(() => {
+        if (textareaRef.current) {
+            lastCursorPositionRef.current = textareaRef.current.selectionStart;
+        }
+    }, []);
     const [isPreview, setIsPreview] = useState(false);
     const [soloMode, setSoloMode] = useState<SoloMode>("both");
 
@@ -110,13 +123,34 @@ export default function EditorPage() {
     const editorRef = useRef<HTMLDivElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const lastCursorPositionRef = useRef<number>(0);
 
     // Focus on editor function - used by split and edit-only buttons
+    // Restores cursor position and scrolls to cursor
     const focusOnEditor = () => {
         if (textareaRef.current) {
-            textareaRef.current.focus();
-            // Scroll into view if needed
-            textareaRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const textarea = textareaRef.current;
+            const cursorPos = lastCursorPositionRef.current;
+            
+            // Focus the textarea
+            textarea.focus();
+            
+            // Restore cursor position
+            if (cursorPos >= 0 && cursorPos <= textarea.value.length) {
+                textarea.setSelectionRange(cursorPos, cursorPos);
+                
+                // Scroll cursor into view
+                const textBeforeCursor = textarea.value.substring(0, cursorPos);
+                const textareaLineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 20;
+                const linesBeforeCursor = textBeforeCursor.split('\n').length;
+                const scrollTop = (linesBeforeCursor - 1) * textareaLineHeight;
+                
+                // Scroll to cursor position
+                textarea.scrollTop = Math.max(0, scrollTop - textarea.clientHeight / 2);
+            } else {
+                // Fallback: scroll into view if needed
+                textarea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
     };
 
@@ -144,6 +178,21 @@ export default function EditorPage() {
             (scrollManagerRef.current as ScrollManager).config.effectiveMode = effectiveMode;
         }
     }, [mounted, effectiveMode]);
+
+    // Auto-focus editor when switching to editor-only or split mode
+    useEffect(() => {
+        if (!mounted || !textareaRef.current) return;
+        
+        // Only auto-focus when switching to editor or both mode (not preview)
+        if (effectiveMode === 'editor' || effectiveMode === 'both') {
+            // Small delay to ensure DOM is ready after mode change
+            const timeoutId = setTimeout(() => {
+                focusOnEditor();
+            }, 100);
+            
+            return () => clearTimeout(timeoutId);
+        }
+    }, [effectiveMode, mounted]);
 
     useEffect(() => {
         setMounted(true);
@@ -1434,6 +1483,7 @@ export default function EditorPage() {
                     showSpellChecker={showSpellChecker}
                     textareaRef={textareaRef}
                     onMarkdownChange={updateMarkdown}
+                    onCursorChange={trackCursorPosition}
                 />
                 <PreviewSection
                     markdown={markdown}
