@@ -436,6 +436,34 @@
   @apply max-w-full box-border;
 }
 
+/* Badge images (shields.io, etc.) - GitHub-style badges */
+.markdown-body .markdown-badge,
+.markdown-body .markdown-badge-img {
+  height: 22px !important;
+  width: auto !important;
+  max-width: none !important;
+  vertical-align: middle;
+  display: inline-block !important;
+}
+
+.markdown-body .markdown-badge-img {
+  height: 22px !important;
+  width: auto !important;
+  max-height: 22px !important;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Badge container in badge rows */
+.markdown-body p:has(.markdown-badge) {
+  line-height: 1.5;
+}
+
+.markdown-body p:has(.markdown-badge) .markdown-badge {
+  margin: 0 2px;
+}
+
 .markdown-body hr {
   @apply border-t border-border my-6;
 }
