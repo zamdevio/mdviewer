@@ -455,13 +455,40 @@
   vertical-align: middle;
 }
 
-/* Badge container in badge rows */
+/* Badge container in badge rows - default to left alignment */
 .markdown-body p:has(.markdown-badge) {
   line-height: 1.5;
+  text-align: left;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .markdown-body p:has(.markdown-badge) .markdown-badge {
   margin: 0 2px;
+}
+
+/* Center badges when inside a centered div */
+.markdown-body div[align="center"] p:has(.markdown-badge),
+.markdown-body div[align="center"] p:has(.markdown-badge-img) {
+  text-align: center !important;
+  justify-content: center !important;
+}
+
+/* Right align badges when inside a right-aligned div */
+.markdown-body div[align="right"] p:has(.markdown-badge),
+.markdown-body div[align="right"] p:has(.markdown-badge-img) {
+  text-align: right !important;
+  justify-content: flex-end !important;
+}
+
+/* Left align badges when inside a left-aligned div (explicit) */
+.markdown-body div[align="left"] p:has(.markdown-badge),
+.markdown-body div[align="left"] p:has(.markdown-badge-img) {
+  text-align: left !important;
+  justify-content: flex-start !important;
 }
 
 .markdown-body hr {
