@@ -2,6 +2,16 @@ name = "mdviewer-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# Environment variables
+[vars]
+# FRONTEND_URL is required - set this to your frontend URL (e.g., "https://yourdomain.com" or "http://localhost:3000")
+# This will be used for CORS and constructing share URLs
+FRONTEND_URL = ""
+
+# Rate limiting configuration (optional - defaults shown)
+RATE_LIMIT_WINDOW = 60  # Time window in seconds (default: 60 = 1 minute)
+RATE_LIMIT_MAX_REQUESTS = 10  # Max requests per window per IP (default: 10)
+
 # R2 Bucket binding
 [[r2_buckets]]
 binding = "R2_BUCKET"
