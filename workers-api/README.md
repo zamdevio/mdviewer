@@ -1,117 +1,262 @@
 # Markdown Share API
 
-Cloudflare Workers API for sharing markdown/text content using R2 storage.
+<div align="center">
 
-## Features
+**⚡ Lightning-fast edge API for sharing markdown and text content**
 
-- ✅ Upload markdown/text content (2MB max)
-- ✅ Rate limiting (10 uploads per minute per IP)
-- ✅ Generate shareable URLs
-- ✅ Retrieve shared content
-- ✅ No database required (uses R2 public URLs)
-- ✅ CORS enabled
+[![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-F38020?style=for-the-badge&logo=cloudflare)](https://workers.cloudflare.com/)
+[![R2 Storage](https://img.shields.io/badge/R2-Storage-FF6B6B?style=for-the-badge&logo=cloudflare)](https://developers.cloudflare.com/r2/)
+[![Durable Objects](https://img.shields.io/badge/Durable-Objects-4ECDC4?style=for-the-badge&logo=cloudflare)](https://developers.cloudflare.com/durable-objects/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-## Setup
+**[📖 API Documentation](#api-endpoints)** • **[🚀 Quick Start](#setup)** • **[⚙️ Configuration](#configuration)**
 
-### 1. Install Dependencies
+</div>
 
-```bash
-cd workers-api
-npm install
+---
+
+## 🌟 Features
+
+<div align="center">
+
+**✨ Edge-Powered • 🔒 Secure • 🚦 Smart Rate Limiting • 🌍 Unlimited Downloads**
+
+</div>
+
+- **⚡ Edge-Powered Uploads** - Global distribution via Cloudflare's edge network for ultra-fast uploads
+- **🔒 Secure Storage** - Content stored securely in Cloudflare R2 with unique, unguessable IDs
+- **🚦 Smart Rate Limiting** - Distributed rate limiting using Durable Objects (10 uploads/minute per IP, configurable)
+- **🌍 Unlimited Downloads** - No rate limits on downloads for fast, unlimited content access
+- **📝 Content Validation** - Only markdown/text/plain content types accepted (1MB max)
+- **🔗 Auto Share URLs** - Automatic generation of shareable frontend URLs
+- **🌐 CORS Ready** - Built-in CORS support for cross-origin requests
+- **📊 Rate Limit Headers** - Standard `X-RateLimit-*` headers for client integration
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────┐      ┌──────────────┐      ┌─────────────┐      ┌──────────────┐
+│   Frontend  │ ───> │ Workers API  │ ───> │  R2 Storage │      │   Durable    │
+│ (Next.js)   │      │  (Edge)      │      │  (Global)   │      │   Objects    │
+│             │ <─── │              │ <─── │             │      │ (Rate Limit) │
+└─────────────┘      └──────────────┘      └─────────────┘      └──────────────┘
 ```
 
-### 2. Create R2 Bucket
+**Tech Stack:**
+- **API**: Cloudflare Workers (edge computing, global distribution)
+- **Storage**: Cloudflare R2 (S3-compatible object storage)
+- **Rate Limiting**: Durable Objects (distributed, consistent, no KV limits)
+- **Language**: TypeScript 5
 
-```bash
-# Create the R2 bucket
-npx wrangler r2 bucket create mdviewer
-```
+---
 
-### 3. Configure Wrangler
+## 🚀 Setup
 
-The `wrangler.toml` is already configured. Make sure the bucket name matches:
+### Prerequisites
 
-```toml
-[[r2_buckets]]
-binding = "R2_BUCKET"
-bucket_name = "mdviewer"
-```
+- Node.js 18+ and npm/yarn/pnpm
+- Cloudflare account with Workers and R2 enabled
+- Wrangler CLI installed (`npm install -g wrangler`)
 
-### 4. Deploy
+### Installation
 
-```bash
-# Deploy to Cloudflare Workers
-npm run deploy
-```
+1. **Install dependencies**:
+   ```bash
+   cd workers-api
+   npm install
+   ```
 
-Or for development:
+2. **Create R2 Bucket**:
+   ```bash
+   npx wrangler r2 bucket create mdviewer
+   ```
 
-```bash
-# Run locally
-npm run dev
-```
+3. **Configure Wrangler**:
+   
+   Edit `wrangler.toml` and set your `FRONTEND_URL`:
+   ```toml
+   [vars]
+   # REQUIRED: Set your frontend URL
+   FRONTEND_URL = "https://yourdomain.com"
+   
+   # Optional: Customize rate limits
+   RATE_LIMIT_WINDOW = 60        # Time window in seconds (default: 60)
+   RATE_LIMIT_MAX_REQUESTS = 10  # Max requests per window (default: 10)
+   ```
 
-## API Endpoints
+4. **Deploy**:
+   ```bash
+   # Deploy to Cloudflare Workers
+   npm run deploy
+   ```
+
+   Or for local development:
+   ```bash
+   # Run locally
+   npm run dev
+   ```
+
+---
+
+## 📖 API Endpoints
 
 ### POST /upload
 
-Upload markdown/text content.
+Upload markdown/text content with rate limiting and validation.
 
-**Request:**
+**Supports two upload formats:**
+
+1. **Direct text upload** (Content-Type: text/plain):
 ```bash
 curl -X POST https://api.mdviewer.your-domain.com/upload \
   -H "Content-Type: text/plain" \
   -d "# Hello World"
 ```
 
+2. **File upload** (Content-Type: multipart/form-data):
+```bash
+curl -X POST https://api.mdviewer.your-domain.com/upload \
+  -F "file=@document.md" \
+  -F "file=@document.txt"
+```
+
+**Note:** For file uploads, the form field can be named `file`, `content`, `markdown`, or `text`. The API will automatically detect and extract the file content.
+
 **Response:**
 ```json
 {
   "id": "abc123...",
-  "shareUrl": "https://api.mdviewer.your-domain.com/share?id=abc123...",
+  "frontendShareUrl": "https://yourdomain.com/share?id=abc123...",
   "size": 13,
   "uploadedAt": "2024-01-01T00:00:00.000Z"
 }
 ```
 
 **Rate Limits:**
-- 10 uploads per minute per IP
-- Returns `429 Too Many Requests` when exceeded
+- **Uploads only**: 10 uploads per minute per IP (configurable via `RATE_LIMIT_MAX_REQUESTS`)
+- **Downloads**: Unlimited (no rate limiting)
+- Returns `429 Too Many Requests` when upload limit exceeded
+- Includes `X-RateLimit-*` headers in all responses
 
 **File Size:**
-- Maximum 2MB
+- Maximum 1MB
 - Returns `413 Payload Too Large` when exceeded
+
+**Content Types:**
+- Only markdown/text/plain content types are accepted:
+  - `text/plain`
+  - `text/markdown`
+  - `text/x-markdown`
+  - `text/md`
+  - `application/x-markdown`
+- Returns `415 Unsupported Media Type` for invalid content types
+
+**Response Headers:**
+```
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 9
+X-RateLimit-Reset: 1234567890
+```
 
 ### GET /share/:id
 
-Retrieve shared content.
+Retrieve shared content from R2 storage. **No rate limiting** - unlimited access.
 
 **Request:**
 ```bash
-curl https://api.mdviewer.your-domain.com/share?id=abc123...
+curl https://api.mdviewer.your-domain.com/share/abc123...
 ```
 
 **Response:**
-- `200 OK`: Returns the markdown/text content
+- `200 OK`: Returns the markdown/text content with caching headers
 - `404 Not Found`: Content doesn't exist
 - `500 Internal Server Error`: Server error
 
-## Environment Variables
+**Note:** This is the API endpoint for retrieving content. The frontend share URL format is `/share?id=ID_HERE` (using query parameters).
 
-No environment variables required for basic setup. The R2 bucket is configured via `wrangler.toml`.
+**Response Headers:**
+```
+Content-Type: text/plain; charset=utf-8
+Cache-Control: public, max-age=3600
+X-Content-Size: 13
+X-Uploaded-At: 2024-01-01T00:00:00.000Z
+```
 
-## Rate Limiting
+---
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+#### Required
+
+- **`FRONTEND_URL`** (required): The frontend URL for your application
+  - Used for CORS headers and constructing share URLs
+  - Must be set in `wrangler.toml` under `[vars]` or via environment variables
+  - Example: `"https://yourdomain.com"` or `"http://localhost:3000"`
+  - The API will return a `500` error if this is not set or is invalid
+
+#### Optional
+
+- **`RATE_LIMIT_WINDOW`**: Rate limit time window in seconds
+  - Default: `60` (1 minute)
+  - Example: `120` for 2-minute windows
+
+- **`RATE_LIMIT_MAX_REQUESTS`**: Maximum requests allowed per window
+  - Default: `10` requests per window
+  - Example: `20` for higher limits
+
+### Example Configuration
+
+```toml
+[vars]
+FRONTEND_URL = "https://mdviewer.pages.dev"
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX_REQUESTS = 10
+```
+
+---
+
+## 🚦 Rate Limiting
+
+### How It Works
 
 Rate limiting is implemented using **Durable Objects**, which provides:
-- ✅ Distributed rate limiting across all worker instances
-- ✅ Consistent rate limits regardless of which worker handles the request
-- ✅ No read/write limits (unlike KV)
-- ✅ Perfect for free tier users
-- ✅ Strong consistency guarantees
 
-Each IP address gets its own Durable Object instance, ensuring accurate rate limiting even with multiple workers.
+- ✅ **Distributed Rate Limiting** - Works across all worker instances
+- ✅ **Strong Consistency** - No race conditions or inconsistent state
+- ✅ **No Read/Write Limits** - Unlike KV, no operation limits
+- ✅ **Per-IP Isolation** - Each IP gets its own Durable Object instance
+- ✅ **Automatic Cleanup** - Objects are evicted when not in use
+- ✅ **Perfect for Free Tier** - No additional costs beyond Workers
 
-## Frontend Integration
+### Rate Limit Headers
+
+All responses include standard rate limit headers:
+
+```
+X-RateLimit-Limit: 10          # Maximum requests allowed
+X-RateLimit-Remaining: 5       # Remaining requests in current window
+X-RateLimit-Reset: 1234567890   # Unix timestamp when limit resets
+Retry-After: 30                 # Seconds until retry (only on 429)
+```
+
+### Algorithm
+
+The rate limiter uses a **fixed-window algorithm**:
+
+1. Each IP gets a unique Durable Object instance
+2. Requests are counted within a time window (default: 60 seconds)
+3. When the window expires, the counter resets
+4. If limit is exceeded, returns `429 Too Many Requests`
+
+---
+
+## 🌐 Frontend Integration
+
+### Environment Variables
 
 Update your frontend `.env.local` or environment variables:
 
@@ -122,19 +267,106 @@ FRONTEND_URL=https://mdviewer.your-domain.com
 
 Both environment variables are required for the frontend to function properly.
 
-## Deployment
+### Example Integration
 
-1. Make sure you're logged in:
+```typescript
+// Upload content
+const response = await fetch(`${API_URL}/upload`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'text/plain',
+  },
+  body: markdownContent,
+});
+
+const data = await response.json();
+// data.frontendShareUrl contains the shareable URL
+```
+
+---
+
+## 🚀 Deployment
+
+### Quick Deploy
+
+1. **Login to Cloudflare**:
    ```bash
    wrangler login
    ```
 
-2. Deploy:
+2. **Deploy**:
    ```bash
    npm run deploy
    ```
 
-3. Note your Workers URL (e.g., `https://api.mdviewer.your-domain.com`)
+3. **Note your Workers URL** (e.g., `https://mdviewer-api.your-subdomain.workers.dev`)
 
-4. Update your frontend with this URL.
+4. **Update frontend** with the API URL
 
+### Production Checklist
+
+- [ ] Set `FRONTEND_URL` in `wrangler.toml`
+- [ ] Create R2 bucket (`wrangler r2 bucket create mdviewer`)
+- [ ] Configure rate limits (optional)
+- [ ] Deploy worker (`npm run deploy`)
+- [ ] Update frontend environment variables
+- [ ] Test upload and download endpoints
+
+---
+
+## 📊 Project Structure
+
+```
+workers-api/
+├── src/
+│   ├── index.ts          # Main API worker (upload, share endpoints)
+│   └── rate-limiter.ts  # Durable Object for rate limiting
+├── wrangler.toml        # Workers configuration
+├── package.json         # Dependencies
+└── README.md           # This file
+```
+
+---
+
+## 🔒 Security
+
+- **Content-Type Validation** - Only markdown/text/plain accepted
+- **File Size Limits** - 1MB maximum to prevent abuse
+- **Rate Limiting** - Prevents spam and abuse
+- **Unique IDs** - Cryptographically secure, URL-safe base64
+- **CORS Protection** - Only allows requests from configured frontend
+- **No Public Access** - R2 bucket is private, content served through Workers
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Error: "FRONTEND_URL is not set"**
+- Solution: Set `FRONTEND_URL` in `wrangler.toml` under `[vars]`
+
+**Error: "Rate limit exceeded"**
+- Solution: Wait for the rate limit window to reset or increase `RATE_LIMIT_MAX_REQUESTS`
+
+**Error: "Invalid content type"**
+- Solution: Use one of the allowed content types: `text/plain`, `text/markdown`, etc.
+
+**Error: "File too large"**
+- Solution: Reduce file size to under 1MB
+
+---
+
+## 📝 License
+
+This project is open source and available under the [MIT License](../../LICENSE).
+
+---
+
+<div align="center">
+
+**Built with ❤️ using Cloudflare Workers**
+
+[⬆ Back to Top](#markdown-share-api)
+
+</div>
