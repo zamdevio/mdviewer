@@ -8,6 +8,11 @@
  * - FRONTEND_URL: Frontend website URL (e.g., https://your-domain.com)
  */
 
+// Remove trailing slash helper
+function removeTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+}
+
 export const config = {
   /**
    * Cloudflare Workers API URL for the share feature
@@ -17,18 +22,16 @@ export const config = {
    */
   API_URL: (() => {
     // For static export, env vars are injected at build time via next.config.ts
-    // Fallback to window.__ENV__ for runtime injection if needed
-    const envUrl = process.env.API_URL || (typeof window !== 'undefined' ? (window as any).__ENV__?.API_URL : undefined);
+    const envUrl = process.env.API_URL;
     
     if (!envUrl || !envUrl.trim()) {
-      const error = 'API_URL environment variable is required but not set. Please set it in your deployment platform (Cloudflare Pages) or .env.local file.';
       if (typeof window !== 'undefined') {
-        console.error(error);
+        console.warn('API_URL environment variable is not set. Share feature will not work. Please set it in your deployment platform (Cloudflare Pages) or .env.local file.');
       }
-      throw new Error(error);
+      return '';
     }
     
-    return envUrl.trim();
+    return removeTrailingSlash(envUrl.trim());
   })(),
   
   /**
@@ -39,18 +42,16 @@ export const config = {
    */
   FRONTEND_URL: (() => {
     // For static export, env vars are injected at build time via next.config.ts
-    // Fallback to window.__ENV__ for runtime injection if needed
-    const envUrl = process.env.FRONTEND_URL || (typeof window !== 'undefined' ? (window as any).__ENV__?.FRONTEND_URL : undefined);
-    
+    const envUrl = process.env.FRONTEND_URL;
+
     if (!envUrl || !envUrl.trim()) {
-      const error = 'FRONTEND_URL environment variable is required but not set. Please set it in your deployment platform (Cloudflare Pages) or .env.local file.';
       if (typeof window !== 'undefined') {
-        console.error(error);
+        console.warn('FRONTEND_URL environment variable is not set. Share feature will not work. Please set it in your deployment platform (Cloudflare Pages) or .env.local file.');
       }
-      throw new Error(error);
+      return '';
     }
     
-    return envUrl.trim();
+    return removeTrailingSlash(envUrl.trim());
   })(),
 } as const;
 
@@ -68,13 +69,50 @@ export function isLocalhostApi(): boolean {
 
 /**
  * Check if the API is properly configured
- * Returns true if API_URL is set and not empty
+ * Returns true if both API_URL and FRONTEND_URL are set and not empty
  */
 export function isApiConfigured(): boolean {
   try {
-    const url = config.API_URL;
-    return Boolean(url && url.trim().length > 0);
+    const apiUrl = config.API_URL;
+    const frontendUrl = config.FRONTEND_URL;
+    return Boolean(
+      apiUrl && apiUrl.trim().length > 0 &&
+      frontendUrl && frontendUrl.trim().length > 0
+    );
   } catch {
     return false;
+  }
+}
+
+/**
+ * Check if API configuration is missing
+ * Returns object with details about what's missing
+ */
+export function getApiConfigStatus(): {
+  isConfigured: boolean;
+  missingApiUrl: boolean;
+  missingFrontendUrl: boolean;
+  apiUrl: string | null;
+  frontendUrl: string | null;
+} {
+  try {
+    const apiUrl = config.API_URL?.trim() || null;
+    const frontendUrl = config.FRONTEND_URL?.trim() || null;
+    
+    return {
+      isConfigured: Boolean(apiUrl && frontendUrl),
+      missingApiUrl: !apiUrl,
+      missingFrontendUrl: !frontendUrl,
+      apiUrl,
+      frontendUrl,
+    };
+  } catch {
+    return {
+      isConfigured: false,
+      missingApiUrl: true,
+      missingFrontendUrl: true,
+      apiUrl: null,
+      frontendUrl: null,
+    };
   }
 }

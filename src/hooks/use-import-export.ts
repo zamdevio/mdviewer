@@ -2,18 +2,14 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { setSettings as updateSettings, getSavedFiles, setSavedFiles, getFileContent, setFileContent, setContent, setEditingFile, type SettingsData } from "@/lib/storage";
+import { setSettings as updateSettings, getSavedFiles, setSavedFiles, setFileContent, setContent, setEditingFile, type SettingsData, SavedFile } from "@/lib/storage";
 import { encodeBase64, decodeBase64, decryptData, isEncryptedFormat } from "@/lib/utils";
-
-interface ConflictFile {
-    imported: any;
-    existing: any;
-    conflictType: 'filename' | 'id';
-}
+import { truncateFilename } from "@/lib/editor";
+import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
 export function useImportExport() {
     const [conflicts, setConflicts] = useState<ConflictFile[]>([]);
-    const [pendingImport, setPendingImport] = useState<any>(null);
+    const [pendingImport, setPendingImport] = useState<ExportImportData | null>(null);
     const [showConflictDialog, setShowConflictDialog] = useState(false);
     const [invalidFiles, setInvalidFiles] = useState<string[]>([]);
     const [showInvalidFilesDialog, setShowInvalidFilesDialog] = useState(false);
@@ -21,7 +17,7 @@ export function useImportExport() {
     const [pendingEncryptedFile, setPendingEncryptedFile] = useState<string | null>(null);
     const [passwordError, setPasswordError] = useState<string | null>(null);
 
-    const performImport = async (data: any, conflictActions: Map<string, 'skip' | 'replace' | 'keepBoth'> = new Map(), onSettingsUpdate?: (settings: any) => void, keepDialogOpen?: boolean) => {
+    const performImport = async (data: ExportImportData, conflictActions: Map<string, ConflictAction> = new Map(), onSettingsUpdate?: (settings: SettingsData) => void, keepDialogOpen?: boolean) => {
         try {
             // Import settings
             if (data.settings) {
@@ -32,6 +28,8 @@ export function useImportExport() {
                     theme: data.settings.theme || 'system',
                     itemsPerPage: data.settings.itemsPerPage ?? 12,
                     defaultEditorMode: data.settings.defaultEditorMode ?? 'both',
+                    showEditorStatusBar: data.settings.showEditorStatusBar ?? true,
+                    showSpellChecker: data.settings.showSpellChecker ?? true,
                 };
                 updateSettings(settings);
                 // Call callback if provided
@@ -41,7 +39,7 @@ export function useImportExport() {
             }
 
             // Process files based on conflict actions
-            const filesToImport: any[] = [];
+            const filesToImport: ExportImportData['files'] = [];
             const existingFiles = getSavedFiles();
             
             for (const file of data.files) {
@@ -56,42 +54,64 @@ export function useImportExport() {
                     const ext = file.filename.match(/\.md$/i) ? '.md' : '';
                     let newName = `${nameWithoutExt}-1${ext}`;
                     let counter = 1;
-                    while (existingFiles.some((f: any) => f.filename === newName)) {
+                    while (existingFiles.some((f: SavedFile) => f.filename === newName)) {
                         newName = `${nameWithoutExt}-${++counter}${ext}`;
                     }
+                    // Truncate if needed
+                    const truncatedName = truncateFilename(newName);
                     filesToImport.push({
                         ...file,
-                        filename: newName,
+                        filename: truncatedName,
                         id: `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
                     });
                 } else {
-                    filesToImport.push(file);
+                    // Truncate filename if needed
+                    const truncatedName = truncateFilename(file.filename);
+                    filesToImport.push({
+                        ...file,
+                        filename: truncatedName,
+                    });
                 }
             }
             
             // Use web storage (localStorage) for all files
-            const savedFiles = getSavedFiles();
-            filesToImport.forEach((file) => {
-                setFileContent(file.filename, file.content || '');
-                const existingIndex = savedFiles.findIndex((f: any) => f.filename === file.filename);
-                const fileData = {
-                    id: file.id || `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-                    filename: file.filename,
-                    timestamp: file.timestamp || new Date().toISOString(),
-                };
-                existingIndex >= 0 ? savedFiles[existingIndex] = fileData : savedFiles.push(fileData);
-            });
-            setSavedFiles(savedFiles);
+            const savedFiles = [...getSavedFiles()];
+            
+            try {
+                for (const file of filesToImport) {
+                    setFileContent(file.filename, file.content || '');
+                    const existingIndex = savedFiles.findIndex((f: SavedFile) => f.filename === file.filename);
+                    const fileData: SavedFile = {
+                        id: file.id || `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+                        filename: file.filename,
+                        timestamp: file.timestamp || new Date().toISOString(),
+                    };
+                    if (existingIndex >= 0) {
+                        savedFiles[existingIndex] = fileData;
+                    } else {
+                        savedFiles.push(fileData);
+                    }
+                }
+                setSavedFiles(savedFiles);
 
-            // Import current content if exists
-            if (data.currentContent) {
-                setContent(data.currentContent);
+                // Import current content if exists
+                if (data.currentContent) {
+                    setContent(data.currentContent);
+                }
+
+                // Import editing file if exists
+                if (data.editingFile) {
+                    setEditingFile(data.editingFile);
+                }
+            } catch (storageError: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+                // Handle LocalStorage quota exceeded error
+                if (storageError.name === 'QuotaExceededError' || storageError.code === 22) {
+                    toast.error("Storage limit reached! Some files could not be imported. Please delete some files and try again.");
+                    return;
+                }
+                throw storageError;
             }
 
-            // Import editing file if exists
-            if (data.editingFile) {
-                setEditingFile(data.editingFile);
-            }
 
             if (!keepDialogOpen) {
                 const allConflictsResolved = conflicts.length > 0 && conflicts.every((c: ConflictFile) => 
@@ -118,7 +138,7 @@ export function useImportExport() {
         }
     };
 
-    const tryDecryptFile = async (fileText: string, password: string): Promise<any> => {
+    const tryDecryptFile = async (fileText: string, password: string): Promise<ExportImportData> => {
         // Try new AES-GCM format first, then fallback to old format
         try {
             return JSON.parse(await decryptData(fileText, password));
@@ -153,7 +173,7 @@ export function useImportExport() {
                     return;
                 }
 
-                let data: any;
+                let data: ExportImportData;
 
                 if (isEncryptedFormat(text)) {
                     if (!importPassword?.trim()) {
@@ -205,17 +225,17 @@ export function useImportExport() {
         input.click();
     };
 
-    const processDecryptedData = async (data: any) => {
+    const processDecryptedData = async (data: ExportImportData) => {
         if (!data.version || !data.files) {
             toast.error("Invalid backup file format");
             return;
         }
 
         // Validate and filter files
-        const validFiles: any[] = [];
+        const validFiles: ExportImportData['files'] = [];
         const invalidFilesList: string[] = [];
         
-        data.files.forEach((file: any, i: number) => {
+        data.files.forEach((file: ExportImportData['files'][number], i: number) => {
             if (!file || typeof file !== 'object' || !file.filename?.trim() || !file.id?.trim()) {
                 invalidFilesList.push(`File ${i + 1}: ${!file ? 'Invalid object' : !file.filename?.trim() ? 'Missing filename' : 'Missing ID'}`);
                 return;
@@ -239,14 +259,14 @@ export function useImportExport() {
         // Check for conflicts
         const existingFiles = getSavedFiles();
         const conflictList: ConflictFile[] = validFiles
-            .map((importedFile: any) => {
-                const existing = existingFiles.find((f: any) => 
+            .map((importedFile: ExportImportData['files'][number]) => {
+                const existing = existingFiles.find((f: SavedFile) => 
                     f.filename === importedFile.filename || (f.id && importedFile.id && f.id === importedFile.id)
                 );
                 return existing ? {
                     imported: importedFile,
                     existing,
-                    conflictType: existingFiles.some((f: any) => f.filename === importedFile.filename) ? 'filename' : 'id',
+                    conflictType: existingFiles.some((f: SavedFile) => f.filename === importedFile.filename) ? 'filename' : 'id',
                 } : null;
             })
             .filter(Boolean) as ConflictFile[];
@@ -287,7 +307,7 @@ export function useImportExport() {
         setPasswordError(null);
     };
 
-    const handleConflictResolution = async (conflictActions: Map<string, 'skip' | 'replace' | 'keepBoth'>, onSettingsUpdate?: (settings: any) => void, keepDialogOpen?: boolean) => {
+    const handleConflictResolution = async (conflictActions: Map<string, ConflictAction>, onSettingsUpdate?: (settings: SettingsData) => void, keepDialogOpen?: boolean) => {
         if (!pendingImport) return;
         await performImport(pendingImport, conflictActions, onSettingsUpdate, keepDialogOpen);
     };
