@@ -4,19 +4,39 @@ import Link from "next/link"
 import { ThemeToggle } from "@/components/theme"
 import { Button } from "@/components/ui/button"
 import { FileText, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { usePlatform } from "@/hooks/use-platform"
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
+    const navRef = useRef<HTMLElement>(null)
     const pathname = usePathname()
     const isHomePage = pathname === "/"
     const { isMobile } = usePlatform()
 
+    // Auto-close on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isOpen && navRef.current && !navRef.current.contains(event.target as Node)) {
+                setIsOpen(false)
+            }
+        }
+
+        // Only add listener if menu is open
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside)
+        }
+    }, [isOpen])
+
     return (
         <header className={`relative z-50 flex items-center justify-center ${isMobile ? 'py-0 px-2' : 'p-4'}`}>
-            <nav className={`relative flex items-center justify-between w-full max-w-5xl ${isMobile ? 'px-3 py-2' : 'px-4 sm:px-6 py-3'} bg-background/70 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10`}>
+            <nav ref={navRef} className={`relative flex items-center justify-between w-full max-w-5xl ${isMobile ? 'px-3 py-2' : 'px-4 sm:px-6 py-3'} bg-background/70 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10`}>
+
                 <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                     <div className="p-2 bg-primary/10 rounded-xl">
                         <FileText className="w-6 h-6 text-primary" />
