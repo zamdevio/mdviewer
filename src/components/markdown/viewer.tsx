@@ -35,17 +35,15 @@ interface MarkdownViewerProps {
 
 const MarkdownComponents: Components = {
     code(props) {
-        const { children, className: codeClassName, node, ...rest } = props;
+        const { children, className: codeClassName, ...rest } = props;
 
         const codeString = String(children).replace(/\n$/, "").trim();
 
-        // ✅ Detect ANY code block (with or without language)
-        // React-markdown always adds className="language-xxx" or className="language-" to code blocks
-        // Inline code doesn't have the language- prefix
-        // Also check if node is a code element (code blocks are always in <pre><code>)
-        const isCodeBlock =
-            (codeClassName && codeClassName.startsWith('language-')) ||
-            (node?.tagName === "code" && node?.type === "element");
+        // ✅ Detect code blocks (with or without language)
+        // React-markdown ONLY adds className="language-xxx" or className="language-" to code blocks (triple backticks)
+        // Inline code (single backticks) does NOT have the language- prefix
+        // So we only check for the language- prefix to distinguish code blocks from inline code
+        const isCodeBlock = codeClassName ? codeClassName.startsWith('language-') : false;
 
         const match = /language-(\w+)/.exec(codeClassName || "");
         const language = match ? match[1] : "";
