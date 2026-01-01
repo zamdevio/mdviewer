@@ -7,6 +7,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { ghcolors } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { CSSProperties } from "react";
 import { useTheme } from "next-themes";
+import { toast } from "sonner";
 
 // GitHub Dark theme colors
 const githubDarkTheme: Record<string, CSSProperties> = {
@@ -61,8 +62,89 @@ interface CodeBlockProps {
 }
 
 /**
+ * Auto-detects programming language from code content
+ * Checks comments, keywords, and syntax patterns
+ */
+function detectLanguageFromCode(code: string): string {
+    const firstLine = code.split('\n')[0]?.trim() || '';
+    
+    // Check for language hints in comments
+    const languagePatterns = [
+        // Single-line comments: //typescript, // TypeScript, // TypeScript example, etc.
+        { pattern: /^\/\/\s*(typescript|ts)(\s|$|:)/i, lang: 'typescript' },
+        { pattern: /^\/\/\s*(javascript|js)(\s|$|:)/i, lang: 'javascript' },
+        { pattern: /^\/\/\s*(python|py)(\s|$|:)/i, lang: 'python' },
+        { pattern: /^\/\/\s*(java)(\s|$|:)/i, lang: 'java' },
+        { pattern: /^\/\/\s*(c\+\+|cpp)(\s|$|:)/i, lang: 'cpp' },
+        { pattern: /^\/\/\s*(c#|csharp|cs)(\s|$|:)/i, lang: 'csharp' },
+        { pattern: /^\/\/\s*(go|golang)(\s|$|:)/i, lang: 'go' },
+        { pattern: /^\/\/\s*(rust|rs)(\s|$|:)/i, lang: 'rust' },
+        { pattern: /^\/\/\s*(php)(\s|$|:)/i, lang: 'php' },
+        { pattern: /^\/\/\s*(ruby|rb)(\s|$|:)/i, lang: 'ruby' },
+        { pattern: /^\/\/\s*(swift)(\s|$|:)/i, lang: 'swift' },
+        { pattern: /^\/\/\s*(kotlin|kt)(\s|$|:)/i, lang: 'kotlin' },
+        // Hash comments: #python, # Python, etc.
+        { pattern: /^#\s*(python|py)(\s|$|:)/i, lang: 'python' },
+        { pattern: /^#\s*(bash|sh|shell)(\s|$|:)/i, lang: 'bash' },
+        { pattern: /^#\s*(ruby|rb)(\s|$|:)/i, lang: 'ruby' },
+        // Multi-line comments: /*typescript, /* TypeScript, etc.
+        { pattern: /^\/\*\s*(typescript|ts)(\s|$|:)/i, lang: 'typescript' },
+        { pattern: /^\/\*\s*(javascript|js)(\s|$|:)/i, lang: 'javascript' },
+    ];
+
+    for (const { pattern, lang } of languagePatterns) {
+        if (pattern.test(firstLine)) {
+            return lang;
+        }
+    }
+
+    // Check for TypeScript-specific keywords
+    if (code.includes('interface ') || code.includes(': string') || code.includes(': number') || 
+        code.includes('type ') || code.includes('as ') || code.includes('enum ')) {
+        return 'typescript';
+    }
+
+    // Check for JavaScript-specific patterns
+    if (code.includes('function ') || code.includes('const ') || code.includes('let ') || 
+        code.includes('var ') || code.includes('=>') || code.includes('export ')) {
+        return 'javascript';
+    }
+
+    // Check for Python-specific patterns
+    if (code.includes('def ') || code.includes('import ') || code.includes('print(') || 
+        code.includes('if __name__') || code.includes('lambda ')) {
+        return 'python';
+    }
+
+    // Check for HTML/XML
+    if (code.includes('<html') || code.includes('<!DOCTYPE') || code.includes('<div') || 
+        code.includes('<span') || code.includes('<?xml')) {
+        return 'markup';
+    }
+
+    // Check for CSS
+    if (code.includes('{') && code.includes('}') && (code.includes(':') || code.includes('@media'))) {
+        return 'css';
+    }
+
+    // Check for JSON
+    if ((code.trim().startsWith('{') && code.trim().endsWith('}')) || 
+        (code.trim().startsWith('[') && code.trim().endsWith(']'))) {
+        try {
+            JSON.parse(code);
+            return 'json';
+        } catch {
+            // Not valid JSON
+        }
+    }
+
+    return 'text'; // Default to plain text if no detection
+}
+
+/**
  * Code Block Component with Copy Button
  * Renders syntax-highlighted code blocks with a copy button
+ * Auto-detects language if not explicitly provided
  */
 export function MarkdownCodeBlock({ language, code }: CodeBlockProps) {
     const [copied, setCopied] = useState(false);
@@ -74,30 +156,46 @@ export function MarkdownCodeBlock({ language, code }: CodeBlockProps) {
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         } catch (err) {
-            console.error('Failed to copy code:', err);
+            toast.error('Failed to copy code: ' + (err instanceof Error ? err.message : 'Unknown error'));
         }
     };
 
     // Ensure we have valid code and language
     const codeContent = code || '';
-    const lang = language || 'text';
+    const hasExplicitLanguage = language && language.trim() !== '' && language.toLowerCase() !== 'text';
+    
+    // Auto-detect language if not explicitly provided
+    const detectedLanguage = hasExplicitLanguage ? '' : detectLanguageFromCode(codeContent);
+    const finalLanguage = hasExplicitLanguage ? language : detectedLanguage;
+    const hasLanguage = hasExplicitLanguage || (detectedLanguage && detectedLanguage !== 'text');
+    const lang = finalLanguage || 'text';
 
     return (
         <div className="relative group my-4">
-            <div className="absolute top-2 right-2 z-10">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCopy}
-                    className="h-8 px-2 opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border"
-                    title="Copy code"
-                >
-                    {copied ? (
-                        <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                        <Copy className="w-4 h-4" />
-                    )}
-                </Button>
+            {/* Language label and copy button */}
+            <div className="absolute top-2 left-2 right-2 flex items-center justify-between z-10 pointer-events-none">
+                {/* Language label - show if language is detected (explicit or auto-detected) */}
+                {hasLanguage && (
+                    <div className="px-2 py-1 text-xs font-medium text-muted-foreground bg-background/80 backdrop-blur-sm border rounded pointer-events-auto">
+                        {lang}
+                    </div>
+                )}
+                {/* Copy button - always visible */}
+                <div className="ml-auto pointer-events-auto">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleCopy}
+                        className="h-8 px-2 bg-background/80 backdrop-blur-sm border"
+                        title="Copy code"
+                    >
+                        {copied ? (
+                            <Check className="w-4 h-4 text-green-500" />
+                        ) : (
+                            <Copy className="w-4 h-4" />
+                        )}
+                    </Button>
+                </div>
             </div>
             <SyntaxHighlighter
                 style={resolvedTheme === "dark" ? githubDarkTheme : ghcolors}
@@ -108,6 +206,7 @@ export function MarkdownCodeBlock({ language, code }: CodeBlockProps) {
                     borderRadius: "6px",
                     backgroundColor: resolvedTheme === "dark" ? "#161b22" : "#f6f8fa",
                     padding: "16px",
+                    paddingTop: "48px",
                     fontSize: "14px",
                     lineHeight: "1.45",
                     overflow: "auto",
