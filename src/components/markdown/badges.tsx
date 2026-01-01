@@ -82,6 +82,37 @@ export const MarkdownBadges: Components['p'] = ({ children, ...props }) => {
         return /\\\s*$/.test(text) || /\\\s*\n/.test(text);
     };
 
+    // Helper to check if a child contains block-level elements (div, pre, code blocks, etc.)
+    const hasBlockLevelElement = (child: unknown): boolean => {
+        if (!isReactElement(child)) return false;
+        
+        const type = child.type as React.ElementType;
+        const typeName = typeof type === 'function' ? (type.displayName || type.name) : type;
+        
+        // Check for block-level HTML elements
+        const blockElements = ['div', 'pre', 'code', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote'];
+        if (blockElements.includes(typeName as string)) {
+            return true;
+        }
+        
+        // Check for custom components that render block elements (like MarkdownCodeBlock)
+        if (typeof type === 'function') {
+            const componentName = type.displayName || type.name || '';
+            if (componentName.includes('CodeBlock') || componentName.includes('Mermaid')) {
+                return true;
+            }
+        }
+        
+        // Recursively check children
+        const c = (child as ElementWithPossibleChildren).props?.children;
+        if (c) {
+            const childrenList = Array.isArray(c) ? c : [c];
+            return childrenList.some((cc) => hasBlockLevelElement(cc));
+        }
+        
+        return false;
+    };
+
     // First, check if this paragraph contains only badges (or badges with whitespace/backslashes)
     const allChildren = childrenArray.filter((child) => {
         if (typeof child === 'string') {
@@ -92,8 +123,16 @@ export const MarkdownBadges: Components['p'] = ({ children, ...props }) => {
         return isImageLink(child);
     });
 
-    // If we have non-badge content, return default paragraph
+    // If we have non-badge content, check if it contains block-level elements
     if (allChildren.length !== childrenArray.length) {
+        // Check if any child contains block-level elements (div, pre, code blocks, etc.)
+        const containsBlockElements = childrenArray.some((child) => hasBlockLevelElement(child));
+        
+        // Use div instead of p if block-level elements are present (p cannot contain div)
+        if (containsBlockElements) {
+            return <div {...props}>{children}</div>;
+        }
+        
         return <p {...props}>{children}</p>;
     }
 
@@ -165,5 +204,10 @@ export const MarkdownBadges: Components['p'] = ({ children, ...props }) => {
     }
 
     // Default paragraph rendering (with emoji support handled by viewer)
+    // Check if children contain block-level elements - if so, use div instead of p
+    const containsBlockElements = childrenArray.some((child) => hasBlockLevelElement(child));
+    if (containsBlockElements) {
+        return <div {...props}>{children}</div>;
+    }
     return <p {...props}>{children}</p>;
 };
