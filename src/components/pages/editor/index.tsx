@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useLayoutEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getApiConfigStatus } from "@/lib/config";
 import { toast } from "sonner";
 import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing } from "@/lib/storage";
@@ -120,145 +120,121 @@ export default function EditorPage() {
         }
     };
 
-        // Scroll Manager - handles all scroll logic
-        const scrollManagerRef = useRef<ScrollManager | null>(null);
+    // Scroll Manager - handles all scroll logic
+    const scrollManagerRef = useRef<ScrollManager | null>(null);
 
-        // Initialize scroll manager
-        useEffect(() => {
+    // Initialize scroll manager
+    useEffect(() => {
         if (!mounted) return;
 
         if (!scrollManagerRef.current) {
-                scrollManagerRef.current = new ScrollManager({
-                    textareaRef,
-                    editorRef,
-                    previewRef,
-                    effectiveMode,
-                    onModeChangeComplete: () => {
-                        // Mode change complete callback
-                    },
-                });
-            }
-    
-            // Update scroll manager config when effectiveMode changes
-            if (scrollManagerRef.current) {
-                (scrollManagerRef.current as ScrollManager).config.effectiveMode = effectiveMode;
-            }
-        }, [mounted, effectiveMode]);
-    
-        useEffect(() => {
-            setMounted(true);
-        }, []);
-    
-        // Load default editor mode from settings on mount and apply mobile fallback
-        // After mount, user can freely change view mode via buttons (session-only)
-        useEffect(() => {
-            if (!mounted) return;
-    
-            const settings = getSettings();
-            const savedMode = settings?.defaultEditorMode ?? 'both';
+            scrollManagerRef.current = new ScrollManager({
+                textareaRef,
+                editorRef,
+                previewRef,
+                effectiveMode,
+                onModeChangeComplete: () => {
+                    // Mode change complete callback
+                },
+            });
+        }
+
+        // Update scroll manager config when effectiveMode changes
+        if (scrollManagerRef.current) {
+            (scrollManagerRef.current as ScrollManager).config.effectiveMode = effectiveMode;
+        }
+    }, [mounted, effectiveMode]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Load default editor mode from settings on mount and apply mobile fallback
+    // After mount, user can freely change view mode via buttons (session-only)
+    useEffect(() => {
+        if (!mounted) return;
+
+        const settings = getSettings();
+        const savedMode = settings?.defaultEditorMode ?? 'both';
+        setSoloMode(savedMode as SoloMode);
+
+        // Apply mobile fallback: if split mode is set but we're on mobile, use editor
+        // But keep the actual setting value intact
+        if (isMobile && savedMode === 'both') {
+            setSoloMode('editor');
+        } else {
+            // Use the actual setting value
             setSoloMode(savedMode as SoloMode);
-    
-            // Apply mobile fallback: if split mode is set but we're on mobile, use editor
-            // But keep the actual setting value intact
-            if (isMobile && savedMode === 'both') {
-                setSoloMode('editor');
-            } else {
-                // Use the actual setting value
-                setSoloMode(savedMode as SoloMode);
-            }
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [mounted]); // Only run on mount - mode changes via buttons are session-only and independent
-    
-        // Check for load, new, and file query parameters
-        useEffect(() => {
-            if (!mounted) return;
-    
-            const urlParams = new URLSearchParams(window.location.search);
-            const loadId = urlParams.get('load');
-            const newParam = urlParams.get('new');
-            const fileId = urlParams.get('file');
-    
-            if (newParam !== null) {
-                // Create new file state - this already clears editing flags in createNewFileFromUrl
-                const newState = createNewFileFromUrl();
-                setEditorState(newState);
-                // Ensure editing flags are cleared (no file in editing mode for new file)
-                clearAllEditingFlags();
-                // Reset undo/redo history
-                setTimeout(() => {
-                    if (textareaRef.current) {
-                        textareaRef.current.value = '';
-                        textareaRef.current.value = newState.markdown;
-                    }
-                }, 0);
-                // Load auto-save setting from storage
-                const settings = getSettings();
-                setAutoSaveEnabled(settings?.autoSave ?? true);
-                // Remove query param immediately
-                const url = new URL(window.location.href);
-                url.searchParams.delete('new');
-                window.history.replaceState({}, '', url.toString());
-                return;
-            }
-    
-            if (fileId) {
-                // Check if there's temp content that would be lost
-                const tempContent = getTempFile();
-                const hasTempContent = tempContent && tempContent.trim();
-    
-                if (hasTempContent) {
-                    // Show warning dialog - user has unsaved temp content
-                    setPendingFileId(fileId);
-                    setShowLoadFileDialog(true);
-                } else {
-                    // No temp content, load file directly
-                    loadFileContentByFileId(fileId, '', false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mounted]); // Only run on mount - mode changes via buttons are session-only and independent
+
+    // Check for load, new, and file query parameters
+    useEffect(() => {
+        if (!mounted) return;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const loadId = urlParams.get('load');
+        const newParam = urlParams.get('new');
+        const fileId = urlParams.get('file');
+
+        if (newParam !== null) {
+            // Create new file state - this already clears editing flags in createNewFileFromUrl
+            const newState = createNewFileFromUrl();
+            setEditorState(newState);
+            // Ensure editing flags are cleared (no file in editing mode for new file)
+            clearAllEditingFlags();
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
+                    textareaRef.current.value = newState.markdown;
                 }
-    
-                // Remove query param
-                const url = new URL(window.location.href);
-                url.searchParams.delete('file');
-                window.history.replaceState({}, '', url.toString());
-                return;
+            }, 0);
+            // Load auto-save setting from storage
+            const settings = getSettings();
+            setAutoSaveEnabled(settings?.autoSave ?? true);
+            // Remove query param immediately
+            const url = new URL(window.location.href);
+            url.searchParams.delete('new');
+            window.history.replaceState({}, '', url.toString());
+            return;
+        }
+
+        if (fileId) {
+            // Check if there's temp content that would be lost
+            const tempContent = getTempFile();
+            const hasTempContent = tempContent && tempContent.trim();
+
+            if (hasTempContent) {
+                // Show warning dialog - user has unsaved temp content
+                setPendingFileId(fileId);
+                setShowLoadFileDialog(true);
+            } else {
+                // No temp content, load file directly
+                loadFileContentByFileId(fileId, '', false);
             }
-    
-            // Use hasUnsavedContent which treats DEFAULT_MARKDOWN as empty
-            if (loadId && hasUnsavedContent(markdown)) {
-                // There's existing content, show dialog
-                setLoadShareId(loadId);
-                setShowLoadDialog(true);
-            } else if (loadId) {
-                // No existing content, load directly
-                handleLoadSharedContent(loadId, false);
-            }
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [mounted]);
-    
 
-    // Shared function for auto-resize and scroll handling in editor modes
-    const handleEditorModeResize = useCallback(() => {
-        if (!textareaRef.current) return;
-      
-        const textarea = textareaRef.current;
-      
-        const cursor = textarea.selectionStart;
-        const prevScrollTop = textarea.scrollTop;
-      
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
-      
-        textarea.setSelectionRange(cursor, cursor, "forward");
-        textarea.scrollTop = prevScrollTop;
-      }, []);
-      
+            // Remove query param
+            const url = new URL(window.location.href);
+            url.searchParams.delete('file');
+            window.history.replaceState({}, '', url.toString());
+            return;
+        }
 
-    // Auto-resize textarea when switching to editor mode and scroll to cursor if needed
-    useLayoutEffect(() => {
-        if (!mounted || !textareaRef.current) return;
+        // Use hasUnsavedContent which treats DEFAULT_MARKDOWN as empty
+        if (loadId && hasUnsavedContent(markdown)) {
+            // There's existing content, show dialog
+            setLoadShareId(loadId);
+            setShowLoadDialog(true);
+        } else if (loadId) {
+            // No existing content, load directly
+            handleLoadSharedContent(loadId, false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [mounted]);
 
-        handleEditorModeResize();
-    }, [markdown, handleEditorModeResize, mounted]);
-      
+
 
     // Function to load file content by file ID (primary method)
     const loadFileContentByFileId = async (fileId: string, filename: string, isInitialLoad: boolean = false, clearTemp: boolean = true) => {
@@ -278,11 +254,11 @@ export default function EditorPage() {
             setEditorState(loadedState);
             setLastSavedContent(loadedState.markdown);
             setSaveStatus('idle');
-            
+
             // Set editing mode AFTER all checks are done (temp content cleared, file loaded successfully)
             // This ensures editing mode is only set for real files, not temp content
             setFileAsEditing(fileId);
-            
+
             // Reset undo/redo history
             setTimeout(() => {
                 if (textareaRef.current) {
@@ -320,10 +296,10 @@ export default function EditorPage() {
 
         // Use handler logic
         const result = handleLoadFileConfirmLogic(saveCurrent);
-        
+
         if (result.savedFilename) {
             toast.success(`Current content saved as ${result.savedFilename}.md`);
-                }
+        }
 
         if (result.shouldLoad) {
             await loadFileContentByFileId(fileId, '', false, false);
@@ -348,7 +324,7 @@ export default function EditorPage() {
             // Temp file exists - clear editing mode so files page doesn't show temp content as editing
             // Temp content is not a real saved file, so it shouldn't be marked as editing
             clearAllEditingFlags();
-            
+
             // Use temp content and don't load editing file
             setEditorState({
                 markdown: tempContent,
@@ -467,7 +443,7 @@ export default function EditorPage() {
                 saveStatus,
                 currentFileName
             );
-            
+
             if (!result.success) {
                 toast.error(result.error || "Failed to load shared content");
                 setLoadingSharedContent(false);
@@ -476,25 +452,25 @@ export default function EditorPage() {
 
             if (result.newState) {
                 setEditorState(result.newState);
-            setLastSavedContent('');
-            setSaveStatus('unsaved');
-            
-            // Reset undo/redo history
-            setTimeout(() => {
-                if (textareaRef.current) {
-                    textareaRef.current.value = '';
+                setLastSavedContent('');
+                setSaveStatus('unsaved');
+
+                // Reset undo/redo history
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        textareaRef.current.value = '';
                         textareaRef.current.value = result.newState!.markdown;
-                }
-            }, 0);
+                    }
+                }, 0);
 
-            toast.success("Shared content loaded! Please save with a filename to share or save again.");
+                toast.success("Shared content loaded! Please save with a filename to share or save again.");
 
-            // Clean URL
-            cleanEditorUrl();
+                // Clean URL
+                cleanEditorUrl();
 
-            // Close dialog
-            setShowLoadDialog(false);
-            setLoadShareId(null);
+                // Close dialog
+                setShowLoadDialog(false);
+                setLoadShareId(null);
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to load shared content");
@@ -523,22 +499,22 @@ export default function EditorPage() {
             setTimeout(() => {
                 if (currentFileName && currentFileId) {
                     // File is open, save to file (only if content is not empty)
-                        if (markdown.trim()) {
-                            const result = saveFileToStorage(currentFileName, markdown, currentFileId);
-                            if (result.success) {
-                                setLastSaved(new Date());
-                                setLastSavedContent(markdown);
-                                setSaveStatus('saved');
-                                // Update state with file ID if it was generated
-                                if (result.file && result.file.id !== currentFileId) {
-                                    setEditorState(prev => ({ ...prev, currentFileId: result.file!.id }));
-                                }
-                            } else {
-                                setSaveStatus('idle');
+                    if (markdown.trim()) {
+                        const result = saveFileToStorage(currentFileName, markdown, currentFileId);
+                        if (result.success) {
+                            setLastSaved(new Date());
+                            setLastSavedContent(markdown);
+                            setSaveStatus('saved');
+                            // Update state with file ID if it was generated
+                            if (result.file && result.file.id !== currentFileId) {
+                                setEditorState(prev => ({ ...prev, currentFileId: result.file!.id }));
                             }
                         } else {
                             setSaveStatus('idle');
                         }
+                    } else {
+                        setSaveStatus('idle');
+                    }
                 } else {
                     // No file open, handle temp file
                     if (markdown.trim()) {
@@ -728,7 +704,7 @@ export default function EditorPage() {
         if (!mounted || !textareaRef.current) return;
 
         const textarea = textareaRef.current;
-        
+
         // Initialize spellcheck based on setting
         if (showSpellChecker) {
             textarea.spellcheck = true;
@@ -744,7 +720,7 @@ export default function EditorPage() {
         if (!mounted || !textareaRef.current) return;
 
         const textarea = textareaRef.current;
-        
+
         // Check spellcheck status periodically and on focus
         const checkSpellCheckStatus = () => {
             if (textarea) {
@@ -757,7 +733,7 @@ export default function EditorPage() {
 
         // Check on focus
         textarea.addEventListener('focus', checkSpellCheckStatus);
-        
+
         // Check periodically (in case it's changed externally)
         const interval = setInterval(checkSpellCheckStatus, 1000);
 
@@ -795,18 +771,10 @@ export default function EditorPage() {
                 return false;
             }
 
-            // Don't trigger other shortcuts when typing in inputs
-            const target = e.target as HTMLElement;
-            if (target.tagName === 'INPUT' || (target.tagName === 'TEXTAREA' && soloMode !== 'preview')) {
-                return;
-            }
-
             // Ctrl+N or Cmd+N - New file (prevent browser new window)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === 'n') {
                 e.preventDefault();
-                e.stopPropagation();
                 handleNewFile();
-                return;
             }
 
             // Ctrl+E or Cmd+E - Export (only works on editor with content)
@@ -958,7 +926,7 @@ export default function EditorPage() {
 
         setIsSharing(true);
         toast.loading("Sharing your markdown...", { id: "sharing" });
-        
+
         try {
             const result = await handleShareLogic(markdown, editorState);
 
@@ -1010,7 +978,7 @@ export default function EditorPage() {
     // Export markdown to file
     const handleExport = async () => {
         const result = handleExportFile(markdown, currentFileName);
-        
+
         if (result.success) {
             toast.success("Markdown exported!");
         } else {
@@ -1022,7 +990,7 @@ export default function EditorPage() {
     const handleImport = () => {
         // Check if can import BEFORE opening file picker (like New button does)
         const action = getImportFileAction(editorState, markdown, lastSavedContent, saveStatus);
-        
+
         if (!action.canExecute) {
             if (action.infoMessage) {
                 toast.info(action.infoMessage);
@@ -1039,7 +1007,7 @@ export default function EditorPage() {
             setSaveFileName("");
             setSaveDialogInitialValue("");
             setShowSaveDialog(true);
-            
+
             // Store a flag to open file picker after save
             setPendingImport(true);
             return;
@@ -1054,10 +1022,10 @@ export default function EditorPage() {
             if (!file) return;
 
             const result = await processImportFile(file);
-            
+
             if (result.success && result.newState) {
                 setEditorState(result.newState);
-                
+
                 // Reset undo/redo history
                 setTimeout(() => {
                     if (textareaRef.current && result.content) {
@@ -1067,9 +1035,9 @@ export default function EditorPage() {
                 }, 0);
                 toast.success("File imported successfully!");
             } else if (result.success && result.content) {
-                    // If save failed, just set the content
+                // If save failed, just set the content
                 setEditorState(prev => ({ ...prev, markdown: result.content! }));
-                
+
                 // Reset undo/redo history
                 setTimeout(() => {
                     if (textareaRef.current) {
@@ -1116,7 +1084,7 @@ export default function EditorPage() {
     // Handle new file button click
     const handleNewFile = () => {
         const action = getNewFileAction(editorState, markdown, lastSavedContent, saveStatus);
-        
+
         if (!action.canExecute) {
             if (action.infoMessage) {
                 toast.info(action.infoMessage);
@@ -1139,19 +1107,19 @@ export default function EditorPage() {
         if (action.newState) {
             // Clear editing mode when creating new file - new file is not a saved file yet
             // This ensures files page doesn't show new/unsaved content as currently editing
-        clearAllEditingFlags();
-            
+            clearAllEditingFlags();
+
             setEditorState(action.newState);
             setLastSavedContent(action.newState.markdown);
-        setSaveStatus('idle');
-        // Reset undo/redo history
-        setTimeout(() => {
-            if (textareaRef.current) {
-                textareaRef.current.value = '';
+            setSaveStatus('idle');
+            // Reset undo/redo history
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.value = '';
                     textareaRef.current.value = action.newState!.markdown;
-            }
-        }, 0);
-        toast.success("New file created");
+                }
+            }, 0);
+            toast.success("New file created");
         }
     };
 
@@ -1192,7 +1160,7 @@ export default function EditorPage() {
     // Handle save button click
     const handleSave = async () => {
         const action = getSaveAction(editorState, markdown, isForked);
-        
+
         if (!action.canExecute) {
             if (action.infoMessage) {
                 setShowEmptySaveDialog(true);
@@ -1237,49 +1205,49 @@ export default function EditorPage() {
             if (result.lastSavedContent) {
                 setLastSavedContent(result.lastSavedContent);
             }
-                setSaveStatus('idle');
+            setSaveStatus('idle');
         }
 
-            // Always close dialog after save attempt
-            setShowSaveDialog(false);
-            setSaveFileName("");
-            setSaveDialogInitialValue("");
+        // Always close dialog after save attempt
+        setShowSaveDialog(false);
+        setSaveFileName("");
+        setSaveDialogInitialValue("");
 
         if (saveDialogMode === 'rename') {
             toast.success("File renamed");
         } else if (result.success) {
-                // State is already updated in saveFile function
+            // State is already updated in saveFile function
 
-                // If this was for creating a new file, clear and create new
-                if (pendingNewFile) {
-                    setPendingNewFile(false);
-                    // Small delay to show save success, then create new
-                    setTimeout(() => {
+            // If this was for creating a new file, clear and create new
+            if (pendingNewFile) {
+                setPendingNewFile(false);
+                // Small delay to show save success, then create new
+                setTimeout(() => {
                     // Clear editing mode when creating new file after save
                     // New file is not saved yet, so it shouldn't be marked as editing
                     clearAllEditingFlags();
-                    
-                        const newState = createNewFileState();
-                        setEditorState(newState);
-                        toast.success("New file created");
-                    }, 500);
-                } else if (pendingImport) {
-                    // If this was for importing, trigger import file picker after save
-                    setPendingImport(false);
-                    // Small delay to show save success, then open file picker
-                    setTimeout(() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.md,.txt,text/markdown,text/plain';
-                        input.onchange = async (e) => {
-                            const file = (e.target as HTMLInputElement).files?.[0];
-                            if (!file) return;
+
+                    const newState = createNewFileState();
+                    setEditorState(newState);
+                    toast.success("New file created");
+                }, 500);
+            } else if (pendingImport) {
+                // If this was for importing, trigger import file picker after save
+                setPendingImport(false);
+                // Small delay to show save success, then open file picker
+                setTimeout(() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.md,.txt,text/markdown,text/plain';
+                    input.onchange = async (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (!file) return;
 
                         const importResult = await processImportFile(file);
-                        
+
                         if (importResult.success && importResult.newState) {
                             setEditorState(importResult.newState);
-                            
+
                             // Reset undo/redo history
                             setTimeout(() => {
                                 if (textareaRef.current && importResult.content) {
@@ -1289,31 +1257,31 @@ export default function EditorPage() {
                             }, 0);
                             toast.success("File imported successfully!");
                         } else if (importResult.success && importResult.content) {
-                                    // If save failed, just set the content
+                            // If save failed, just set the content
                             setEditorState(prev => ({ ...prev, markdown: importResult.content! }));
-                                
-                                // Reset undo/redo history
-                                setTimeout(() => {
-                                    if (textareaRef.current) {
-                                        textareaRef.current.value = '';
+
+                            // Reset undo/redo history
+                            setTimeout(() => {
+                                if (textareaRef.current) {
+                                    textareaRef.current.value = '';
                                     textareaRef.current.value = importResult.content!;
-                                    }
-                                }, 0);
-                                toast.success("File imported successfully!");
+                                }
+                            }, 0);
+                            toast.success("File imported successfully!");
                         } else {
                             toast.error("Failed to import file: " + (importResult.error || "Unknown error"));
-                            }
-                        };
-                        input.click();
-                    }, 500);
-                }
-            } else {
-                // Save failed, clear pending flags
-                if (pendingNewFile) {
-                    setPendingNewFile(false);
-                }
-                if (pendingImport) {
-                    setPendingImport(false);
+                        }
+                    };
+                    input.click();
+                }, 500);
+            }
+        } else {
+            // Save failed, clear pending flags
+            if (pendingNewFile) {
+                setPendingNewFile(false);
+            }
+            if (pendingImport) {
+                setPendingImport(false);
             }
         }
     };
@@ -1334,11 +1302,11 @@ export default function EditorPage() {
                 onSaveAndLoad={() => handleLoadFileConfirm(true)}
                 onLoadWithoutSaving={() => handleLoadFileConfirm(false)}
                 onCancel={() => {
-                            setShowLoadFileDialog(false);
-                            setPendingFileId(null);
-                            const url = new URL(window.location.href);
-                            url.searchParams.delete('file');
-                            window.history.replaceState({}, '', url.toString());
+                    setShowLoadFileDialog(false);
+                    setPendingFileId(null);
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('file');
+                    window.history.replaceState({}, '', url.toString());
                 }}
             />
 
@@ -1349,11 +1317,11 @@ export default function EditorPage() {
                 onSaveAndLoad={() => loadShareId && handleLoadSharedContent(loadShareId, true)}
                 onLoadWithoutSaving={() => loadShareId && handleLoadSharedContent(loadShareId, false)}
                 onCancel={() => {
-                            setShowLoadDialog(false);
-                            setLoadShareId(null);
-                            const url = new URL(window.location.href);
-                            url.searchParams.delete('load');
-                            window.history.replaceState({}, '', url.toString());
+                    setShowLoadDialog(false);
+                    setLoadShareId(null);
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('load');
+                    window.history.replaceState({}, '', url.toString());
                 }}
             />
 
@@ -1363,11 +1331,11 @@ export default function EditorPage() {
                 markdown={markdown}
                 autoSaveEnabled={autoSaveEnabled}
                 onRename={() => {
-                                setSaveDialogMode('rename');
+                    setSaveDialogMode('rename');
                     setSaveFileName(currentFileName || '');
                     setSaveDialogInitialValue(currentFileName || '');
-                                setShowSaveDialog(true);
-                            }}
+                    setShowSaveDialog(true);
+                }}
                 onDelete={handleDeleteFile}
                 onNewFile={handleNewFile}
                 onImport={handleImport}
@@ -1376,10 +1344,10 @@ export default function EditorPage() {
                 isClosed={isClosed}
                 isActivateButtonDismissed={isActivateButtonDismissed}
                 onActivate={() => {
-                                setIsClosed(false);
-                                setIsActivateButtonDismissed(false);
-                                setActivateButtonDismissed(false);
-                            }}
+                    setIsClosed(false);
+                    setIsActivateButtonDismissed(false);
+                    setActivateButtonDismissed(false);
+                }}
             />
 
             <SaveDialog
@@ -1390,11 +1358,11 @@ export default function EditorPage() {
                 onChange={setSaveFileName}
                 onConfirm={handleSaveConfirm}
                 onCancel={() => {
-                            setShowSaveDialog(false);
-                            setSaveFileName("");
-                            setSaveDialogInitialValue("");
-                            setPendingNewFile(false);
-                            setPendingImport(false);
+                    setShowSaveDialog(false);
+                    setSaveFileName("");
+                    setSaveDialogInitialValue("");
+                    setPendingNewFile(false);
+                    setPendingImport(false);
                 }}
             />
 
@@ -1418,35 +1386,35 @@ export default function EditorPage() {
                     setActivateButtonDismissed(false);
                     toast.info("Live Editor closed. Use the activate button to get it back.", {
                         duration: 5000,
-                                            });
-                                        }}
+                    });
+                }}
                 onCopyAll={async () => {
-                                        try {
-                                            await navigator.clipboard.writeText(markdown);
-                                            toast.success("All content copied to clipboard!");
-                                        } catch (err) {
-                                            toast.error("Failed to copy content: " + (err instanceof Error ? err.message : "Unknown error"));
-                                        }
-                                    }}
+                    try {
+                        await navigator.clipboard.writeText(markdown);
+                        toast.success("All content copied to clipboard!");
+                    } catch (err) {
+                        toast.error("Failed to copy content: " + (err instanceof Error ? err.message : "Unknown error"));
+                    }
+                }}
                 onShare={handleShare}
                 onShowSharePanel={() => setShowSharePanel(true)}
                 onSetSoloMode={setSoloMode}
                 onSetIsPreview={setIsPreview}
                 onFocusEditor={focusOnEditor}
                 onToggleSpellCheck={() => {
-                                                const textarea = textareaRef.current;
-                                                if (textarea) {
-                                                    const newSpellCheckState = !textarea.spellcheck;
-                                                    textarea.spellcheck = newSpellCheckState;
-                                                    setIsSpellCheckActive(newSpellCheckState);
-                                                    toast.info(
-                                                        newSpellCheckState
-                                                            ? "Spell checker enabled"
-                                                            : "Spell checker disabled",
-                                                        { duration: 2000 }
-                                                    );
-                                                }
-                                            }}
+                    const textarea = textareaRef.current;
+                    if (textarea) {
+                        const newSpellCheckState = !textarea.spellcheck;
+                        textarea.spellcheck = newSpellCheckState;
+                        setIsSpellCheckActive(newSpellCheckState);
+                        toast.info(
+                            newSpellCheckState
+                                ? "Spell checker enabled"
+                                : "Spell checker disabled",
+                            { duration: 2000 }
+                        );
+                    }
+                }}
             />
 
             {/* Editor Content */}
@@ -1455,26 +1423,25 @@ export default function EditorPage() {
                 : "grid-cols-1"
                 }`}>
                 <EditorSection
-                                markdown={markdown}
+                    markdown={markdown}
                     effectiveMode={effectiveMode}
                     isPreview={isPreview}
                     showEditorStatusBar={showEditorStatusBar}
-                                saveStatus={saveStatus}
-                                lastSaved={lastSaved}
-                                timeSinceSave={timeSinceSave}
-                                isAutoSave={autoSaveEnabled}
+                    saveStatus={saveStatus}
+                    lastSaved={lastSaved}
+                    timeSinceSave={timeSinceSave}
+                    isAutoSave={autoSaveEnabled}
                     showSpellChecker={showSpellChecker}
                     textareaRef={textareaRef}
                     onMarkdownChange={updateMarkdown}
-                    onEditorModeResize={handleEditorModeResize}
                 />
                 <PreviewSection
                     markdown={markdown}
                     effectiveMode={effectiveMode}
                     isPreview={isPreview}
                     previewRef={previewRef}
-                            />
-                </div>
+                />
+            </div>
 
             <EmptySaveDialog show={showEmptySaveDialog} onClose={() => setShowEmptySaveDialog(false)} />
             <DeleteWarningDialog
