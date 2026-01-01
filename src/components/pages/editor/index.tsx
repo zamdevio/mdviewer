@@ -90,6 +90,19 @@ export default function EditorPage() {
     const [showThemeToggle, setShowThemeToggle] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isClosed, setIsClosed] = useState(false);
+    
+    // Refs to track current state for keyboard handlers (avoid stale closures)
+    const isCollapsedRef = useRef(isCollapsed);
+    const isClosedRef = useRef(isClosed);
+    
+    // Keep refs in sync with state
+    useEffect(() => {
+        isCollapsedRef.current = isCollapsed;
+    }, [isCollapsed]);
+    
+    useEffect(() => {
+        isClosedRef.current = isClosed;
+    }, [isClosed]);
     const [isActivateButtonDismissed, setIsActivateButtonDismissed] = useState(() => {
         if (typeof window !== "undefined") {
             return getActivateButtonDismissed();
@@ -792,6 +805,28 @@ export default function EditorPage() {
         };
     }, [mounted, markdown]);
 
+    // Handler functions that match the button handlers exactly
+    const handleToggleCollapse = () => {
+        setIsCollapsed(!isCollapsed);
+    };
+
+    const handleClose = () => {
+        setIsClosed(true);
+        setIsActivateButtonDismissed(false);
+        setActivateButtonDismissed(false);
+        toast.info("Live Editor closed. Use the activate button to get it back.", {
+            duration: 5000,
+        });
+    };
+
+    const handleActivate = () => {
+        setIsClosed(false);
+        setIsActivateButtonDismissed(false);
+        setActivateButtonDismissed(false);
+        // Ensure not collapsed when activating
+        setIsCollapsed(false);
+    };
+
     // Keyboard shortcuts handler - intercept ALL Ctrl+S signals
     useEffect(() => {
         if (!mounted || !keyboardShortcutsEnabled) return;
@@ -842,6 +877,29 @@ export default function EditorPage() {
                 e.preventDefault();
                 e.stopPropagation();
                 handleImport();
+                return;
+            }
+
+            // Ctrl+M or Cmd+M - Cycle through Live Editor states: expand -> collapse -> close -> expand
+            if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Read current state from refs to avoid stale closures
+                const currentClosed = isClosedRef.current;
+                const currentCollapsed = isCollapsedRef.current;
+                
+                // Cycle: expand -> collapse -> close -> expand
+                if (currentClosed) {
+                    // State 1: CLOSED -> Expand
+                    handleActivate();
+                } else if (currentCollapsed) {
+                    // State 2: COLLAPSED -> Close
+                    handleClose();
+                } else {
+                    // State 3: EXPANDED -> Collapse (default case when neither closed nor collapsed)
+                    handleToggleCollapse();
+                }
                 return;
             }
 
@@ -1392,11 +1450,7 @@ export default function EditorPage() {
                 onExport={handleExport}
                 isClosed={isClosed}
                 isActivateButtonDismissed={isActivateButtonDismissed}
-                onActivate={() => {
-                    setIsClosed(false);
-                    setIsActivateButtonDismissed(false);
-                    setActivateButtonDismissed(false);
-                }}
+                onActivate={handleActivate}
             />
 
             <SaveDialog
@@ -1428,15 +1482,8 @@ export default function EditorPage() {
                 isSpellCheckActive={isSpellCheckActive}
                 showSpellChecker={showSpellChecker}
                 textareaRef={textareaRef}
-                onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
-                onClose={() => {
-                    setIsClosed(true);
-                    setIsActivateButtonDismissed(false);
-                    setActivateButtonDismissed(false);
-                    toast.info("Live Editor closed. Use the activate button to get it back.", {
-                        duration: 5000,
-                    });
-                }}
+                onToggleCollapse={handleToggleCollapse}
+                onClose={handleClose}
                 onCopyAll={async () => {
                     try {
                         await navigator.clipboard.writeText(markdown);
