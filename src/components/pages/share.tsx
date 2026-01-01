@@ -74,9 +74,7 @@ export default function ShareViewPage(): React.JSX.Element {
             await navigator.clipboard.writeText(window.location.href);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            // Ignore clipboard errors
-        }
+        } catch {}
     };
 
     if (loading) {
