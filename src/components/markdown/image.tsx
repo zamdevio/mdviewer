@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { getSettings } from "@/lib/storage";
 import type { Components } from "react-markdown";
 import Image from "next/image";
 
@@ -20,6 +21,7 @@ import Image from "next/image";
 export const MarkdownImage: Components['img'] = ({ src, alt }) => {
     const [showLightbox, setShowLightbox] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [lightboxImageError, setLightboxImageError] = useState(false);
     const { resolvedTheme } = useTheme();
 
     // Check if this is a badge image (shields.io, badges, etc.)
@@ -63,9 +65,12 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
     const { width, height, cleanUrl } = parseImageSize(srcString);
     const badge = isBadge(cleanUrl);
 
-    const handleImageClick = () => {
+    const handleImageClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
         // Don't show lightbox for badges (they're small and don't need it)
-        if (!imageError && !badge) {
+        if (!badge) {
+            setLightboxImageError(false); // Reset error state when opening lightbox
             setShowLightbox(true);
         }
     };
@@ -73,6 +78,28 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
     const handleImageError = () => {
         setImageError(true);
     };
+
+    // Handle Esc key to close lightbox (only if keyboard shortcuts are enabled)
+    useEffect(() => {
+        if (!showLightbox) return;
+
+        const checkShortcutsEnabled = () => {
+            const settings = getSettings();
+            return settings?.keyboardShortcuts !== false;
+        };
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Only handle Esc if keyboard shortcuts are enabled
+            if (e.key === 'Escape' && checkShortcutsEnabled()) {
+                setShowLightbox(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [showLightbox]);
 
     // For badges, use GitHub-style dimensions (~22px height for better visibility)
     // For regular images, use larger defaults
@@ -99,23 +126,39 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
                 className={imageError ? 'opacity-50' : (badge ? 'markdown-badge hover:opacity-90 transition-opacity' : 'hover:opacity-90 transition-opacity cursor-pointer')}
                 title={imageError ? 'Failed to load image' : (badge ? alt || '' : 'Click to view full size')}
             >
-                <Image
-                    src={cleanUrl}
-                    alt={alt || ''}
-                    width={imageWidth}
-                    height={imageHeight}
-                    style={{
-                        maxWidth: '100%',
-                        height: badge ? '30px' : 'auto',
-                        width: badge ? 'auto' : undefined,
-                        display: 'block',
-                        ...(width && !badge && { width: width }),
-                        ...(height && !badge && { objectFit: 'contain' }),
-                    }}
-                    onError={handleImageError}
-                    className={imageError ? 'opacity-50' : (badge ? 'markdown-badge-img' : '')}
-                    unoptimized
-                />
+                {imageError ? (
+                    <span className="inline-flex items-center justify-center p-2 text-muted-foreground text-sm border border-destructive/20 rounded bg-destructive/5">
+                        Broken Image
+                    </span>
+                ) : (
+                    <Image
+                        src={cleanUrl}
+                        alt={alt || ''}
+                        width={imageWidth}
+                        height={imageHeight}
+                        style={{
+                            maxWidth: '100%',
+                            height: badge ? '30px' : 'auto',
+                            width: badge ? 'auto' : undefined,
+                            display: 'block',
+                            ...(width && !badge && { width: width }),
+                            ...(height && !badge && { objectFit: 'contain' }),
+                        }}
+                        onError={(e) => {
+                            // Prevent infinite reload loop - only set error once
+                            if (!imageError) {
+                                handleImageError();
+                                // Hide the image element to prevent retries
+                                const target = e.currentTarget as HTMLImageElement;
+                                target.style.display = 'none';
+                            }
+                        }}
+                        className={badge ? 'markdown-badge-img' : ''}
+                        unoptimized
+                        loading="lazy"
+                        priority={false}
+                    />
+                )}
             </span>
             {showLightbox && typeof document !== 'undefined' && createPortal(
                 <div
@@ -125,7 +168,16 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
                     onClick={() => setShowLightbox(false)}
                     style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
                 >
-                    <Card className="relative max-w-[90vw] max-h-[90vh] p-4 bg-background flex flex-col">
+                    <Card 
+                        className="relative p-4 bg-background flex flex-col"
+                        style={{ 
+                            width: '95vw', 
+                            height: '95vh',
+                            maxWidth: '95vw',
+                            maxHeight: '95vh'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="flex items-center justify-between mb-2 flex-shrink-0">
                             <p className="text-sm text-muted-foreground truncate flex-1 mr-2">
                                 {alt || cleanUrl}
@@ -139,15 +191,41 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
                                 <X className="w-4 h-4" />
                             </Button>
                         </div>
-                        <div className="overflow-auto flex-1 min-h-0 relative">
-                            <Image
-                                src={cleanUrl}
-                                alt={alt || ''}
-                                fill
-                                className="object-contain"
-                                onClick={(e) => e.stopPropagation()}
-                                unoptimized
-                            />
+                        <div 
+                            className="overflow-auto flex-1 min-h-0 relative" 
+                            style={{ 
+                                width: '100%', 
+                                height: 'calc(95vh - 60px)',
+                                minHeight: '400px'
+                            }}
+                        >
+                            {lightboxImageError ? (
+                                <div className="flex items-center justify-center h-full w-full text-muted-foreground">
+                                    <div className="text-center">
+                                        <p className="text-sm mb-2">Failed to load image</p>
+                                        <p className="text-xs break-all px-4">{cleanUrl}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <Image
+                                    src={cleanUrl}
+                                    alt={alt || ''}
+                                    fill
+                                    className="object-contain"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onError={(e) => {
+                                        // Prevent infinite reload loop
+                                        if (!lightboxImageError) {
+                                            setLightboxImageError(true);
+                                            // Hide the image element to prevent retries
+                                            const target = e.currentTarget as HTMLImageElement;
+                                            target.style.display = 'none';
+                                        }
+                                    }}
+                                    unoptimized
+                                    loading="eager"
+                                />
+                            )}
                         </div>
                     </Card>
                 </div>,
