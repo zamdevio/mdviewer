@@ -494,6 +494,13 @@ export default function SettingsPage(): React.JSX.Element {
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
+                                        <kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">Ctrl/Cmd + M</kbd>
+                                        <span className="text-muted-foreground">Cycle Live Editor (Expand → Collapse → Close)</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground/70">Editor</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
                                         <kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">Esc</kbd>
                                         <span className="text-muted-foreground">Close Dialogs</span>
                                     </div>
