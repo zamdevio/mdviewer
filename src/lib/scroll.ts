@@ -42,10 +42,9 @@ export class ScrollManager {
     private cursorPosition: CursorPosition | null = null;
     private previousMode: SoloMode | null = null;
     private isModeChanging: boolean = false;
-    private scrollListeners: Array<() => void> = [];
     private isInitialized: boolean = false; // Track if manager has been initialized
     
-    private config: ScrollManagerConfig;
+    config: ScrollManagerConfig;
     
     constructor(config: ScrollManagerConfig) {
         this.config = config;
@@ -138,7 +137,6 @@ export class ScrollManager {
         document.body.removeChild(tempTextarea);
         
         // Calculate scroll position to show cursor (1/3 from top for better visibility)
-        const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.5;
         const scrollTop = scrollHeight - (textarea.clientHeight * 0.33);
         
         return Math.max(0, scrollTop);
