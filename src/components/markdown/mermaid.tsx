@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, AlertCircle, Copy, Download, Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { onStorageChange, getSettings } from "@/lib/storage";
 import { toast } from "sonner";
 
 // Track mermaid initialization per theme to allow theme switching
-let mermaidInitializedThemes = new Set<string>();
+const mermaidInitializedThemes = new Set<string>();
 
 /**
  * Helper function to get Mermaid theme config
@@ -114,8 +114,19 @@ export function MarkdownMermaid({ code }: { code: string }) {
     const [mounted, setMounted] = useState(false);
     // State to track current theme for immediate updates
     const [currentIsDarkMode, setCurrentIsDarkMode] = useState(false);
+    // Debounced code to prevent excessive re-renders while typing
+    const [debouncedCode, setDebouncedCode] = useState(code);
+    
+    // Debounce code updates
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedCode(code);
+        }, 500); // 500ms debounce
+        return () => clearTimeout(timer);
+    }, [code]);
     
     // Listen to storage changes for real-time theme updates
+
     useEffect(() => {
         setMounted(true);
         
@@ -140,7 +151,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
     }, []);
     
     // Determine current theme - check DOM class first (most reliable), then storage, then resolvedTheme
-    const getCurrentTheme = (): 'dark' | 'default' => {
+    const getCurrentTheme = useCallback((): 'dark' | 'default' => {
         if (!mounted || typeof document === 'undefined') {
             // During SSR or initial mount, default to light
             return 'default';
@@ -160,7 +171,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
         
         // Final fallback to resolvedTheme from next-themes
         return resolvedTheme === 'dark' ? 'dark' : 'default';
-    };
+    }, [mounted, storageTheme, resolvedTheme]);
     
     // Update theme state immediately when it changes (for instant swapping)
     useEffect(() => {
@@ -193,7 +204,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
             observer.disconnect();
             unsubscribe();
         };
-    }, [mounted, storageTheme, resolvedTheme]);
+    }, [mounted, storageTheme, resolvedTheme, getCurrentTheme]);
     
     const isDarkMode = currentIsDarkMode;
     const primaryTheme = isDarkMode ? 'dark' : 'default';
@@ -244,7 +255,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
 
     // Render primary theme (current theme) - loads first
     useEffect(() => {
-        if (!code || code.trim() === '') {
+        if (!debouncedCode || debouncedCode.trim() === '') {
             setIsLoadingPrimary(false);
             return;
         }
@@ -291,7 +302,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
                 }
                 
                 // Render the diagram to SVG
-                const { svg } = await mermaid.render(id, code.trim());
+                const { svg } = await mermaid.render(id, debouncedCode.trim());
                 
                 // Insert the rendered SVG into DOM
                 if (ref.current) {
@@ -311,11 +322,11 @@ export function MarkdownMermaid({ code }: { code: string }) {
         };
 
         renderPrimary();
-    }, [code, primaryTheme, isDarkMode, storageTheme]); // Re-render when code changes or theme changes (including storage)
+    }, [debouncedCode, primaryTheme, isDarkMode, storageTheme]); // Re-render when code changes or theme changes (including storage)
 
     // Render secondary theme (other theme) - loads in background
     useEffect(() => {
-        if (!code || code.trim() === '') {
+        if (!debouncedCode || debouncedCode.trim() === '') {
             setIsLoadingSecondary(false);
             return;
         }
@@ -363,7 +374,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
                     }
                     
                     // Render the diagram to SVG
-                    const { svg } = await mermaid.render(id, code.trim());
+                    const { svg } = await mermaid.render(id, debouncedCode.trim());
                     
                     // Insert the rendered SVG into DOM (hidden)
                     if (ref.current) {
@@ -386,7 +397,8 @@ export function MarkdownMermaid({ code }: { code: string }) {
         }, 100); // Small delay to prioritize primary theme
 
         return () => clearTimeout(timeoutId);
-    }, [code, secondaryTheme, isDarkMode, storageTheme]); // Re-render when code changes or theme changes (including storage)
+    }, [debouncedCode, secondaryTheme, isDarkMode, storageTheme]); // Re-render when code changes or theme changes (including storage)
+
 
     // Show error if both fail
     if (errorPrimary && errorSecondary) {
@@ -455,7 +467,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
                 ref={mermaidRefDark}
                 className="mermaid-container flex items-center justify-center overflow-auto"
                 style={{ 
-                    minHeight: isLoading ? '100px' : 'auto',
+                    minHeight: (isLoading && !hasRenderedDiagram) ? '100px' : 'auto',
                     display: showDark ? 'flex' : 'none' // Instant theme switching via display
                 }}
                 data-mermaid-theme="dark"
@@ -466,7 +478,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
                 ref={mermaidRefLight}
                 className="mermaid-container flex items-center justify-center overflow-auto"
                 style={{ 
-                    minHeight: isLoading ? '100px' : 'auto',
+                    minHeight: (isLoading && !hasRenderedDiagram) ? '100px' : 'auto',
                     display: showLight ? 'flex' : 'none' // Instant theme switching via display
                 }}
                 data-mermaid-theme="default"
