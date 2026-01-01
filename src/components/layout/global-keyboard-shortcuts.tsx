@@ -57,14 +57,14 @@ export function GlobalKeyboardShortcuts() {
             }
 
             // Ctrl+N or Cmd+N - New file (only works on editor page)
-            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === 'n') {
                 if (pathname === '/editor') {
                     // Let editor handle it
                     return;
                 }
                 e.preventDefault();
                 e.stopPropagation();
-                toast.info("New file shortcut (Ctrl+N) only works on the Editor page.");
+                toast.info("New file shortcut (Ctrl+Alt+N) only works on the Editor page.");
                 return;
             }
 
