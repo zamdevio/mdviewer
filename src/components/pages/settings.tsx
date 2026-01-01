@@ -80,8 +80,14 @@ export default function SettingsPage(): React.JSX.Element {
     const { theme, setTheme, resolvedTheme } = useTheme();
     const { conflicts, pendingImport, showConflictDialog, setShowConflictDialog, handleImport, handleConflictResolution, invalidFiles, showInvalidFilesDialog, setShowInvalidFilesDialog, showPasswordPanel, passwordError, handlePasswordSubmit, closePasswordPanel } = useImportExport();
     
-    // Check if we're on the client side (for hydration safety)
-    const isMounted = typeof window !== 'undefined';
+    // Properly handle mounting to prevent hydration errors
+    const [isMounted, setIsMounted] = useState(false);
+    
+    useEffect(() => {
+        requestAnimationFrame(() => {
+            setIsMounted(true);
+        });
+    }, []);
     
     // Reload settings when component becomes visible (user returns to page)
     useEffect(() => {
@@ -272,8 +278,12 @@ export default function SettingsPage(): React.JSX.Element {
             {/* Theme Settings */}
             <Card className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    {isMounted && resolvedTheme === 'dark' ? (
-                        <Moon className="w-5 h-5 text-primary" />
+                    {isMounted ? (
+                        resolvedTheme === 'dark' ? (
+                            <Moon className="w-5 h-5 text-primary" />
+                        ) : (
+                            <Sun className="w-5 h-5 text-primary" />
+                        )
                     ) : (
                         <Sun className="w-5 h-5 text-primary" />
                     )}
@@ -456,7 +466,7 @@ export default function SettingsPage(): React.JSX.Element {
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
-                                        <kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">Ctrl/Cmd + N</kbd>
+                                        <kbd className="px-1.5 py-0.5 bg-background border rounded text-xs">Ctrl/Cmd + Alt + N</kbd>
                                         <span className="text-muted-foreground">New File</span>
                                     </div>
                                     <span className="text-xs text-muted-foreground/70">Editor</span>
