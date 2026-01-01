@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme";
 import { 
-    Settings as SettingsIcon, 
     Moon, 
     Sun, 
     FileText, 
@@ -25,60 +24,68 @@ import {
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useImportExport } from "@/hooks/use-import-export";
-import { getSettings, setSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, setSavedFiles, removeContent, removeEditingFile, removeFileContent, clearAllData, type SettingsData } from "@/lib/storage";
-import { usePlatform } from "@/hooks/use-platform";
-import { encodeBase64, encryptData } from "@/lib/utils";
-
-
-interface ConflictFile {
-    imported: any;
-    existing: any;
-    conflictType: 'filename' | 'id';
-}
+import { getSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, clearAllData } from "@/lib/storage";
+import { encryptData } from "@/lib/utils";
+import { truncateFilenameForDisplay } from "@/lib/editor";
+import type { SavedFile } from "@/lib/storage";
+import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
 export default function SettingsPage(): React.JSX.Element {
-    const { isMobile } = usePlatform();
-    const [showDefaultContent, setShowDefaultContent] = useState(false);
-    const [keyboardShortcuts, setKeyboardShortcuts] = useState(true);
-    const [autoSave, setAutoSave] = useState(true);
-    const [itemsPerPage, setItemsPerPage] = useState(12);
-    const [defaultEditorMode, setDefaultEditorMode] = useState<'both' | 'editor' | 'preview'>('both');
+    // Use lazy initialization to load settings from localStorage without useEffect
+    const [showDefaultContent, setShowDefaultContent] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const settings = getSettings();
+        return settings?.showDefaultContent ?? false;
+    });
+    const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const settings = getSettings();
+        return settings?.keyboardShortcuts ?? true;
+    });
+    const [autoSave, setAutoSave] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const settings = getSettings();
+        return settings?.autoSave ?? true;
+    });
+    const [itemsPerPage, setItemsPerPage] = useState(() => {
+        if (typeof window === 'undefined') return 12;
+        const settings = getSettings();
+        return settings?.itemsPerPage ?? 12;
+    });
+    const [defaultEditorMode, setDefaultEditorMode] = useState<'both' | 'editor' | 'preview'>(() => {
+        if (typeof window === 'undefined') return 'both';
+        const settings = getSettings();
+        return settings?.defaultEditorMode ?? 'both';
+    });
+    const [showEditorStatusBar, setShowEditorStatusBar] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const settings = getSettings();
+        return settings?.showEditorStatusBar ?? true;
+    });
+    const [showSpellChecker, setShowSpellChecker] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const settings = getSettings();
+        return settings?.showSpellChecker ?? true;
+    });
     const [exportPassword, setExportPassword] = useState("");
     const [importPassword, setImportPassword] = useState("");
     const [showExportPassword, setShowExportPassword] = useState(false);
     const [showImportPassword, setShowImportPassword] = useState(false);
-    const [conflictActions, setConflictActions] = useState<Map<string, 'skip' | 'replace' | 'keepBoth'>>(new Map());
+    const [conflictActions, setConflictActions] = useState<Map<string, ConflictAction>>(new Map());
     const [appliedFiles, setAppliedFiles] = useState<Set<string>>(new Set()); // Track which files have been applied
-    const [lastChosenAction, setLastChosenAction] = useState<'skip' | 'replace' | 'keepBoth'>('skip'); // Default to 'skip'
+    const [lastChosenAction, setLastChosenAction] = useState<ConflictAction>('skip'); // Default to 'skip'
     const [showExportWarning, setShowExportWarning] = useState(false);
     const [showClearDataWarning, setShowClearDataWarning] = useState(false);
     const [clearDataConfirmText, setClearDataConfirmText] = useState("");
     const { theme, setTheme, resolvedTheme } = useTheme();
-    const { conflicts, pendingImport, showConflictDialog, setShowConflictDialog, handleImport, handleConflictResolution, invalidFiles, showInvalidFilesDialog, setShowInvalidFilesDialog, showPasswordPanel, setShowPasswordPanel, passwordError, handlePasswordSubmit, closePasswordPanel } = useImportExport();
-    const [mounted, setMounted] = useState(false);
+    const { conflicts, pendingImport, showConflictDialog, setShowConflictDialog, handleImport, handleConflictResolution, invalidFiles, showInvalidFilesDialog, setShowInvalidFilesDialog, showPasswordPanel, passwordError, handlePasswordSubmit, closePasswordPanel } = useImportExport();
     
-    // Prevent hydration mismatch by waiting for mount
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        // Load settings only on mount
-        if (!mounted) return;
-        
-        const settings = getSettings();
-        if (settings) {
-            setShowDefaultContent(settings.showDefaultContent);
-            setKeyboardShortcuts(settings.keyboardShortcuts);
-            setAutoSave(settings.autoSave);
-            setItemsPerPage(settings.itemsPerPage);
-            setDefaultEditorMode(settings.defaultEditorMode ?? 'both');
-        }
-    }, [mounted]);
+    // Check if we're on the client side (for hydration safety)
+    const isMounted = typeof window !== 'undefined';
     
     // Reload settings when component becomes visible (user returns to page)
     useEffect(() => {
-        if (!mounted) return;
+        if (!isMounted) return;
         
         const handleVisibilityChange = () => {
             if (!document.hidden) {
@@ -90,16 +97,52 @@ export default function SettingsPage(): React.JSX.Element {
                     setAutoSave(settings.autoSave);
                     setItemsPerPage(settings.itemsPerPage);
                     setDefaultEditorMode(settings.defaultEditorMode ?? 'both');
+                    setShowEditorStatusBar(settings.showEditorStatusBar ?? true);
+                    setShowSpellChecker(settings.showSpellChecker ?? true);
                 }
             }
         };
         
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [mounted]);
+    }, [isMounted]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Don't trigger shortcuts when typing in inputs
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                if (e.key === 'Escape') {
+                    // Still allow Escape to close dialogs
+                    if (showExportWarning) {
+                        setShowExportWarning(false);
+                    } else if (showClearDataWarning) {
+                        setShowClearDataWarning(false);
+                        setClearDataConfirmText("");
+                    } else if (showConflictDialog) {
+                        setShowConflictDialog(false);
+                        setConflictActions(new Map());
+                        setLastChosenAction('skip');
+                        setImportPassword("");
+                    } else if (showInvalidFilesDialog) {
+                        setShowInvalidFilesDialog(false);
+                    }
+                }
+                return;
+            }
+
+            // Check if keyboard shortcuts are enabled
+            if (!keyboardShortcuts) return;
+
+            // Ctrl+O or Cmd+O - Import JSON data (settings import)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+                e.preventDefault();
+                e.stopPropagation();
+                handleImport();
+                return;
+            }
+
+            // Escape key - Close dialogs
             if (e.key === 'Escape') {
                 if (showExportWarning) {
                     setShowExportWarning(false);
@@ -119,39 +162,11 @@ export default function SettingsPage(): React.JSX.Element {
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [showExportWarning, showClearDataWarning, showConflictDialog, showInvalidFilesDialog, setShowConflictDialog, setShowInvalidFilesDialog]);
+    }, [keyboardShortcuts, showExportWarning, showClearDataWarning, showConflictDialog, showInvalidFilesDialog, setShowConflictDialog, setShowInvalidFilesDialog, handleImport]);
 
-    const saveSettings = () => {
-        setSettings({
-            showDefaultContent,
-            theme: theme as 'light' | 'dark' | 'system',
-            keyboardShortcuts: keyboardShortcuts,
-            autoSave: autoSave,
-            itemsPerPage: itemsPerPage,
-            defaultEditorMode: defaultEditorMode,
-        });
-        // Trigger storage event to notify editor
-        window.dispatchEvent(new Event('storage'));
-    };
-
-    // Only save settings when user explicitly changes a setting
-    // Don't auto-save on mount or when values change programmatically
-    const handleSettingChange = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) => {
-        // Update local state
-        if (key === 'showDefaultContent') setShowDefaultContent(value as boolean);
-        else if (key === 'keyboardShortcuts') setKeyboardShortcuts(value as boolean);
-        else if (key === 'autoSave') setAutoSave(value as boolean);
-        else if (key === 'itemsPerPage') setItemsPerPage(value as number);
-        else if (key === 'defaultEditorMode') setDefaultEditorMode(value as 'both' | 'editor' | 'preview');
-        else if (key === 'theme') setTheme(value as 'light' | 'dark' | 'system');
-        
-        // Save immediately on user action
-        saveSettings();
-    };
-    
     // Sync theme changes between localStorage and next-themes cookie
     useEffect(() => {
-        if (mounted && theme) {
+        if (isMounted && theme) {
             // Update cookie for next-themes (it uses _th cookie)
             document.cookie = `_th=${theme}; path=/; max-age=31536000; SameSite=Lax`;
             // Update storage if theme changed
@@ -160,7 +175,7 @@ export default function SettingsPage(): React.JSX.Element {
                 updateSetting('theme', theme as 'light' | 'dark' | 'system');
             }
         }
-    }, [theme, mounted]);
+    }, [theme, isMounted]);
 
     const handleExportClick = () => {
         setShowExportWarning(true);
@@ -170,12 +185,12 @@ export default function SettingsPage(): React.JSX.Element {
         setShowExportWarning(false);
         try {
             // Collect all data
-            const data: any = {
+            const data: ExportImportData = {
                 version: '1.0',
                 exportDate: new Date().toISOString(),
                 settings: {
                     showDefaultContent,
-                    theme,
+                    theme: theme as 'light' | 'dark' | 'system',
                 },
                 files: [],
                 currentContent: getContent(),
@@ -184,7 +199,7 @@ export default function SettingsPage(): React.JSX.Element {
 
             // Collect all files
             const savedFiles = getSavedFiles();
-            data.files = savedFiles.map((file: any) => ({
+            data.files = savedFiles.map((file: SavedFile) => ({
                 id: file.id || `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`, // Only for export, not saved
                 filename: file.filename,
                 content: getFileContent(file.filename) || '',
@@ -257,7 +272,7 @@ export default function SettingsPage(): React.JSX.Element {
             {/* Theme Settings */}
             <Card className="p-6">
                 <div className="flex items-center gap-3 mb-4">
-                    {mounted && resolvedTheme === 'dark' ? (
+                    {isMounted && resolvedTheme === 'dark' ? (
                         <Moon className="w-5 h-5 text-primary" />
                     ) : (
                         <Sun className="w-5 h-5 text-primary" />
@@ -290,16 +305,16 @@ export default function SettingsPage(): React.JSX.Element {
                             </p>
                         </div>
                         <Button
-                            variant={mounted && showDefaultContent ? "default" : "outline"}
+                            variant={isMounted && showDefaultContent ? "default" : "outline"}
                             size="sm"
                             onClick={() => {
                                 const newValue = !showDefaultContent;
                                 setShowDefaultContent(newValue);
                                 updateSetting('showDefaultContent', newValue);
                             }}
-                            disabled={!mounted}
+                            disabled={!isMounted}
                         >
-                            {mounted ? (showDefaultContent ? "On" : "Off") : "..."}
+                            {isMounted ? (showDefaultContent ? "On" : "Off") : "..."}
                         </Button>
                     </div>
                     <div className="flex items-center justify-between border-t pt-4">
@@ -310,33 +325,33 @@ export default function SettingsPage(): React.JSX.Element {
                             </p>
                         </div>
                         <Button
-                            variant={mounted && autoSave ? "default" : "outline"}
+                            variant={isMounted && autoSave ? "default" : "outline"}
                             size="sm"
                             onClick={() => {
                                 const newValue = !autoSave;
                                 setAutoSave(newValue);
                                 updateSetting('autoSave', newValue);
                             }}
-                            disabled={!mounted}
+                            disabled={!isMounted}
                         >
-                            {mounted ? (autoSave ? "On" : "Off") : "..."}
+                            {isMounted ? (autoSave ? "On" : "Off") : "..."}
                         </Button>
                     </div>
                     <div className="flex items-center justify-between border-t pt-4">
                         <div className="flex-1">
                             <p className="text-sm font-medium mb-1">Default Editor Mode</p>
                             <p className="text-xs text-muted-foreground">
-                                Choose the default view mode when the editor page loads. This setting only applies on page load. You can change the view mode anytime using the buttons in the editor (changes are session-only and won't be saved). Split view will automatically fallback to editor-only on mobile/small screens.
+                                Choose the default view mode when the editor page loads. This setting only applies on page load. You can change the view mode anytime using the buttons in the editor (changes are session-only and won&apos;t be saved). Split view will automatically fallback to editor-only on mobile/small screens.
                             </p>
                         </div>
                         <select
-                            value={mounted ? defaultEditorMode : 'both'}
+                            value={isMounted ? defaultEditorMode : 'both'}
                             onChange={(e) => {
                                 const newValue = e.target.value as 'both' | 'editor' | 'preview';
                                 setDefaultEditorMode(newValue);
                                 updateSetting('defaultEditorMode', newValue);
                             }}
-                            disabled={!mounted}
+                            disabled={!isMounted}
                             className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                         >
                             <option value="both">Split View</option>
@@ -346,39 +361,19 @@ export default function SettingsPage(): React.JSX.Element {
                     </div>
                     <div className="flex items-center justify-between border-t pt-4">
                         <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Keyboard Shortcuts</p>
-                            <p className="text-xs text-muted-foreground">
-                                Enable keyboard shortcuts for quick actions
-                            </p>
-                        </div>
-                        <Button
-                            variant={mounted && keyboardShortcuts ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => {
-                                const newValue = !keyboardShortcuts;
-                                setKeyboardShortcuts(newValue);
-                                updateSetting('keyboardShortcuts', newValue);
-                            }}
-                            disabled={!mounted}
-                        >
-                            {mounted ? (keyboardShortcuts ? "On" : "Off") : "..."}
-                        </Button>
-                    </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
                             <p className="text-sm font-medium mb-1">Items Per Page</p>
                             <p className="text-xs text-muted-foreground">
                                 Number of files to show per page in the Files page
                             </p>
                         </div>
                         <select
-                            value={mounted ? itemsPerPage : 12}
+                            value={isMounted ? itemsPerPage : 12}
                             onChange={(e) => {
                                 const newValue = Number(e.target.value);
                                 setItemsPerPage(newValue);
                                 updateSetting('itemsPerPage', newValue);
                             }}
-                            disabled={!mounted}
+                            disabled={!isMounted}
                             className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                         >
                             <option value={6}>6</option>
@@ -387,6 +382,66 @@ export default function SettingsPage(): React.JSX.Element {
                             <option value={48}>48</option>
                             <option value={96}>96</option>
                         </select>
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium mb-1">Show Editor Status Bar</p>
+                            <p className="text-xs text-muted-foreground">
+                                Show the status bar with word count, character count, and save status in the editor
+                            </p>
+                        </div>
+                        <Button
+                            variant={isMounted && showEditorStatusBar ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                const newValue = !showEditorStatusBar;
+                                setShowEditorStatusBar(newValue);
+                                updateSetting('showEditorStatusBar', newValue);
+                            }}
+                            disabled={!isMounted}
+                        >
+                            {isMounted ? (showEditorStatusBar ? "On" : "Off") : "..."}
+                        </Button>
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium mb-1">Show Spell Checker</p>
+                            <p className="text-xs text-muted-foreground">
+                                Show the spell checker toggle button in the editor toolbar and enable browser spell checking
+                            </p>
+                        </div>
+                        <Button
+                            variant={isMounted && showSpellChecker ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                const newValue = !showSpellChecker;
+                                setShowSpellChecker(newValue);
+                                updateSetting('showSpellChecker', newValue);
+                            }}
+                            disabled={!isMounted}
+                        >
+                            {isMounted ? (showSpellChecker ? "On" : "Off") : "..."}
+                        </Button>
+                    </div>
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div className="flex-1">
+                            <p className="text-sm font-medium mb-1">Keyboard Shortcuts</p>
+                            <p className="text-xs text-muted-foreground">
+                                Enable keyboard shortcuts for quick actions
+                            </p>
+                        </div>
+                        <Button
+                            variant={isMounted && keyboardShortcuts ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                const newValue = !keyboardShortcuts;
+                                setKeyboardShortcuts(newValue);
+                                updateSetting('keyboardShortcuts', newValue);
+                            }}
+                            disabled={!isMounted}
+                        >
+                            {isMounted ? (keyboardShortcuts ? "On" : "Off") : "..."}
+                        </Button>
                     </div>
                     {keyboardShortcuts && (
                         <div className="mt-4 p-4 bg-muted/50 rounded-lg border-t">
@@ -753,20 +808,20 @@ export default function SettingsPage(): React.JSX.Element {
                         </div>
 
                         <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto">
-                            {conflicts.map((conflict: any, index: number) => {
+                            {conflicts.map((conflict: ConflictFile, index: number) => {
                                 const fileKey = conflict.imported.id || conflict.imported.filename;
                                 // First conflict defaults to 'skip', others use last chosen action or 'skip'
                                 const currentAction = conflictActions.get(fileKey) || (index === 0 ? 'skip' : lastChosenAction);
                                 const isApplied = appliedFiles.has(fileKey);
                                 
-                                const handleActionClick = (action: 'skip' | 'replace' | 'keepBoth') => {
+                                const handleActionClick = (action: ConflictAction) => {
                                     const newActions = new Map(conflictActions);
                                     
                                     // Set action for this file (just select, don't apply yet)
                                     newActions.set(fileKey, action);
                                     
                                     // Set same action for all remaining conflicts (as selection)
-                                    conflicts.forEach((c: any, idx: number) => {
+                                    conflicts.forEach((c: ConflictFile, idx: number) => {
                                         if (idx > index) {
                                             const otherKey = c.imported.id || c.imported.filename;
                                             if (!newActions.has(otherKey) && !appliedFiles.has(otherKey)) {
@@ -779,7 +834,7 @@ export default function SettingsPage(): React.JSX.Element {
                                     setLastChosenAction(action);
                                 };
                                 
-                                const handleActionDoubleClick = (action: 'skip' | 'replace' | 'keepBoth') => {
+                                const handleActionDoubleClick = (action: ConflictAction) => {
                                     if (isApplied) return; // Already applied
                                     
                                     // Mark as applied first
@@ -793,7 +848,7 @@ export default function SettingsPage(): React.JSX.Element {
                                     setConflictActions(newActions);
                                     
                                     // Create a map with only this file's action for immediate resolution
-                                    const singleFileActions = new Map<string, 'skip' | 'replace' | 'keepBoth'>();
+                                    const singleFileActions = new Map<string, ConflictAction>();
                                     singleFileActions.set(fileKey, action);
                                     
                                     // Apply this single file immediately (keep dialog open for other files)
@@ -835,7 +890,7 @@ export default function SettingsPage(): React.JSX.Element {
                                             <div className="grid grid-cols-2 gap-4 text-sm">
                                                 <div className="min-w-0">
                                                     <p className="font-medium mb-1 text-muted-foreground">Imported File:</p>
-                                                    <p className="font-semibold truncate" title={conflict.imported.filename}>{conflict.imported.filename}</p>
+                                                    <p className="font-semibold truncate" title={conflict.imported.filename}>{truncateFilenameForDisplay(conflict.imported.filename)}</p>
                                                     <p className="text-xs text-muted-foreground font-mono truncate" title={conflict.imported.id || 'N/A'}>
                                                         ID: <span className="truncate inline-block max-w-full">{conflict.imported.id || 'N/A'}</span>
                                                     </p>
@@ -849,7 +904,7 @@ export default function SettingsPage(): React.JSX.Element {
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-medium mb-1 text-muted-foreground">Existing File:</p>
-                                                    <p className="font-semibold truncate" title={conflict.existing.filename}>{conflict.existing.filename}</p>
+                                                    <p className="font-semibold truncate" title={conflict.existing.filename}>{truncateFilenameForDisplay(conflict.existing.filename)}</p>
                                                     <p className="text-xs text-muted-foreground font-mono truncate" title={conflict.existing.id || 'N/A'}>
                                                         ID: <span className="truncate inline-block max-w-full">{conflict.existing.id || 'N/A'}</span>
                                                     </p>
@@ -910,10 +965,10 @@ export default function SettingsPage(): React.JSX.Element {
                                 onClick={() => {
                                     // Apply last chosen action to all files that haven't been applied yet
                                     const actionToApply = lastChosenAction;
-                                    const allActions = new Map<string, 'skip' | 'replace' | 'keepBoth'>();
+                                    const allActions = new Map<string, ConflictAction>();
                                     
                                     // Apply the last chosen action to all unapplied files
-                                    conflicts.forEach((conflict: any) => {
+                                    conflicts.forEach((conflict: ConflictFile) => {
                                         const fileKey = conflict.imported.id || conflict.imported.filename;
                                         if (!appliedFiles.has(fileKey)) {
                                             allActions.set(fileKey, actionToApply);
