@@ -46,9 +46,7 @@ export function ThemeToggle() {
             }
             // Trigger storage event
             window.dispatchEvent(new Event('storage'));
-        } catch (e) {
-            // Ignore errors
-        }
+        } catch {}
     }
 
     return (

@@ -34,11 +34,14 @@ export function GlobalKeyboardShortcuts() {
 
             if (!checkShortcutsEnabled()) return;
 
-            // Ctrl+O or Cmd+O - Import (works on all pages)
+            // Ctrl+O or Cmd+O - Import (only works on editor and settings pages)
             if ((e.ctrlKey || e.metaKey) && e.key === 'o') {
+                if (pathname === '/editor' || pathname === '/settings') {
+                    // Let the page handle it
+                    return;
+                }
                 e.preventDefault();
-                e.stopPropagation();
-                handleImport();
+                toast.info("Import shortcut (Ctrl+O) only works on Editor (MD files) and Settings (JSON data) pages.");
                 return;
             }
 

@@ -16,7 +16,7 @@ export function ThemeProvider({ children, ...props }: Omit<ThemeProviderProps, '
                     defaultTheme = parsed.theme;
                 }
             }
-        } catch (e) {
+        } catch {
             // Fallback to cookie
             try {
                 const cookieValue = document.cookie

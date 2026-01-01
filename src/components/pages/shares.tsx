@@ -8,18 +8,20 @@ import { Share2, ExternalLink, Copy, X, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { getSharedLinks, removeSharedLink, clearSharedLinks, onStorageChange, type SharedLink } from "@/lib/storage";
-import { usePlatform } from "@/hooks/use-platform";
 
 export default function SharesPage(): React.JSX.Element {
-    const { isMobile } = usePlatform();
     const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
     const [loading, setLoading] = useState(true);
     const [showClearWarning, setShowClearWarning] = useState(false);
     const [deleteLinkId, setDeleteLinkId] = useState<string | null>(null);
 
     useEffect(() => {
-        setSharedLinks(getSharedLinks());
-        setLoading(false);
+        const loadSharedLinks = async () => {
+            const links = await getSharedLinks();
+            setSharedLinks(links);
+            setLoading(false);
+        };
+        loadSharedLinks();
     }, []);
 
     // Listen for shared links changes

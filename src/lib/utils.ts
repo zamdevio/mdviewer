@@ -121,7 +121,7 @@ export async function decryptData(encryptedData: string, password: string): Prom
     try {
       combined = decodeBase64(encryptedData);
     } catch (error) {
-      throw new Error('Invalid base64 encoding');
+      throw new Error('Invalid base64 encoding: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
 
     // Check minimum size (salt 16 + iv 12 + at least some encrypted data)
@@ -158,7 +158,7 @@ export async function decryptData(encryptedData: string, password: string): Prom
         ['deriveBits', 'deriveKey']
       );
     } catch (error) {
-      throw new Error('Failed to import key material');
+      throw new Error('Failed to import key material: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
 
     // Derive key from password (same parameters as encryption)
@@ -177,7 +177,7 @@ export async function decryptData(encryptedData: string, password: string): Prom
         ['decrypt']
       );
     } catch (error) {
-      throw new Error('Failed to derive decryption key');
+      throw new Error('Failed to derive decryption key: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
 
     // Decrypt the data
@@ -204,7 +204,7 @@ export async function decryptData(encryptedData: string, password: string): Prom
     try {
       return new TextDecoder().decode(decrypted);
     } catch (error) {
-      throw new Error('Failed to decode decrypted data');
+      throw new Error('Failed to decode decrypted data: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   } catch (error) {
     // Re-throw with more context if it's already our custom error

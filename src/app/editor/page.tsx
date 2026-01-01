@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import EditorPage from "@/components/pages/editor";
+import EditorPage from "@/components/pages/editor/index";
 
 export const metadata: Metadata = {
   title: "Markdown Editor - Live Preview Editor",

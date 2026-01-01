@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { ThemeToggle } from "@/components/theme"
 import { Button } from "@/components/ui/button"
-import { FileText, Menu, X, FolderOpen } from "lucide-react"
+import { FileText, Menu, X } from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { usePlatform } from "@/hooks/use-platform"

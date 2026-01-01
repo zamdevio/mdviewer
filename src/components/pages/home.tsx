@@ -29,7 +29,9 @@ export default function Home() {
   const { isMobile } = usePlatform();
 
   useEffect(() => {
-    setMounted(true);
+    setTimeout(() => {
+      setMounted(true);
+    }, 1000);
   }, []);
 
   return (
@@ -236,7 +238,7 @@ export default function Home() {
                 <CardTitle className="text-xl">GitHub Style</CardTitle>
               </div>
               <CardDescription>
-                Matches GitHub's markdown rendering exactly. Familiar and beautiful.
+                Matches GitHub&apos;s markdown rendering exactly. Familiar and beautiful.
               </CardDescription>
             </CardHeader>
           </Card>
@@ -294,7 +296,7 @@ export default function Home() {
               Perfect For
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Whether you're writing documentation, creating notes, or sharing content
+              Whether you&apos;re writing documentation, creating notes, or sharing content
             </p>
           </div>
 
