@@ -57,17 +57,9 @@ export async function handleShare(
     try {
         const result = await uploadMarkdown(markdown);
         
-        // Use frontendShareUrl from response if available, otherwise construct it
-        let sharePath: string;
-        if (result.frontendShareUrl) {
-            sharePath = result.frontendShareUrl;
-        } else {
-            // Construct share URL with query parameter format
-            sharePath = `/share?id=${result.id}`;
-        }
-        
-        // Construct full URL using config
-        const fullUrl = `${config.FRONTEND_URL}${sharePath}`;
+        // Use frontendShareUrl from response directly (it's already a full URL)
+        // Only construct URL if frontendShareUrl is not provided
+        const fullUrl = result.frontendShareUrl || `${config.FRONTEND_URL}/share?id=${result.id}`;
 
         // Store shared link
         const sharedLink: SharedLink = {
