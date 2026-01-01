@@ -12,6 +12,8 @@ export interface SettingsData {
     autoSave: boolean;
     itemsPerPage: number;
     defaultEditorMode: 'both' | 'editor' | 'preview';
+    showEditorStatusBar: boolean;
+    showSpellChecker: boolean;
 }
 
 export interface SavedFile {
@@ -81,6 +83,8 @@ class StorageManager {
                 autoSave: parsed.autoSave ?? true,
                 itemsPerPage: parsed.itemsPerPage ?? 12,
                 defaultEditorMode: parsed.defaultEditorMode ?? 'both',
+                showEditorStatusBar: parsed.showEditorStatusBar ?? true,
+                showSpellChecker: parsed.showSpellChecker ?? true,
             };
         } catch {
             return null;
@@ -101,6 +105,8 @@ class StorageManager {
                 autoSave: true,
                 itemsPerPage: 12,
                 defaultEditorMode: 'both',
+                showEditorStatusBar: true,
+                showSpellChecker: true,
             };
             return defaults[key];
         }
@@ -122,6 +128,8 @@ class StorageManager {
                 autoSave: settings.autoSave ?? current?.autoSave ?? true,
                 itemsPerPage: settings.itemsPerPage ?? current?.itemsPerPage ?? 12,
                 defaultEditorMode: settings.defaultEditorMode ?? current?.defaultEditorMode ?? 'both',
+                showEditorStatusBar: settings.showEditorStatusBar ?? current?.showEditorStatusBar ?? true,
+                showSpellChecker: settings.showSpellChecker ?? current?.showSpellChecker ?? true,
             };
             
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(updated));
@@ -403,9 +411,7 @@ class StorageManager {
             const limited = filtered.slice(0, 50);
             localStorage.setItem(this.KEYS.SHARED_LINKS, JSON.stringify(limited));
             window.dispatchEvent(new Event('storage'));
-        } catch (error) {
-            // Silently fail - don't use console.error
-        }
+        } catch {}
     }
 
     /**
@@ -419,9 +425,7 @@ class StorageManager {
             const filtered = links.filter(l => l.shareId !== shareId);
             localStorage.setItem(this.KEYS.SHARED_LINKS, JSON.stringify(filtered));
             window.dispatchEvent(new Event('storage'));
-        } catch (error) {
-            // Silently fail - don't use console.error
-        }
+        } catch {}
     }
 
     /**
@@ -468,9 +472,7 @@ class StorageManager {
             }
             // Dispatch storage event for cross-component sync
             window.dispatchEvent(new Event('storage'));
-        } catch (error) {
-            console.error('Error setting temp file:', error);
-        }
+        } catch {}
     }
 
     /**
@@ -523,15 +525,14 @@ class StorageManager {
                 autoSave: true,
                 itemsPerPage: 12,
                 defaultEditorMode: 'both',
+                showEditorStatusBar: true,
+                showSpellChecker: true,
             };
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(defaultSettings));
             
             // Dispatch storage event for cross-component sync
             window.dispatchEvent(new Event('storage'));
-        } catch (error) {
-            console.error('Error clearing all data:', error);
-            throw error;
-        }
+        } catch {}
     }
 
     /**

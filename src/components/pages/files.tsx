@@ -4,16 +4,17 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileText, Trash2, Download, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle } from "lucide-react";
+import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSettings, getEditingFile, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, setEditingFile, onStorageChange, setFileAsEditing, clearAllEditingFlags, type SavedFile } from "@/lib/storage";
+import { getSettings, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, type SavedFile } from "@/lib/storage";
+import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile } from "@/lib/editor";
 
 export default function FilesPage(): React.JSX.Element {
     const [files, setFiles] = useState<SavedFile[]>([]);
     const [loading, setLoading] = useState(true);
-    const [editingFile, setEditingFile] = useState<string | null>(null);
+    const [editingFileId, setEditingFileId] = useState<string | null>(null);
     const [renamingFile, setRenamingFile] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState("");
     const [showDeleteWarning, setShowDeleteWarning] = useState<{ filename: string; fileId?: string } | null>(null);
@@ -53,10 +54,10 @@ export default function FilesPage(): React.JSX.Element {
 
     useEffect(() => {
         loadFiles();
-        // Check which file is currently being edited
-        const editing = getEditingFile();
-        if (editing) {
-            setEditingFile(editing);
+        // Check which file is currently being edited using lib/editor function
+        const editingFileData = getEditingFileFromSavedFiles();
+        if (editingFileData) {
+            setEditingFileId(editingFileData.id);
         }
         
         // Listen for storage changes to sync with editor (only reload if files actually changed)
@@ -64,20 +65,22 @@ export default function FilesPage(): React.JSX.Element {
             // Only reload if mdviewer_saved_files changed, not just editing_file
             if (key === 'mdviewer_saved_files') {
                 loadFiles();
-            }
-            const editing = getEditingFile();
-            if (editing !== editingFile) {
-                setEditingFile(editing);
+                // Update editing file status after reloading files
+                const editingFileData = getEditingFileFromSavedFiles();
+                if (editingFileData) {
+                    setEditingFileId(editingFileData.id);
+                } else {
+                    setEditingFileId(null);
+                }
             }
         });
         
         // Check for editing file changes (but don't reload files unnecessarily)
         const interval = setInterval(() => {
-            const editing = getEditingFile();
-            if (editing !== editingFile) {
-                setEditingFile(editing);
-                // Only reload if we need to update the "Currently editing" badge
-                // Don't reload the entire file list
+            const editingFileData = getEditingFileFromSavedFiles();
+            const currentEditingFileId = editingFileData?.id || null;
+            if (currentEditingFileId !== editingFileId) {
+                setEditingFileId(currentEditingFileId);
             }
         }, 2000);
         
@@ -85,7 +88,7 @@ export default function FilesPage(): React.JSX.Element {
             unsubscribe();
             clearInterval(interval);
         };
-    }, []);
+    }, [ editingFileId ]);
 
     const loadFiles = async () => {
         setLoading(true);
@@ -116,6 +119,10 @@ export default function FilesPage(): React.JSX.Element {
                 setSavedFiles(Array.from(filesById.values()));
             }
             
+            // Get the currently editing file to check editing status
+            const editingFileData = getEditingFileFromSavedFiles();
+            const editingFileId = editingFileData?.id || null;
+            
             const filesWithContent = Array.from(filesById.values()).map((file: SavedFile) => {
                 const content = getFileContent(file.filename) || undefined;
                 return {
@@ -123,6 +130,7 @@ export default function FilesPage(): React.JSX.Element {
                     filename: file.filename,
                     content,
                     timestamp: file.timestamp,
+                    editing: file.id === editingFileId, // Mark as editing if this file's ID matches
                 };
             });
             setFiles(filesWithContent);
@@ -157,7 +165,7 @@ export default function FilesPage(): React.JSX.Element {
             toast.success("File deleted");
             loadFiles();
         } catch (error) {
-            toast.error("Failed to delete file");
+            toast.error("Failed to delete file: " + (error instanceof Error ? error.message : "Unknown error"));
         }
     };
 
@@ -173,20 +181,28 @@ export default function FilesPage(): React.JSX.Element {
             return;
         }
 
-        const newName = renameValue.trim().replace(/\.md$/i, '');
-        const newFilename = `${newName}.md`;
+        // Sanitize and validate filename
+        const cleanName = sanitizeFileName(renameValue.trim());
+        const validation = validateFileName(cleanName);
+        if (!validation.valid) {
+            toast.error(validation.error || "Invalid filename");
+            return;
+        }
+
+        // Truncate if needed
+        const truncatedName = truncateFilename(cleanName);
+        const newName = truncatedName.replace(/\.md$/i, '');
 
         try {
-            // Find file by ID (not filename)
+            // Find file by ID to get current content
             const savedFiles = getSavedFiles();
-            const fileIndex = savedFiles.findIndex((f: SavedFile) => f.id === fileId);
+            const file = savedFiles.find((f: SavedFile) => f.id === fileId);
             
-            if (fileIndex === -1) {
+            if (!file) {
                 toast.error("File not found");
                 return;
             }
 
-            const file = savedFiles[fileIndex];
             const oldFilename = file.filename;
             const oldNameWithoutExt = oldFilename.replace(/\.md$/i, '');
 
@@ -196,7 +212,7 @@ export default function FilesPage(): React.JSX.Element {
                 return;
             }
 
-            // Get file content
+            // Get file content using the file ID (find by ID, then get content by filename)
             const content = getFileContent(oldFilename);
 
             if (!content) {
@@ -204,31 +220,23 @@ export default function FilesPage(): React.JSX.Element {
                 return;
             }
 
-            // Use existing file ID (preserve it)
-            const existingId = file.id;
+            // Use the rename function from lib/editor which always uses file ID
+            // This ensures we're always renaming by ID, not by filename
+            const result = renameFile(fileId, newName, content);
 
-            // Save with new name (preserve ID)
-            setFileContent(newFilename, content);
-            removeFileContent(oldFilename);
-            // Update metadata (preserve ID)
-            savedFiles[fileIndex] = {
-                id: existingId,
-                filename: newFilename,
-                timestamp: file.timestamp,
-            };
-            setSavedFiles(savedFiles);
+            if (result.success && result.file) {
+                // Editing file ID is preserved automatically by renameFile function
+                // No need to update editingFileId here
 
-            // Update editing file if it was the renamed file
-            if (editingFile === oldNameWithoutExt) {
-                setEditingFile(newName);
+                toast.success("File renamed");
+                setRenamingFile(null);
+                setRenameValue("");
+                loadFiles();
+            } else {
+                toast.error(result.error || "Failed to rename file");
             }
-
-            toast.success("File renamed");
-            setRenamingFile(null);
-            setRenameValue("");
-            loadFiles();
         } catch (error) {
-            toast.error("Failed to rename file");
+            toast.error("Failed to rename file: " + (error instanceof Error ? error.message : "Unknown error"));
         }
     };
 
@@ -257,10 +265,38 @@ export default function FilesPage(): React.JSX.Element {
                 targetFileId = existingFile.id;
             }
             
-            // Navigate to editor with file ID - editor will handle temp content warning
+            // Navigate to editor with file ID - editor will handle temp content warning and set editing mode
+            // Editor page will set editing mode after all checks (temp content, etc.)
             router.push(`/editor?file=${targetFileId}`);
         } catch (error) {
-            toast.error("Failed to load file to editor");
+            toast.error("Failed to load file to editor: " + (error instanceof Error ? error.message : "Unknown error"));
+        }
+    };
+
+    const handleExport = (filename: string, content: string) => {
+        try {
+            if (!content) {
+                toast.error("File content is empty");
+                return;
+            }
+
+            // Ensure filename doesn't exceed limit
+            const exportFilename = truncateFilename(filename);
+
+            // Create blob and download
+            const blob = new Blob([content], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = exportFilename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            toast.success(`File "${truncateFilenameForDisplay(exportFilename)}" exported successfully!`);
+        } catch (error) {
+            toast.error("Failed to export file: " + (error instanceof Error ? error.message : "Unknown error"));
         }
     };
 
@@ -470,7 +506,13 @@ export default function FilesPage(): React.JSX.Element {
                                             <input
                                                 type="text"
                                                 value={renameValue}
-                                                onChange={(e) => setRenameValue(e.target.value)}
+                                                onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    // Limit to max filename length
+                                                    if (value.length <= MAX_FILENAME_LENGTH) {
+                                                        setRenameValue(value);
+                                                    }
+                                                }}
                                                 onKeyPress={(e) => {
                                                     if (e.key === "Enter") {
                                                         handleRenameConfirm(file.id);
@@ -479,6 +521,7 @@ export default function FilesPage(): React.JSX.Element {
                                                         setRenameValue("");
                                                     }
                                                 }}
+                                                maxLength={MAX_FILENAME_LENGTH}
                                                 className="flex-1 px-2 py-1 rounded border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 autoFocus
                                             />
@@ -504,7 +547,7 @@ export default function FilesPage(): React.JSX.Element {
                                         </div>
                                     ) : (
                                         <div className="flex items-center gap-2 min-w-0">
-                                            <h3 className="font-semibold truncate flex-1" title={file.filename}>{file.filename}</h3>
+                                            <h3 className="font-semibold truncate flex-1" title={file.filename}>{truncateFilenameForDisplay(file.filename)}</h3>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -542,13 +585,24 @@ export default function FilesPage(): React.JSX.Element {
                             <div className="flex gap-2">
                                 {file.content && (
                                     <Button
-                                        variant={editingFile === file.filename.replace(/\.md$/i, '') ? "default" : "default"}
+                                        variant={editingFileId === file.id ? "default" : "default"}
                                         size="sm"
                                         onClick={() => handleLoadToEditor(file.filename, file.content!, file.id)}
                                         className="flex-1 gap-2"
                                     >
                                         <Edit3 className="w-4 h-4" />
-                                        {editingFile === file.filename.replace(/\.md$/i, '') ? "Editing" : "Load"}
+                                        {editingFileId === file.id ? "Editing" : "Load"}
+                                    </Button>
+                                )}
+                                {file.content && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleExport(file.filename, file.content!)}
+                                        className="gap-2"
+                                        title={`Export ${file.filename}`}
+                                    >
+                                        <Download className="w-4 h-4" />
                                     </Button>
                                 )}
                                 <Button
@@ -556,12 +610,12 @@ export default function FilesPage(): React.JSX.Element {
                                     size="sm"
                                     onClick={() => handleDelete(file.filename, file.id)}
                                     className="gap-2"
-                                    disabled={editingFile === file.filename.replace(/\.md$/i, '')}
+                                    disabled={editingFileId === file.id}
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                             </div>
-                            {editingFile === file.filename.replace(/\.md$/i, '') && (
+                            {editingFileId === file.id && (
                                 <div className="flex items-center gap-1 text-xs text-primary font-medium mt-1">
                                     <Edit3 className="w-3 h-3" />
                                     Currently editing in editor

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, ExternalLink, FileText } from "lucide-react";
@@ -14,6 +14,14 @@ export default function SearchPage(): React.JSX.Element {
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    // Auto-focus search input when page loads
+    useEffect(() => {
+        if (searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    }, []);
 
     // Extract share ID from URL or use as-is if it's just an ID
     const extractShareId = (input: string): string | null => {
@@ -100,6 +108,7 @@ export default function SearchPage(): React.JSX.Element {
             <Card className="p-6 max-w-2xl mx-auto w-full">
                 <div className="flex gap-2">
                     <input
+                        ref={searchInputRef}
                         type="text"
                         placeholder={`Enter share ID or URL (e.g., abc123 or ${config.FRONTEND_URL}/share?id=abc123)`}
                         value={shareId}
