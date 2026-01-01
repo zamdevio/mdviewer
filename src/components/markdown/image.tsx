@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import type { Components } from "react-markdown";
+import Image from "next/image";
 
 /**
  * Enhanced Image Component for Markdown
@@ -16,10 +17,22 @@ import type { Components } from "react-markdown";
  * - Image alignment via HTML wrapper
  * - Lightbox preview on click
  */
-export const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
+export const MarkdownImage: Components['img'] = ({ src, alt }) => {
     const [showLightbox, setShowLightbox] = useState(false);
     const [imageError, setImageError] = useState(false);
     const { resolvedTheme } = useTheme();
+
+    // Check if this is a badge image (shields.io, badges, etc.)
+    const isBadge = (url: string): boolean => {
+        const badgePatterns = [
+            /shields\.io/i,
+            /badge/i,
+            /img\.shields\.io/i,
+            /badgen\.net/i,
+            /badges\.github\.io/i,
+        ];
+        return badgePatterns.some(pattern => pattern.test(url));
+    };
 
     // Parse image size from src (supports =200x300 or #width=200&height=300)
     const parseImageSize = (url: string) => {
@@ -48,9 +61,11 @@ export const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
 
     const srcString = typeof src === 'string' ? src : '';
     const { width, height, cleanUrl } = parseImageSize(srcString);
+    const badge = isBadge(cleanUrl);
 
     const handleImageClick = () => {
-        if (!imageError) {
+        // Don't show lightbox for badges (they're small and don't need it)
+        if (!imageError && !badge) {
             setShowLightbox(true);
         }
     };
@@ -59,26 +74,49 @@ export const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
         setImageError(true);
     };
 
-    const imageStyle: React.CSSProperties = {
+    // For badges, use GitHub-style dimensions (~22px height for better visibility)
+    // For regular images, use larger defaults
+    const imageWidth: number = width || (badge ? 100 : 800);
+    const imageHeight: number = height || (badge ? 30 : 600);
+
+    const containerStyle: React.CSSProperties = {
+        display: 'inline-block',
         maxWidth: '100%',
-        height: 'auto',
-        cursor: imageError ? 'default' : 'pointer',
+        cursor: imageError ? 'default' : (badge ? 'pointer' : 'pointer'),
         ...(width && { width: `${width}px` }),
-        ...(height && { height: `${height}px`, objectFit: 'contain' }),
+        ...(height && { height: `${height}px` }),
+        ...(badge && { 
+            height: '30px',
+            verticalAlign: 'middle',
+        }),
     };
 
     return (
         <>
-            <img
-                src={cleanUrl}
-                alt={alt || ''}
-                style={imageStyle}
+            <span
+                style={containerStyle}
                 onClick={handleImageClick}
-                onError={handleImageError}
-                className={imageError ? 'opacity-50' : 'hover:opacity-90 transition-opacity'}
-                title={imageError ? 'Failed to load image' : 'Click to view full size'}
-                {...props}
-            />
+                className={imageError ? 'opacity-50' : (badge ? 'markdown-badge hover:opacity-90 transition-opacity' : 'hover:opacity-90 transition-opacity cursor-pointer')}
+                title={imageError ? 'Failed to load image' : (badge ? alt || '' : 'Click to view full size')}
+            >
+                <Image
+                    src={cleanUrl}
+                    alt={alt || ''}
+                    width={imageWidth}
+                    height={imageHeight}
+                    style={{
+                        maxWidth: '100%',
+                        height: badge ? '30px' : 'auto',
+                        width: badge ? 'auto' : undefined,
+                        display: 'block',
+                        ...(width && !badge && { width: width }),
+                        ...(height && !badge && { objectFit: 'contain' }),
+                    }}
+                    onError={handleImageError}
+                    className={imageError ? 'opacity-50' : (badge ? 'markdown-badge-img' : '')}
+                    unoptimized
+                />
+            </span>
             {showLightbox && typeof document !== 'undefined' && createPortal(
                 <div
                     className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm ${
@@ -101,13 +139,14 @@ export const MarkdownImage: Components['img'] = ({ src, alt, ...props }) => {
                                 <X className="w-4 h-4" />
                             </Button>
                         </div>
-                        <div className="overflow-auto flex-1 min-h-0">
-                            <img
+                        <div className="overflow-auto flex-1 min-h-0 relative">
+                            <Image
                                 src={cleanUrl}
                                 alt={alt || ''}
-                                className="max-w-full max-h-full object-contain mx-auto"
+                                fill
+                                className="object-contain"
                                 onClick={(e) => e.stopPropagation()}
-                                style={{ display: 'block' }}
+                                unoptimized
                             />
                         </div>
                     </Card>
