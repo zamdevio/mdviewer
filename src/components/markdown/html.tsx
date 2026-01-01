@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, Fragment } from "react";
+import { Fragment } from "react";
 import type { ReactNode } from "react";
 
 /**
@@ -9,10 +9,9 @@ import type { ReactNode } from "react";
  * This component is used by rehype-raw to render HTML in markdown
  */
 export function MarkdownHTML({ 
-    node, 
     children 
 }: { 
-    node: any; 
+    node: React.ReactNode; 
     children?: ReactNode;
 }) {
     // This is handled by rehype-sanitize configuration

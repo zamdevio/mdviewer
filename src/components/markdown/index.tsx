@@ -11,6 +11,6 @@ export { MarkdownMath } from './math';
 export { MarkdownHTML, sanitizeSchema } from './html';
 export { MarkdownCodeBlock } from './code';
 export { MarkdownBadges } from './badges';
-export { MarkdownEmoji } from './emoji';
 export { MarkdownViewer } from './viewer';
+
 
