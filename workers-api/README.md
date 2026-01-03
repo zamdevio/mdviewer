@@ -59,6 +59,15 @@
 - Node.js 18+ and npm/yarn/pnpm
 - Cloudflare account with Workers and R2 enabled
 - Wrangler CLI installed (`npm install -g wrangler`)
+- **Frontend deployed first** (Cloudflare Pages) - you need the Pages domain to configure here
+
+### ⚠️ Important: Deployment Order
+
+**Deploy your frontend (Cloudflare Pages) FIRST**, then deploy this Workers API. This ensures you have the Pages domain to configure in `wrangler.toml`.
+
+1. Deploy Next.js app to Cloudflare Pages → Get domain (e.g., `mdviewer.pages.dev`)
+2. Configure `FRONTEND_URL` in `wrangler.toml` with that domain
+3. Deploy this Workers API
 
 ### Installation
 
@@ -68,33 +77,54 @@
    npm install
    ```
 
-2. **Create R2 Bucket**:
+2. **Login to Cloudflare** (first time only):
    ```bash
-   npx wrangler r2 bucket create mdviewer
+   wrangler login
    ```
 
-3. **Configure Wrangler**:
+3. **Create R2 Bucket**:
+   ```bash
+   wrangler r2 bucket create mdviewer
+   ```
+
+4. **Configure `wrangler.toml`** (REQUIRED):
    
-   Edit `wrangler.toml` and set your `FRONTEND_URL`:
+   **⚠️ CRITICAL**: The Workers API **requires** `FRONTEND_URL` to be set. It **will not work** without it and will return `500` errors on all requests.
+   
+   Open `wrangler.toml` and set your `FRONTEND_URL`:
+   
    ```toml
    [vars]
-   # REQUIRED: Set your frontend URL
-   FRONTEND_URL = "https://yourdomain.com"
+   # REQUIRED: Set to your Cloudflare Pages domain
+   # Get this from your Pages deployment (e.g., mdviewer.pages.dev)
+   # Or use your custom domain if you set one up
+   FRONTEND_URL = "https://mdviewer.pages.dev"
+   
+   # For local development, use:
+   # FRONTEND_URL = "http://localhost:3000"
    
    # Optional: Customize rate limits
    RATE_LIMIT_WINDOW = 60        # Time window in seconds (default: 60)
    RATE_LIMIT_MAX_REQUESTS = 10  # Max requests per window (default: 10)
    ```
+   
+   **Important**:
+   - Use the **exact domain** from your Cloudflare Pages deployment
+   - If you set up a custom domain for Pages, use that instead
+   - The domain must match what users will access your site from
+   - For local dev, use `http://localhost:3000`
 
-4. **Deploy**:
+5. **Deploy**:
    ```bash
    # Deploy to Cloudflare Workers
    npm run deploy
    ```
 
+   **Note your Workers URL** from the output (e.g., `https://mdviewer-api.xxx.workers.dev`). You'll need this for your frontend's `API_URL` environment variable.
+
    Or for local development:
    ```bash
-   # Run locally
+   # Run locally (requires FRONTEND_URL set to localhost:3000)
    npm run dev
    ```
 
@@ -193,10 +223,13 @@ X-Uploaded-At: 2024-01-01T00:00:00.000Z
 #### Required
 
 - **`FRONTEND_URL`** (required): The frontend URL for your application
+  - **⚠️ CRITICAL**: The API **will not work** without this. All requests will return `500` errors.
   - Used for CORS headers and constructing share URLs
-  - Must be set in `wrangler.toml` under `[vars]` or via environment variables
-  - Example: `"https://yourdomain.com"` or `"http://localhost:3000"`
+  - **Must be set in `wrangler.toml`** under `[vars]` (recommended) or via environment variables
+  - **For production**: Use your Cloudflare Pages domain (e.g., `https://mdviewer.pages.dev`) or custom domain
+  - **For local dev**: Use `http://localhost:3000`
   - The API will return a `500` error if this is not set or is invalid
+  - **Must match** the domain users access your frontend from
 
 #### Optional
 
@@ -210,9 +243,26 @@ X-Uploaded-At: 2024-01-01T00:00:00.000Z
 
 ### Example Configuration
 
+**Production (Cloudflare Pages domain):**
 ```toml
 [vars]
 FRONTEND_URL = "https://mdviewer.pages.dev"
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX_REQUESTS = 10
+```
+
+**Production (Custom domain):**
+```toml
+[vars]
+FRONTEND_URL = "https://mdviewer.yourdomain.com"
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX_REQUESTS = 10
+```
+
+**Local Development:**
+```toml
+[vars]
+FRONTEND_URL = "http://localhost:3000"
 RATE_LIMIT_WINDOW = 60
 RATE_LIMIT_MAX_REQUESTS = 10
 ```
@@ -287,29 +337,57 @@ const data = await response.json();
 
 ## 🚀 Deployment
 
+### ⚠️ Deployment Order (Important!)
+
+**Deploy your frontend (Cloudflare Pages) FIRST**, then deploy this Workers API:
+
+1. **Deploy Next.js app to Cloudflare Pages** → Get your Pages domain (e.g., `mdviewer.pages.dev`)
+2. **Set `FRONTEND_URL` in `wrangler.toml`** with that domain
+3. **Deploy this Workers API**
+4. **Update frontend environment variables** with the Workers API URL
+
 ### Quick Deploy
 
-1. **Login to Cloudflare**:
+1. **Ensure frontend is deployed** and you have the Pages domain
+
+2. **Configure `wrangler.toml`**:
+   ```toml
+   [vars]
+   FRONTEND_URL = "https://mdviewer.pages.dev"  # Your Pages domain
+   ```
+
+3. **Login to Cloudflare** (if not already done):
    ```bash
    wrangler login
    ```
 
-2. **Deploy**:
+4. **Create R2 bucket** (if not already created):
+   ```bash
+   wrangler r2 bucket create mdviewer
+   ```
+
+5. **Deploy**:
    ```bash
    npm run deploy
    ```
 
-3. **Note your Workers URL** (e.g., `https://mdviewer-api.your-subdomain.workers.dev`)
+6. **Note your Workers URL** (e.g., `https://mdviewer-api.your-subdomain.workers.dev`)
 
-4. **Update frontend** with the API URL
+7. **Update frontend environment variables** in Cloudflare Pages:
+   - `API_URL` = Your Workers URL (from step 6)
+   - `FRONTEND_URL` = Your Pages domain (same as in `wrangler.toml`)
 
 ### Production Checklist
 
-- [ ] Set `FRONTEND_URL` in `wrangler.toml`
+- [ ] Frontend deployed to Cloudflare Pages (get domain first!)
+- [ ] Set `FRONTEND_URL` in `wrangler.toml` (matches Pages domain)
 - [ ] Create R2 bucket (`wrangler r2 bucket create mdviewer`)
 - [ ] Configure rate limits (optional)
 - [ ] Deploy worker (`npm run deploy`)
-- [ ] Update frontend environment variables
+- [ ] Note Workers API URL from deployment output
+- [ ] Update frontend environment variables in Cloudflare Pages:
+  - [ ] `API_URL` = Workers API URL
+  - [ ] `FRONTEND_URL` = Pages domain (must match `wrangler.toml`)
 - [ ] Test upload and download endpoints
 
 ---
@@ -343,17 +421,30 @@ workers-api/
 
 ### Common Issues
 
-**Error: "FRONTEND_URL is not set"**
-- Solution: Set `FRONTEND_URL` in `wrangler.toml` under `[vars]`
+**Error: "FRONTEND_URL is not set" or "Configuration error"**
+- **Solution**: Set `FRONTEND_URL` in `wrangler.toml` under `[vars]`
+- **Must be set** - the API will not work without it
+- Use your Cloudflare Pages domain (e.g., `https://mdviewer.pages.dev`)
+- For local dev, use `http://localhost:3000`
+
+**Error: "FRONTEND_URL is not a valid URL"**
+- **Solution**: Ensure `FRONTEND_URL` in `wrangler.toml` is a valid URL
+- Must include protocol (`https://` or `http://`)
+- No trailing slashes
+
+**CORS errors**
+- **Solution**: Ensure `FRONTEND_URL` in `wrangler.toml` matches the domain users access your site from
+- If using custom domain, update `FRONTEND_URL` to match
+- Redeploy after changing `FRONTEND_URL`
 
 **Error: "Rate limit exceeded"**
-- Solution: Wait for the rate limit window to reset or increase `RATE_LIMIT_MAX_REQUESTS`
+- **Solution**: Wait for the rate limit window to reset or increase `RATE_LIMIT_MAX_REQUESTS`
 
 **Error: "Invalid content type"**
-- Solution: Use one of the allowed content types: `text/plain`, `text/markdown`, etc.
+- **Solution**: Use one of the allowed content types: `text/plain`, `text/markdown`, etc.
 
 **Error: "File too large"**
-- Solution: Reduce file size to under 1MB
+- **Solution**: Reduce file size to under 1MB
 
 ---
 
