@@ -53,9 +53,11 @@ export function useConnection() {
 
       clearTimeout(timeoutId);
       const isHealthy = response.ok;
+      console.log('[Connection] Health check result:', isHealthy ? 'OK' : 'FAILED', response.status);
       return isHealthy;
     } catch {
       // Network error, timeout, or server unreachable
+      console.warn('[Connection] Health check failed - server unreachable or timeout');
       return false;
     }
   }, []);
