@@ -41,7 +41,6 @@ export function useConnection() {
 
     try {
       const healthUrl = `${config.API_URL}/health`;
-      console.log('[Connection] Checking health endpoint:', healthUrl);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
@@ -53,11 +52,9 @@ export function useConnection() {
 
       clearTimeout(timeoutId);
       const isHealthy = response.ok;
-      console.log('[Connection] Health check result:', isHealthy ? 'OK' : 'FAILED', response.status);
       return isHealthy;
     } catch {
       // Network error, timeout, or server unreachable
-      console.warn('[Connection] Health check failed - server unreachable or timeout');
       return false;
     }
   }, []);
