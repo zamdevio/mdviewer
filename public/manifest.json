@@ -1,0 +1,44 @@
+{
+  "name": "MD Viewer - Modern Markdown Editor",
+  "short_name": "MDViewer",
+  "description": "A premium markdown viewing and editing experience with offline support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities", "text-editors"],
+  "shortcuts": [
+    {
+      "name": "Editor",
+      "short_name": "Editor",
+      "description": "Open the markdown editor",
+      "url": "/editor",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Files",
+      "short_name": "Files",
+      "description": "View your files",
+      "url": "/files",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Search",
+      "short_name": "Search",
+      "description": "Search your documents",
+      "url": "/search",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}
+
