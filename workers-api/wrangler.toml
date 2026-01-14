@@ -7,7 +7,7 @@ compatibility_date = "2024-01-01"
 # ============================================================================
 # 
 # After cloning this repository, you MUST update the following:
-# 1. FRONTEND_URL - Your Cloudflare Pages domain or custom domain
+# 1. ALLOWED_ORIGINS - Comma-separated list of allowed frontend origins
 # 2. routes (if using custom domain) - Your custom domain configuration
 # 3. bucket_name (optional) - Change if you want a different R2 bucket name
 #
@@ -15,21 +15,30 @@ compatibility_date = "2024-01-01"
 
 # Environment variables
 [vars]
-# ⚠️ REQUIRED: Set this to your frontend URL
+# ⚠️ REQUIRED: Set this to your allowed frontend origins
+# 
+# Comma-separated list of origins allowed to make CORS requests.
+# The API will use the request origin (if allowed) to construct share URLs.
 # 
 # Options:
 # - For Cloudflare Pages: "https://your-project.pages.dev"
 # - For custom domain: "https://yourdomain.com"
 # - For local development: "http://localhost:3000"
+# - Multiple domains: "https://domain1.com,https://domain2.com"
 #
 # This is used for:
-# - CORS headers (allows requests from your frontend)
-# - Constructing share URLs returned to users
+# - CORS headers (allows requests from your frontend(s))
+# - Constructing share URLs returned to users (uses the request origin)
 #
-# Example:
-# FRONTEND_URL = "https://mdviewer.pages.dev"
-# FRONTEND_URL = "https://mdviewer.yourdomain.com"
-FRONTEND_URL = "https://mdviewer.zamdev.dev"
+# Format: Comma-separated list of origins (full URLs or just domains)
+# - Full URLs: "https://markview.pages.dev,https://mdviewer.pages.dev"
+# - Domains: "markview.pages.dev,mdviewer.pages.dev" (https:// will be added automatically)
+#
+# Examples:
+# ALLOWED_ORIGINS = "https://mdviewer.pages.dev"
+# ALLOWED_ORIGINS = "https://mdviewer.yourdomain.com"
+# ALLOWED_ORIGINS = "https://markview.pages.dev,https://mdviewer.pages.dev"
+ALLOWED_ORIGINS = "https://mdviewer.zamdev.dev,https://markview.pages.dev"
 
 # Rate limiting configuration (optional - defaults shown)
 # Adjust these if you want different rate limits
