@@ -51,10 +51,10 @@ export function useConnection() {
       });
 
       clearTimeout(timeoutId);
-      const isHealthy = response.ok;
-      return isHealthy;
-    } catch {
+      return response.ok;
+    } catch (error) {
       // Network error, timeout, or server unreachable
+      console.warn('[Connection] Health check failed:', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }, []);
@@ -83,10 +83,12 @@ export function useConnection() {
 
   // Setup listeners and initial check
   useEffect(() => {
+    console.log('[Connection] Setting up connection monitoring, API_URL:', config.API_URL || 'not set');
     // Use setTimeout to avoid calling setState synchronously in effect
     const initialCheck = setTimeout(() => {
+      console.log('[Connection] Running initial status check');
       updateStatus();
-    }, 0);
+    }, 100); // Small delay to ensure component is mounted
 
     // Listen to browser online/offline events
     const handleOnline = () => {
