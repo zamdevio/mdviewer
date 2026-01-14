@@ -19,7 +19,9 @@ import {
     AlertTriangle,
     X,
     Check,
-    AlertCircle
+    AlertCircle,
+    RefreshCw,
+    Package
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
@@ -27,6 +29,7 @@ import { useImportExport } from "@/hooks/use-import-export";
 import { getSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, clearAllData } from "@/lib/storage";
 import { encryptData } from "@/lib/utils";
 import { truncateFilenameForDisplay } from "@/lib/editor";
+import { getAppVersion, getCacheVersion, checkForUpdate, triggerUpdate } from "@/lib/pwa-version";
 import type { SavedFile } from "@/lib/storage";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
@@ -77,6 +80,9 @@ export default function SettingsPage(): React.JSX.Element {
     const [showExportWarning, setShowExportWarning] = useState(false);
     const [showClearDataWarning, setShowClearDataWarning] = useState(false);
     const [clearDataConfirmText, setClearDataConfirmText] = useState("");
+    const [cacheVersion, setCacheVersion] = useState<string | null>(null);
+    const [updateStatus, setUpdateStatus] = useState<{ hasUpdate: boolean; waiting: boolean; installing: boolean } | null>(null);
+    const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
     const { theme, setTheme, resolvedTheme } = useTheme();
     const { conflicts, pendingImport, showConflictDialog, setShowConflictDialog, handleImport, handleConflictResolution, invalidFiles, showInvalidFilesDialog, setShowInvalidFilesDialog, showPasswordPanel, passwordError, handlePasswordSubmit, closePasswordPanel } = useImportExport();
     
@@ -89,15 +95,32 @@ export default function SettingsPage(): React.JSX.Element {
         });
     }, []);
     
+    // Load cache version and update status
+    useEffect(() => {
+        if (!isMounted) return;
+
+        const loadVersionInfo = async () => {
+            const cacheVer = await getCacheVersion();
+            setCacheVersion(cacheVer);
+            
+            const updateInfo = await checkForUpdate();
+            setUpdateStatus(updateInfo);
+        };
+
+        loadVersionInfo();
+    }, [isMounted]);
+
     // Reload settings when component becomes visible (user returns to page)
     useEffect(() => {
         if (!isMounted) return;
         
         const handleVisibilityChange = () => {
             if (!document.hidden) {
-                // Page is now visible, reload settings
+                // Page is now visible, reload settings and check for updates
                 const settings = getSettings();
                 if (settings) {
+                    // Also refresh update status
+                    checkForUpdate().then(setUpdateStatus);
                     setShowDefaultContent(settings.showDefaultContent);
                     setKeyboardShortcuts(settings.keyboardShortcuts);
                     setAutoSave(settings.autoSave);
@@ -509,6 +532,86 @@ export default function SettingsPage(): React.JSX.Element {
                             </div>
                         </div>
                     )}
+                </div>
+            </Card>
+
+            {/* App Version & Updates */}
+            <Card className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                    <Package className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">App Version & Updates</h2>
+                </div>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-sm font-medium mb-1">App Version</p>
+                            <p className="text-xs text-muted-foreground">
+                                Current version: {getAppVersion()}
+                            </p>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm font-medium mb-1">Cache Version</p>
+                            <p className="text-xs text-muted-foreground">
+                                {cacheVersion ? cacheVersion : "Not cached"}
+                            </p>
+                        </div>
+                    </div>
+                    {updateStatus && (updateStatus.waiting || updateStatus.installing) && (
+                        <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                            <div className="flex items-center gap-2 mb-2">
+                                <AlertCircle className="w-4 h-4 text-primary" />
+                                <p className="text-sm font-medium">Update Available</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-3">
+                                A new version is {updateStatus.waiting ? "ready" : "installing"}. Click update to reload with the latest version.
+                            </p>
+                            <Button
+                                size="sm"
+                                variant="default"
+                                onClick={async () => {
+                                    const success = await triggerUpdate();
+                                    if (success) {
+                                        toast.success("Updating...");
+                                    } else {
+                                        toast.error("Failed to trigger update");
+                                    }
+                                }}
+                                className="gap-2"
+                            >
+                                <RefreshCw className="w-4 h-4" />
+                                Update Now
+                            </Button>
+                        </div>
+                    )}
+                    <div className="flex items-center justify-between border-t pt-4">
+                        <div>
+                            <p className="text-sm font-medium mb-1">Check for Updates</p>
+                            <p className="text-xs text-muted-foreground">
+                                Manually check if a new version is available
+                            </p>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={async () => {
+                                setIsCheckingUpdate(true);
+                                const updateInfo = await checkForUpdate();
+                                setUpdateStatus(updateInfo);
+                                setIsCheckingUpdate(false);
+                                
+                                if (updateInfo.hasUpdate) {
+                                    toast.info("Update available! Click 'Update Now' to install.");
+                                } else {
+                                    toast.success("You're using the latest version");
+                                }
+                            }}
+                            disabled={isCheckingUpdate || !isMounted}
+                            className="gap-2"
+                        >
+                            <RefreshCw className={`w-4 h-4 ${isCheckingUpdate ? "animate-spin" : ""}`} />
+                            {isCheckingUpdate ? "Checking..." : "Check"}
+                        </Button>
+                    </div>
                 </div>
             </Card>
 
