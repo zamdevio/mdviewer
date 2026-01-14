@@ -561,6 +561,20 @@ const worker = {
     }
 
     // Step 4: Route handling
+    // Health check endpoint for monitoring/CI-CD verification
+    if (request.method === 'GET' && path === '/health') {
+      return new Response(
+        JSON.stringify({ ok: true }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+
     if (request.method === 'POST' && path === '/upload') {
       const response = await handleUpload(request, env, frontendUrlObj.origin);
       // Add CORS headers to response
