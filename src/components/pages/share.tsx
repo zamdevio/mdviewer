@@ -15,6 +15,24 @@ export default function ShareViewPage(): React.JSX.Element {
     const [copied, setCopied] = useState(false);
     const [shareId, setShareId] = useState<string | null>(null);
 
+    // Add rel="me" link for verifiable identity (used by Mastodon, etc.)
+    useEffect(() => {
+        if (typeof window !== 'undefined' && shareId) {
+            const link = document.createElement('link');
+            link.rel = 'me';
+            link.href = window.location.href;
+            document.head.appendChild(link);
+
+            return () => {
+                // Cleanup on unmount
+                const existingLink = document.querySelector('link[rel="me"][href="' + window.location.href + '"]');
+                if (existingLink) {
+                    document.head.removeChild(existingLink);
+                }
+            };
+        }
+    }, [shareId]);
+
     // Extract share ID from URL pathname
     useEffect(() => {
         if (typeof window !== 'undefined') {
