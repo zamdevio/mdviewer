@@ -24,8 +24,8 @@
  * - Downloads: Unlimited access for fast content delivery
  * 
  * @environmentVariables
- * - FRONTEND_URL (required): The frontend URL for CORS and share URL construction
- *   Example: "https://yourdomain.com" or "http://localhost:3000"
+ * - ALLOWED_ORIGINS (required): Comma-separated list of allowed origins for CORS and share URL construction
+ *   Example: "https://yourdomain.com,https://staging.yourdomain.com" or "http://localhost:3000"
  * - RATE_LIMIT_WINDOW (optional): Rate limit window in seconds (default: 60)
  * - RATE_LIMIT_MAX_REQUESTS (optional): Max requests per window (default: 10)
  * 
@@ -39,14 +39,14 @@
  * @interface Env
  * @property {R2Bucket} R2_BUCKET - R2 bucket binding for storing shared content
  * @property {DurableObjectNamespace} RATE_LIMITER - Durable Object namespace for rate limiting
- * @property {string} FRONTEND_URL - Required: Frontend URL for CORS and share URL construction
+ * @property {string} ALLOWED_ORIGINS - Required: Comma-separated list of allowed origins for CORS and share URL construction
  * @property {string} [RATE_LIMIT_WINDOW] - Optional: Rate limit window in seconds (default: 60)
  * @property {string} [RATE_LIMIT_MAX_REQUESTS] - Optional: Max requests per window (default: 10)
  */
 export interface Env {
   R2_BUCKET: R2Bucket;
   RATE_LIMITER: DurableObjectNamespace;
-  FRONTEND_URL: string; // Required: Frontend URL for CORS and share URL construction
+  ALLOWED_ORIGINS: string; // Required: Comma-separated list of allowed origins for CORS and share URL construction
   RATE_LIMIT_WINDOW?: string; // Optional: Rate limit window in seconds (default: 60)
   RATE_LIMIT_MAX_REQUESTS?: string; // Optional: Max requests per window (default: 10)
 }
@@ -134,7 +134,7 @@ function getClientIP(request: Request): string {
  * 
  * @param {Env} env - Environment bindings (R2, Durable Objects, etc.)
  * @param {string} ip - Client IP address
- * @param {string} frontendUrl - Frontend URL for CORS headers
+ * @param {string} frontendOrigin - Frontend origin for rate limiting context
  * @returns {Promise<{allowed: boolean, remaining: number, resetAt: number, limit: number}>}
  *   Rate limit check result with remaining requests and reset time
  * 
@@ -144,7 +144,7 @@ function getClientIP(request: Request): string {
  *   // Rate limit exceeded
  * }
  */
-async function checkRateLimit(env: Env, ip: string, frontendUrl: string): Promise<{ allowed: boolean; remaining: number; resetAt: number; limit: number }> {
+async function checkRateLimit(env: Env, ip: string, frontendOrigin: string): Promise<{ allowed: boolean; remaining: number; resetAt: number; limit: number }> {
   // Parse rate limit config from env (with defaults)
   const rateLimitWindow = env.RATE_LIMIT_WINDOW ? parseInt(env.RATE_LIMIT_WINDOW, 10) : DEFAULT_RATE_LIMIT_WINDOW;
   const rateLimitMaxRequests = env.RATE_LIMIT_MAX_REQUESTS ? parseInt(env.RATE_LIMIT_MAX_REQUESTS, 10) : DEFAULT_RATE_LIMIT_MAX_REQUESTS;
@@ -160,7 +160,7 @@ async function checkRateLimit(env: Env, ip: string, frontendUrl: string): Promis
   const requestUrl = new URL('https://rate-limiter/check');
   requestUrl.searchParams.set('window', String(rateLimitWindow));
   requestUrl.searchParams.set('maxRequests', String(rateLimitMaxRequests));
-  requestUrl.searchParams.set('frontendUrl', frontendUrl);
+  requestUrl.searchParams.set('frontendUrl', frontendOrigin);
   
   const response = await stub.fetch(new Request(requestUrl.toString(), {
     method: 'GET',
@@ -285,7 +285,7 @@ async function extractContent(request: Request): Promise<{ content: string; cont
  * 
  * @param {Request} request - The upload request
  * @param {Env} env - Environment bindings
- * @param {string} frontendUrl - Frontend URL for CORS
+ * @param {string} frontendOrigin - Frontend origin for share URL construction
  * @returns {Promise<Response>} Success response with share URL or error response
  * 
  * @throws {429} Rate limit exceeded
@@ -294,10 +294,10 @@ async function extractContent(request: Request): Promise<{ content: string; cont
  * @throws {400} Empty content
  * @throws {500} Storage error
  */
-async function handleUpload(request: Request, env: Env, frontendUrl: string): Promise<Response> {
+async function handleUpload(request: Request, env: Env, frontendOrigin: string): Promise<Response> {
   // Step 1: Check rate limit (only for uploads)
   const ip = getClientIP(request);
-  const rateLimit = await checkRateLimit(env, ip, frontendUrl);
+  const rateLimit = await checkRateLimit(env, ip, frontendOrigin);
   
   if (!rateLimit.allowed) {
     return new Response(
@@ -390,8 +390,8 @@ async function handleUpload(request: Request, env: Env, frontendUrl: string): Pr
       },
     });
 
-    // Step 5: Construct frontend share URL
-    const frontendUrlObj = new URL(env.FRONTEND_URL);
+    // Step 5: Construct frontend share URL using the request origin
+    const frontendUrlObj = new URL(frontendOrigin);
     frontendUrlObj.pathname = '/share';
     frontendUrlObj.searchParams.set('id', id);
     
@@ -496,10 +496,11 @@ async function handleShare(request: Request, env: Env, id: string): Promise<Resp
  * 
  * @description
  * Handles all incoming requests with the following flow:
- * 1. Validates FRONTEND_URL configuration (required)
- * 2. Sets up CORS headers
- * 3. Routes requests to appropriate handlers
- * 4. Adds CORS headers to all responses
+ * 1. Validates ALLOWED_ORIGINS configuration (required)
+ * 2. Determines frontend origin from request (must be in allowed origins)
+ * 3. Sets up CORS headers
+ * 4. Routes requests to appropriate handlers
+ * 5. Adds CORS headers to all responses
  * 
  * @type {Object}
  * @property {Function} fetch - Main request handler
@@ -513,12 +514,12 @@ const worker = {
    * @returns {Promise<Response>} Response with content or error
    */
   async fetch(request: Request, env: Env): Promise<Response> {
-    // Step 1: Validate FRONTEND_URL is set - MUST be checked before any processing or CORS setup
-    if (!env.FRONTEND_URL || env.FRONTEND_URL.trim() === '') {
+    // Step 1: Validate ALLOWED_ORIGINS is set - MUST be checked before any processing or CORS setup
+    if (!env.ALLOWED_ORIGINS || env.ALLOWED_ORIGINS.trim() === '') {
       return new Response(
         JSON.stringify({
           error: 'Configuration error',
-          message: 'FRONTEND_URL environment variable is not set. Please configure it in wrangler.toml or via environment variables.',
+          message: 'ALLOWED_ORIGINS environment variable is not set. Please configure it in wrangler.toml or via environment variables.',
         }),
         {
           status: 500,
@@ -527,15 +528,26 @@ const worker = {
       );
     }
 
-    // Step 2: Validate FRONTEND_URL is a valid URL
-    let frontendUrlObj: URL;
-    try {
-      frontendUrlObj = new URL(env.FRONTEND_URL);
-    } catch {
+    // Step 2: Parse and normalize allowed origins
+    const allowedOrigins = env.ALLOWED_ORIGINS.split(',')
+      .map(origin => origin.trim())
+      .filter(origin => origin.length > 0)
+      .map(origin => {
+        // Ensure origins are normalized (add https:// if missing, extract origin from full URL)
+        try {
+          const url = new URL(origin.startsWith('http') ? origin : `https://${origin}`);
+          return url.origin;
+        } catch {
+          return null; // Invalid origin, will be filtered out
+        }
+      })
+      .filter((origin): origin is string => origin !== null); // Remove invalid origins
+    
+    if (allowedOrigins.length === 0) {
       return new Response(
         JSON.stringify({
           error: 'Configuration error',
-          message: `FRONTEND_URL is not a valid URL: ${env.FRONTEND_URL}. Please set a valid URL in wrangler.toml.`,
+          message: 'ALLOWED_ORIGINS must contain at least one valid origin. Please configure it in wrangler.toml.',
         }),
         {
           status: 500,
@@ -544,13 +556,26 @@ const worker = {
       );
     }
 
-    // Step 3: Extract path and set up CORS headers
+    // Step 3: Extract path and determine frontend origin from request
     const url = new URL(request.url);
     const path = url.pathname;
-
-    // CORS headers - use FRONTEND_URL for allowed origin
+    
+    // Get the origin from the request
+    const requestOrigin = request.headers.get('Origin');
+    
+    // Determine the frontend origin to use (must be in allowed origins)
+    // If request has an origin and it's allowed, use it; otherwise use the first allowed origin
+    const frontendOrigin = requestOrigin && allowedOrigins.includes(requestOrigin)
+      ? requestOrigin
+      : allowedOrigins[0]; // Default to first allowed origin
+    
+    // For CORS, only allow if the request origin is in the allowed list
+    const corsOrigin = requestOrigin && allowedOrigins.includes(requestOrigin)
+      ? requestOrigin
+      : allowedOrigins[0]; // Use first allowed origin as fallback
+    
     const corsHeaders = {
-      'Access-Control-Allow-Origin': frontendUrlObj.origin,
+      'Access-Control-Allow-Origin': corsOrigin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     };
@@ -576,7 +601,7 @@ const worker = {
     }
 
     if (request.method === 'POST' && path === '/upload') {
-      const response = await handleUpload(request, env, frontendUrlObj.origin);
+      const response = await handleUpload(request, env, frontendOrigin);
       // Add CORS headers to response
       Object.entries(corsHeaders).forEach(([key, value]) => {
         response.headers.set(key, value);
