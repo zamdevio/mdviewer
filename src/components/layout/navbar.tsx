@@ -7,6 +7,7 @@ import { FileText, Menu, X } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { usePlatform } from "@/hooks/use-platform"
+import { ConnectionIndicator } from "@/components/layout/connection-indicator"
 
 export function Navbar() {
     const [isOpen, setIsOpen] = useState(false)
@@ -72,6 +73,7 @@ export function Navbar() {
                 </div>
 
                 <div className={`hidden md:flex items-center gap-2`}>
+                    <ConnectionIndicator />
                     <ThemeToggle />
                     {isHomePage && (
                         <Link href="/editor">
@@ -84,6 +86,7 @@ export function Navbar() {
 
                 {/* Mobile Menu Toggle */}
                 <div className={`${isMobile ? 'flex' : 'flex md:hidden'} items-center gap-2`}>
+                    <ConnectionIndicator />
                     <ThemeToggle />
                     <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
                         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
