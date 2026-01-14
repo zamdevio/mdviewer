@@ -98,6 +98,11 @@ This isn't a toy project. It's **production-grade architecture** that happens to
 - ✅ **CORS Protection** - Properly configured CORS headers
 - ✅ **Input Validation** - Client and server-side validation
 - ✅ **Security** - AES-GCM encryption for exports, secure ID generation
+- ✅ **PWA Support** - Installable app with offline-first capabilities
+- ✅ **Service Worker** - Automatic cache updates and version management
+- ✅ **Connection Status** - Real-time network and server health monitoring
+- ✅ **CSP Headers** - Content Security Policy for enhanced security
+- ✅ **Health Endpoint** - `/health` endpoint for monitoring and CI/CD
 - ✅ **Monitoring Ready** - Structured logging and error tracking
 - ✅ **Scalable** - Handles millions of requests on free tier
 
@@ -148,6 +153,36 @@ The shared content is stored securely in Cloudflare R2 and served through our Wo
 - **Backend**: Cloudflare Workers (edge computing)
 - **Storage**: Cloudflare R2 (S3-compatible object storage)
 - **Rate Limiting**: Durable Objects (distributed, no KV limits)
+
+---
+
+## 📱 Progressive Web App (PWA) Features
+
+This app is a **fully installable Progressive Web App** with offline-first capabilities:
+
+### 🎯 PWA Capabilities
+
+- **📦 Installable** - Install as a native app on desktop and mobile
+- **🌐 Offline Support** - Works completely offline with cached assets
+- **🔄 Auto-Updates** - Automatically detects and applies new versions
+- **⚡ Fast Loading** - Service worker caches assets for instant loading
+- **📊 Version Management** - View app version and cache status in settings
+- **🔔 Update Notifications** - Get notified when new versions are available
+
+### 🛠️ PWA Implementation
+
+- **Service Worker** (`public/sw.js`) - Network-first for HTML, cache-first for assets
+- **Web App Manifest** (`public/manifest.json`) - App metadata and install configuration
+- **Automatic Updates** - Checks for updates on load, visibility change, and every 5 minutes
+- **Version Sync** - Build script automatically syncs version from `config.ts` to service worker
+- **Offline Indicator** - Connection status shows when offline or server is down
+
+### 📋 How It Works
+
+1. **Install**: Browser shows install prompt (or use Settings → App Version)
+2. **Offline**: App works completely offline using cached assets
+3. **Updates**: New versions detected automatically, update on reload or click "Update Now"
+4. **Versioning**: Single source of truth in `src/lib/config.ts`, auto-synced during build
 
 ---
 
@@ -276,6 +311,8 @@ This means:
 - **[Cloudflare Pages](https://pages.cloudflare.com/)** - Static site hosting on edge network
 - **Static Export** - Pre-rendered HTML/CSS/JS for maximum performance
 - **Edge Caching** - 300+ global locations for sub-100ms latency
+- **PWA Support** - Progressive Web App with offline-first architecture
+- **Service Worker** - Automatic updates, cache management, and offline support
 - **$0 Cost** - Runs entirely on free tiers (Pages, Workers, R2, Durable Objects)
 
 ---
@@ -803,7 +840,12 @@ mdviewer/
 │           └── load-handlers.ts     # Load handlers
 ├── scripts/
 │   ├── generate-icons.js  # Generate app icons from favicon
+│   ├── inject-sw-version.cjs  # Auto-inject version from config.ts to sw.js
 │   └── README-ICONS.md    # Icon generation guide
+├── public/
+│   ├── sw.js  # Service worker for PWA and offline support
+│   ├── manifest.json  # PWA manifest for installable app
+│   └── _headers  # Security headers (CSP, etc.) for Cloudflare Pages
 ├── workers-api/           # Cloudflare Workers API
 │   ├── src/               # API source code
 │   ├── wrangler.toml      # Workers configuration
