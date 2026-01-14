@@ -6,6 +6,9 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Toaster } from "@/components/ui/toaster";
 import { GlobalKeyboardShortcuts } from "@/components/layout/global-keyboard-shortcuts";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
+import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
+import { UpdatePrompt } from "@/components/pwa/update-prompt";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className="h-full" data-scroll-behavior="smooth">
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -75,6 +79,7 @@ export default function RootLayout({
         />
       </head>
       <body className={`${inter.className} flex flex-col min-h-screen m-0 p-0`}>
+        <ServiceWorkerRegister />
         <GlobalKeyboardShortcuts />
         <ThemeProvider>
           <div className="flex flex-col min-h-screen bg-background selection:bg-primary/20 selection:text-primary m-0">
@@ -85,6 +90,8 @@ export default function RootLayout({
             <Footer />
           </div>
           <Toaster />
+          <PWAInstallPrompt />
+          <UpdatePrompt />
         </ThemeProvider>
       </body>
     </html>
