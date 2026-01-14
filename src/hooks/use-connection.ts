@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { config, isApiConfigured } from "@/lib/config";
+import { config } from "@/lib/config";
 
 export type ConnectionStatus = "online" | "offline" | "server-down";
 
@@ -53,11 +53,9 @@ export function useConnection() {
 
       clearTimeout(timeoutId);
       const isHealthy = response.ok;
-      console.log('[Connection] Health check result:', isHealthy ? 'OK' : 'FAILED', response.status);
       return isHealthy;
     } catch (error) {
       // Network error, timeout, or server unreachable
-      console.warn('[Connection] Health check failed:', error);
       return false;
     }
   }, []);
