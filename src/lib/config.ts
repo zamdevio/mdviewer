@@ -8,6 +8,15 @@
  * - FRONTEND_URL: Frontend website URL (e.g., https://your-domain.com)
  */
 
+// App version - shared across Service Worker and UI
+// Update this when releasing a new version
+export const APP_VERSION = "3.2.0";
+
+// Cache version for Service Worker - should match major.minor of APP_VERSION
+// This is automatically injected into public/sw.js during build by scripts/inject-sw-version.cjs
+// You only need to update this value - the build script handles the rest!
+export const CACHE_VERSION = "v3.2";
+
 // Remove trailing slash helper
 function removeTrailingSlash(url: string): string {
   return url.endsWith('/') ? url.slice(0, -1) : url;
