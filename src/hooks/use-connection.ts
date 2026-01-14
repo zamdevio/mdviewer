@@ -54,7 +54,7 @@ export function useConnection() {
       clearTimeout(timeoutId);
       const isHealthy = response.ok;
       return isHealthy;
-    } catch (error) {
+    } catch {
       // Network error, timeout, or server unreachable
       return false;
     }
