@@ -32,13 +32,16 @@ export function useConnection() {
 
   // Check API server health
   const checkServerHealth = useCallback(async (): Promise<boolean> => {
-    // If API is not configured, assume server is "reachable" (no server needed)
-    if (!isApiConfigured() || !config.API_URL) {
+    // Only check health if API_URL is configured
+    // We don't need FRONTEND_URL for health checks
+    if (!config.API_URL || !config.API_URL.trim()) {
+      // No API URL configured, assume "reachable" (no server to check)
       return true;
     }
 
     try {
       const healthUrl = `${config.API_URL}/health`;
+      console.log('[Connection] Checking health endpoint:', healthUrl);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
 
@@ -49,9 +52,12 @@ export function useConnection() {
       });
 
       clearTimeout(timeoutId);
-      return response.ok;
-    } catch {
+      const isHealthy = response.ok;
+      console.log('[Connection] Health check result:', isHealthy ? 'OK' : 'FAILED', response.status);
+      return isHealthy;
+    } catch (error) {
       // Network error, timeout, or server unreachable
+      console.warn('[Connection] Health check failed:', error);
       return false;
     }
   }, []);
