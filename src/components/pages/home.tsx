@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePlatform } from "@/hooks/use-platform";
+import { APP_VERSION } from "@/lib/config";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -53,7 +54,7 @@ export default function Home() {
             } border-transparent bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 backdrop-blur-sm`}
           >
             <Sparkles className="w-3 h-3 animate-spin-slow" />
-            v3.1.0 Now Available
+            v{APP_VERSION} Now Available
           </div>
 
           {/* Main Heading */}
