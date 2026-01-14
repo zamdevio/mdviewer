@@ -66,7 +66,7 @@
 **Deploy your frontend (Cloudflare Pages) FIRST**, then deploy this Workers API. This ensures you have the Pages domain to configure in `wrangler.toml`.
 
 1. Deploy Next.js app to Cloudflare Pages → Get domain (e.g., `mdviewer.pages.dev`)
-2. Configure `FRONTEND_URL` in `wrangler.toml` with that domain
+2. Configure `ALLOWED_ORIGINS` in `wrangler.toml` with that domain (and any other domains you want to support)
 3. Deploy this Workers API
 
 ### Installation
@@ -89,19 +89,23 @@
 
 4. **Configure `wrangler.toml`** (REQUIRED):
    
-   **⚠️ CRITICAL**: The Workers API **requires** `FRONTEND_URL` to be set. It **will not work** without it and will return `500` errors on all requests.
+   **⚠️ CRITICAL**: The Workers API **requires** `ALLOWED_ORIGINS` to be set. It **will not work** without it and will return `500` errors on all requests.
    
-   Open `wrangler.toml` and set your `FRONTEND_URL`:
+   Open `wrangler.toml` and set your `ALLOWED_ORIGINS`:
    
    ```toml
    [vars]
-   # REQUIRED: Set to your Cloudflare Pages domain
+   # REQUIRED: Set to your Cloudflare Pages domain(s)
    # Get this from your Pages deployment (e.g., mdviewer.pages.dev)
+   # Can include multiple domains separated by commas
    # Or use your custom domain if you set one up
-   FRONTEND_URL = "https://mdviewer.pages.dev"
+   ALLOWED_ORIGINS = "https://mdviewer.pages.dev"
+   
+   # For multiple domains:
+   # ALLOWED_ORIGINS = "https://mdviewer.pages.dev,https://markview.pages.dev"
    
    # For local development, use:
-   # FRONTEND_URL = "http://localhost:3000"
+   # ALLOWED_ORIGINS = "http://localhost:3000"
    
    # Optional: Customize rate limits
    RATE_LIMIT_WINDOW = 60        # Time window in seconds (default: 60)
@@ -109,9 +113,9 @@
    ```
    
    **Important**:
-   - Use the **exact domain** from your Cloudflare Pages deployment
-   - If you set up a custom domain for Pages, use that instead
-   - The domain must match what users will access your site from
+   - Use the **exact domain(s)** from your Cloudflare Pages deployment
+   - If you set up a custom domain for Pages, include it in the list
+   - The API will use the request origin (if allowed) to construct share URLs
    - For local dev, use `http://localhost:3000`
 
 5. **Deploy**:
@@ -124,7 +128,7 @@
 
    Or for local development:
    ```bash
-   # Run locally (requires FRONTEND_URL set to localhost:3000)
+   # Run locally (requires ALLOWED_ORIGINS set to localhost:3000)
    npm run dev
    ```
 
@@ -222,14 +226,23 @@ X-Uploaded-At: 2024-01-01T00:00:00.000Z
 
 #### Required
 
-- **`FRONTEND_URL`** (required): The frontend URL for your application
+- **`ALLOWED_ORIGINS`** (required): Comma-separated list of allowed origins for your application
   - **⚠️ CRITICAL**: The API **will not work** without this. All requests will return `500` errors.
-  - Used for CORS headers and constructing share URLs
+  - Used for CORS headers and constructing share URLs (uses the request origin if allowed)
   - **Must be set in `wrangler.toml`** under `[vars]` (recommended) or via environment variables
   - **For production**: Use your Cloudflare Pages domain (e.g., `https://mdviewer.pages.dev`) or custom domain
+  - **For multiple domains**: Include all domains separated by commas (e.g., `"https://mdviewer.pages.dev,https://markview.pages.dev"`)
   - **For local dev**: Use `http://localhost:3000`
   - The API will return a `500` error if this is not set or is invalid
-  - **Must match** the domain users access your frontend from
+  - **Format**: Comma-separated list of origins (full URLs or just domains)
+    - Full URLs: `"https://markview.pages.dev,https://mdviewer.pages.dev"`
+    - Domains: `"markview.pages.dev,mdviewer.pages.dev"` (https:// will be added automatically)
+  - **How it works**: The API checks the request's `Origin` header. If it matches an allowed origin, that origin is used for CORS and share URL construction. Otherwise, the first allowed origin is used as a fallback.
+  - **Examples**:
+    - `ALLOWED_ORIGINS = "https://mdviewer.pages.dev"` (single domain)
+    - `ALLOWED_ORIGINS = "https://markview.pages.dev,https://mdviewer.pages.dev"` (multiple domains)
+    - `ALLOWED_ORIGINS = "markview.pages.dev,mdviewer.pages.dev"` (domains without protocol)
+    - `ALLOWED_ORIGINS = "https://staging.yourdomain.com,https://preview.yourdomain.com"` (staging environments)
 
 #### Optional
 
@@ -243,18 +256,26 @@ X-Uploaded-At: 2024-01-01T00:00:00.000Z
 
 ### Example Configuration
 
-**Production (Cloudflare Pages domain):**
+**Production (Single domain - Cloudflare Pages):**
 ```toml
 [vars]
-FRONTEND_URL = "https://mdviewer.pages.dev"
+ALLOWED_ORIGINS = "https://mdviewer.pages.dev"
 RATE_LIMIT_WINDOW = 60
 RATE_LIMIT_MAX_REQUESTS = 10
 ```
 
-**Production (Custom domain):**
+**Production (Single domain - Custom domain):**
 ```toml
 [vars]
-FRONTEND_URL = "https://mdviewer.yourdomain.com"
+ALLOWED_ORIGINS = "https://mdviewer.yourdomain.com"
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_MAX_REQUESTS = 10
+```
+
+**Production (Multiple domains - Pages.dev + Custom domain):**
+```toml
+[vars]
+ALLOWED_ORIGINS = "https://mdviewer.pages.dev,https://markview.pages.dev,https://mdviewer.yourdomain.com"
 RATE_LIMIT_WINDOW = 60
 RATE_LIMIT_MAX_REQUESTS = 10
 ```
@@ -262,7 +283,7 @@ RATE_LIMIT_MAX_REQUESTS = 10
 **Local Development:**
 ```toml
 [vars]
-FRONTEND_URL = "http://localhost:3000"
+ALLOWED_ORIGINS = "http://localhost:3000"
 RATE_LIMIT_WINDOW = 60
 RATE_LIMIT_MAX_REQUESTS = 10
 ```
@@ -312,10 +333,9 @@ Update your frontend `.env.local` or environment variables:
 
 ```env
 API_URL=https://api.mdviewer.your-domain.com
-FRONTEND_URL=https://mdviewer.your-domain.com
 ```
 
-Both environment variables are required for the frontend to function properly.
+The `API_URL` environment variable is required for the frontend to function properly.
 
 ### Example Integration
 
@@ -342,7 +362,7 @@ const data = await response.json();
 **Deploy your frontend (Cloudflare Pages) FIRST**, then deploy this Workers API:
 
 1. **Deploy Next.js app to Cloudflare Pages** → Get your Pages domain (e.g., `mdviewer.pages.dev`)
-2. **Set `FRONTEND_URL` in `wrangler.toml`** with that domain
+2. **Set `ALLOWED_ORIGINS` in `wrangler.toml`** with that domain (and any other domains you want to support)
 3. **Deploy this Workers API**
 4. **Update frontend environment variables** with the Workers API URL
 
@@ -353,7 +373,7 @@ const data = await response.json();
 2. **Configure `wrangler.toml`**:
    ```toml
    [vars]
-   FRONTEND_URL = "https://mdviewer.pages.dev"  # Your Pages domain
+   ALLOWED_ORIGINS = "https://mdviewer.pages.dev"  # Your Pages domain(s)
    ```
 
 3. **Login to Cloudflare** (if not already done):
@@ -375,19 +395,17 @@ const data = await response.json();
 
 7. **Update frontend environment variables** in Cloudflare Pages:
    - `API_URL` = Your Workers URL (from step 6)
-   - `FRONTEND_URL` = Your Pages domain (same as in `wrangler.toml`)
 
 ### Production Checklist
 
 - [ ] Frontend deployed to Cloudflare Pages (get domain first!)
-- [ ] Set `FRONTEND_URL` in `wrangler.toml` (matches Pages domain)
+- [ ] Set `ALLOWED_ORIGINS` in `wrangler.toml` (include all domains you want to support)
 - [ ] Create R2 bucket (`wrangler r2 bucket create mdviewer`)
 - [ ] Configure rate limits (optional)
 - [ ] Deploy worker (`npm run deploy`)
 - [ ] Note Workers API URL from deployment output
 - [ ] Update frontend environment variables in Cloudflare Pages:
   - [ ] `API_URL` = Workers API URL
-  - [ ] `FRONTEND_URL` = Pages domain (must match `wrangler.toml`)
 - [ ] Test upload and download endpoints
 
 ---
@@ -412,7 +430,7 @@ workers-api/
 - **File Size Limits** - 1MB maximum to prevent abuse
 - **Rate Limiting** - Prevents spam and abuse
 - **Unique IDs** - Cryptographically secure, URL-safe base64
-- **CORS Protection** - Only allows requests from configured frontend
+- **CORS Protection** - Only allows requests from configured frontend(s) via `ALLOWED_ORIGINS`
 - **No Public Access** - R2 bucket is private, content served through Workers
 
 ---
@@ -421,21 +439,27 @@ workers-api/
 
 ### Common Issues
 
-**Error: "FRONTEND_URL is not set" or "Configuration error"**
-- **Solution**: Set `FRONTEND_URL` in `wrangler.toml` under `[vars]`
+**Error: "ALLOWED_ORIGINS is not set" or "Configuration error"**
+- **Solution**: Set `ALLOWED_ORIGINS` in `wrangler.toml` under `[vars]`
 - **Must be set** - the API will not work without it
 - Use your Cloudflare Pages domain (e.g., `https://mdviewer.pages.dev`)
+- For multiple domains, separate them with commas: `"https://domain1.com,https://domain2.com"`
 - For local dev, use `http://localhost:3000`
 
-**Error: "FRONTEND_URL is not a valid URL"**
-- **Solution**: Ensure `FRONTEND_URL` in `wrangler.toml` is a valid URL
-- Must include protocol (`https://` or `http://`)
+**Error: "ALLOWED_ORIGINS must contain at least one valid origin"**
+- **Solution**: Ensure `ALLOWED_ORIGINS` in `wrangler.toml` contains at least one valid origin
+- Origins can be full URLs (`https://domain.com`) or just domains (`domain.com`)
+- Protocol (`https://` or `http://`) will be added automatically if missing
 - No trailing slashes
 
 **CORS errors**
-- **Solution**: Ensure `FRONTEND_URL` in `wrangler.toml` matches the domain users access your site from
-- If using custom domain, update `FRONTEND_URL` to match
-- Redeploy after changing `FRONTEND_URL`
+- **Solution**: Ensure the domain users access your site from is included in `ALLOWED_ORIGINS`
+- Add all domains you want to support to `ALLOWED_ORIGINS`:
+  ```toml
+  ALLOWED_ORIGINS = "https://mdviewer.pages.dev,https://markview.pages.dev,https://mdviewer.yourdomain.com"
+  ```
+- The API uses the request's `Origin` header to determine which frontend to use for share URLs
+- Redeploy after changing `ALLOWED_ORIGINS`
 
 **Error: "Rate limit exceeded"**
 - **Solution**: Wait for the rate limit window to reset or increase `RATE_LIMIT_MAX_REQUESTS`
