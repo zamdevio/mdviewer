@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "inject-sw-version": "node scripts/inject-sw-version.cjs",
+    "prebuild": "npm run inject-sw-version",
     "build": "next build",
     "start": "npx serve@latest out",
     "lint": "eslint",
