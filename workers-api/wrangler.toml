@@ -2,17 +2,69 @@ name = "mdviewer-api"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# ============================================================================
+# ⚠️ IMPORTANT: CONFIGURE THESE VALUES BEFORE DEPLOYING
+# ============================================================================
+# 
+# After cloning this repository, you MUST update the following:
+# 1. FRONTEND_URL - Your Cloudflare Pages domain or custom domain
+# 2. routes (if using custom domain) - Your custom domain configuration
+# 3. bucket_name (optional) - Change if you want a different R2 bucket name
+#
+# ============================================================================
+
 # Environment variables
 [vars]
-# FRONTEND_URL is required - set this to your frontend URL (e.g., "https://yourdomain.com" or "http://localhost:3000")
-# This will be used for CORS and constructing share URLs
-FRONTEND_URL = ""
+# ⚠️ REQUIRED: Set this to your frontend URL
+# 
+# Options:
+# - For Cloudflare Pages: "https://your-project.pages.dev"
+# - For custom domain: "https://yourdomain.com"
+# - For local development: "http://localhost:3000"
+#
+# This is used for:
+# - CORS headers (allows requests from your frontend)
+# - Constructing share URLs returned to users
+#
+# Example:
+# FRONTEND_URL = "https://mdviewer.pages.dev"
+# FRONTEND_URL = "https://mdviewer.yourdomain.com"
+FRONTEND_URL = "https://mdviewer.zamdev.dev"
 
 # Rate limiting configuration (optional - defaults shown)
+# Adjust these if you want different rate limits
 RATE_LIMIT_WINDOW = 60  # Time window in seconds (default: 60 = 1 minute)
 RATE_LIMIT_MAX_REQUESTS = 10  # Max requests per window per IP (default: 10)
 
+# ============================================================================
+# Custom Domain Routes (Optional)
+# ============================================================================
+# 
+# If you want to use a custom domain instead of the default workers.dev domain,
+# uncomment and configure the routes section below.
+#
+# Steps:
+# 1. Add your domain to Cloudflare (if not already added)
+# 2. Create a CNAME record pointing to your worker
+# 3. Uncomment and update the routes section below
+# 4. Replace "api.yourdomain.com" with your actual API subdomain
+# 5. Replace "yourdomain.com" with your actual domain
+#
+# Example for api.mdviewer.zamdev.dev:
+[[routes]]
+pattern = "api.mdviewer.zamdev.dev"
+zone_name = "zamdev.dev"
+custom_domain = true
+
+
+# [[routes]]
+# pattern = "api.yourdomain.com"
+# zone_name = "yourdomain.com"
+# custom_domain = true
+
 # R2 Bucket binding
+# ⚠️ OPTIONAL: Change "mdviewer" to your preferred bucket name
+# Make sure to create the bucket first: wrangler r2 bucket create <your-bucket-name>
 [[r2_buckets]]
 binding = "R2_BUCKET"
 bucket_name = "mdviewer"
