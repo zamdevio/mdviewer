@@ -23,20 +23,51 @@ const STATIC_ASSETS = [
   '/settings',
   '/favicon.svg',
   '/manifest.json',
+  '/offline.html', // Cache offline page
 ];
+
+// Check if we're on localhost (for smart clearing in dev)
+const isLocalhost = self.location.hostname === 'localhost' || 
+                    self.location.hostname === '127.0.0.1' ||
+                    self.location.hostname.startsWith('192.168.') ||
+                    self.location.hostname.startsWith('10.0.');
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker, cache version:', CACHE_VERSION);
+  console.log('[SW] Localhost detected:', isLocalhost);
   
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        // If some assets fail to cache, continue anyway
-        console.warn('[SW] Some assets failed to cache', err);
-      });
-    })
-  );
+  // On localhost, clear old caches immediately for easier development
+  if (isLocalhost) {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((name) => name.startsWith('mdviewer-'))
+            .map((name) => {
+              console.log('[SW] [DEV] Clearing cache:', name);
+              return caches.delete(name);
+            })
+        );
+      }).then(() => {
+        // Then cache new assets
+        return caches.open(CACHE_NAME).then((cache) => {
+          return cache.addAll(STATIC_ASSETS).catch((err) => {
+            console.warn('[SW] Some assets failed to cache', err);
+          });
+        });
+      })
+    );
+  } else {
+    // Production: normal caching
+    event.waitUntil(
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.addAll(STATIC_ASSETS).catch((err) => {
+          console.warn('[SW] Some assets failed to cache', err);
+        });
+      })
+    );
+  }
   
   // Activate immediately, don't wait for other tabs to close
   self.skipWaiting();
@@ -100,11 +131,17 @@ self.addEventListener('fetch', (event) => {
             if (cachedResponse) {
               return cachedResponse;
             }
-            // No cache, return offline response
-            return new Response('Offline - Content not available', {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: { 'Content-Type': 'text/plain' },
+            // No cache, return offline HTML page
+            return caches.match('/offline.html').then((offlinePage) => {
+              if (offlinePage) {
+                return offlinePage;
+              }
+              // Fallback if offline.html not cached
+              return new Response('Offline - Content not available', {
+                status: 503,
+                statusText: 'Service Unavailable',
+                headers: { 'Content-Type': 'text/plain' },
+              });
             });
           });
         })
@@ -147,7 +184,7 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Listen for messages from the client to skip waiting
+// Listen for messages from the client
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     console.log('[SW] Received SKIP_WAITING message, activating immediately');
@@ -157,5 +194,47 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'CLIENTS_CLAIM') {
     console.log('[SW] Claiming clients');
     self.clients.claim();
+  }
+  
+  // Handle clear cache request
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    console.log('[SW] Received CLEAR_CACHE message');
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((name) => {
+            console.log('[SW] Deleting cache:', name);
+            return caches.delete(name);
+          })
+        );
+      }).then(() => {
+        // Send confirmation back to client
+        if (event.ports && event.ports[0]) {
+          event.ports[0].postMessage({ success: true, message: 'All caches cleared' });
+        }
+      })
+    );
+  }
+  
+  // Handle unregister request
+  if (event.data && event.data.type === 'UNREGISTER_SW') {
+    console.log('[SW] Received UNREGISTER_SW message');
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((name) => caches.delete(name))
+        );
+      }).then(() => {
+        // Unregister this service worker
+        return self.registration.unregister().then((success) => {
+          if (event.ports && event.ports[0]) {
+            event.ports[0].postMessage({ 
+              success, 
+              message: success ? 'Service worker unregistered' : 'Failed to unregister' 
+            });
+          }
+        });
+      })
+    );
   }
 });

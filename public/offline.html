@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - MD Viewer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      color: #fff;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+    
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+    
+    p {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    button {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-danger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(245, 87, 108, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .btn-secondary:hover {
+      background: #d0d0d0;
+      transform: translateY(-2px);
+    }
+    
+    .status {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .status.success {
+      background: #4caf50;
+      color: white;
+      display: block;
+    }
+    
+    .status.error {
+      background: #f44336;
+      color: white;
+      display: block;
+    }
+    
+    .status.info {
+      background: #2196f3;
+      color: white;
+      display: block;
+    }
+    
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>It looks like you're not connected to the internet, or the server/origin might be down. The content you're looking for isn't available in the cache.</p>
+    
+    <div class="button-group">
+      <button class="btn-primary" onclick="reloadPage()">
+        🔄 Reload Page
+      </button>
+      <button class="btn-danger" onclick="clearServiceWorker()">
+        🗑️ Clear Service Worker & Cache
+      </button>
+      <button class="btn-secondary" onclick="goHome()">
+        🏠 Go to Home
+      </button>
+    </div>
+    
+    <div id="status" class="status"></div>
+  </div>
+
+  <script>
+    function showStatus(message, type = 'info') {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+      setTimeout(() => {
+        status.style.display = 'none';
+      }, 5000);
+    }
+
+    async function clearServiceWorker() {
+      const container = document.querySelector('.container');
+      container.classList.add('loading');
+      
+      try {
+        showStatus('Clearing service worker and caches...', 'info');
+        
+        // Try to send message to service worker first
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          
+          // Send message to clear cache
+          return new Promise((resolve) => {
+            const messageChannel = new MessageChannel();
+            
+            messageChannel.port1.onmessage = (event) => {
+              if (event.data && event.data.success) {
+                console.log('Cache cleared via SW:', event.data.message);
+              }
+            };
+            
+            registration.active?.postMessage(
+              { type: 'CLEAR_CACHE' },
+              [messageChannel.port2]
+            );
+            
+            // Also try unregister
+            setTimeout(async () => {
+              try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let reg of registrations) {
+                  await reg.unregister();
+                  console.log('Service worker unregistered:', reg.scope);
+                }
+              } catch (e) {
+                console.warn('Error unregistering:', e);
+              }
+              
+              // Clear all caches directly as fallback
+              if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(
+                  cacheNames.map(cacheName => {
+                    console.log('Deleting cache:', cacheName);
+                    return caches.delete(cacheName);
+                  })
+                );
+              }
+              
+              showStatus('✅ Service worker and caches cleared successfully!', 'success');
+              
+              // Reload after a short delay
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+              
+              resolve();
+            }, 500);
+          });
+        } else {
+          // Fallback: clear caches directly
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(
+              cacheNames.map(cacheName => caches.delete(cacheName))
+            );
+          }
+          
+          showStatus('✅ Caches cleared successfully!', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        }
+        
+      } catch (error) {
+        console.error('Error clearing service worker:', error);
+        showStatus('❌ Error clearing service worker: ' + error.message, 'error');
+        container.classList.remove('loading');
+      }
+    }
+
+    function reloadPage() {
+      window.location.reload();
+    }
+
+    function goHome() {
+      window.location.href = '/';
+    }
+
+    // Check if we're on localhost and show a helpful message
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      const status = document.getElementById('status');
+      status.textContent = '💡 Development Mode: Use "Clear Service Worker" if localhost becomes unresponsive';
+      status.className = 'status info';
+      status.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
+
