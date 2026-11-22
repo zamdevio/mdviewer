@@ -38,7 +38,8 @@ compatibility_date = "2024-01-01"
 # ALLOWED_ORIGINS = "https://mdviewer.pages.dev"
 # ALLOWED_ORIGINS = "https://mdviewer.yourdomain.com"
 # ALLOWED_ORIGINS = "https://markview.pages.dev,https://mdviewer.pages.dev"
-ALLOWED_ORIGINS = "https://mdviewer.zamdev.dev,https://markview.pages.dev"
+# Include localhost for local Vite (`pnpm web:dev`) — omit in locked-down prod-only forks if needed.
+ALLOWED_ORIGINS = "https://mdviewer.zamdev.dev,https://markview.pages.dev,http://localhost:3000,http://127.0.0.1:3000"
 
 # Rate limiting configuration (optional - defaults shown)
 # Adjust these if you want different rate limits

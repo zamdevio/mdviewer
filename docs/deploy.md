@@ -1,19 +1,36 @@
 # Deploy
 
-## Web (Cloudflare Pages)
+Primary path: **GitHub Actions → Cloudflare** on every `main` push (see [`.github/workflows/deploy-cloudflare.yml`](../.github/workflows/deploy-cloudflare.yml)).
+
+The old **Fly.io** GitHub “production” deployment is legacy (Next-era). New production traffic is Cloudflare Pages (`markview`) + Worker (`mdviewer-api`). Mark Fly inactive in GitHub Deployments if it still shows as Active.
+
+## One-time GitHub setup
+
+Repository **Secrets**:
+
+| Secret | Purpose |
+|--------|---------|
+| `CLOUDFLARE_API_TOKEN` | Token with Pages Edit + Workers Scripts Edit |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id |
+
+Repository **Variables** (build-time for the SPA):
+
+| Variable | Example |
+|----------|---------|
+| `VITE_API_URL` | `https://api.mdviewer.zamdev.dev` |
+| `VITE_FRONTEND_URL` | `https://mdviewer.zamdev.dev` |
+
+## Manual deploy
 
 ```bash
 pnpm web:deploy
-```
-
-Set Pages env: `VITE_API_URL`, `VITE_FRONTEND_URL` (or `API_URL` / `FRONTEND_URL` — both accepted by `vite.config.ts`).
-
-SPA fallback: `apps/web/public/_redirects` → `/* /index.html 200`.
-
-## Worker
-
-```bash
 pnpm worker:deploy
 ```
 
-Configure `ALLOWED_ORIGINS` in [`apps/worker/wrangler.toml`](../apps/worker/wrangler.toml). Ensure R2 bucket + Durable Object migration exist.
+SPA fallback: `apps/web/public/_redirects` → `/* /index.html 200`.
+
+Configure `ALLOWED_ORIGINS` in [`apps/worker/wrangler.toml`](../apps/worker/wrangler.toml) (include `http://localhost:3000` for local share). Ensure R2 bucket + Durable Object migration exist.
+
+## PWA / cache
+
+Service worker cache migration rules: [`maintainer/systems/pwa-cache.md`](../maintainer/systems/pwa-cache.md).

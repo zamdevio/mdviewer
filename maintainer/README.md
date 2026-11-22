@@ -30,5 +30,6 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | [`phases/ui.md`](phases/ui.md) | UI polish (home, shell, empty states) |
 | [`systems/web.md`](systems/web.md) | Web app map |
 | [`systems/worker.md`](systems/worker.md) | Worker API map |
+| [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
 | [`shipped/README.md`](shipped/README.md) | Closed-slice timeline |
 | [`agents/tree.md`](agents/tree.md) | Directory conventions |

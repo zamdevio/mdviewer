@@ -1,23 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { config } from "@/lib/config";
+import { probeApiHealth } from "@/lib/api-errors";
 
-export type ConnectionStatus = "online" | "offline" | "server-down";
+export type ConnectionStatus = "online" | "offline" | "server-down" | "cors-blocked";
 
 interface ConnectionState {
   status: ConnectionStatus;
   isOnline: boolean;
   isServerReachable: boolean;
+  isCorsBlocked: boolean;
   lastChecked: number | null;
 }
 
 /**
- * Hook to monitor connection status (network + server)
- * 
- * Checks:
- * 1. Browser online/offline status
- * 2. API server health endpoint (if configured)
- * 
- * Returns current connection status and methods to manually check
+ * Hook to monitor connection status (network + server + CORS).
  */
 export function useConnection() {
   const [state, setState] = useState<ConnectionState>(() => {
@@ -26,71 +22,63 @@ export function useConnection() {
       status: isOnline ? "online" : "offline",
       isOnline,
       isServerReachable: true,
+      isCorsBlocked: false,
       lastChecked: null,
     };
   });
 
-  // Check API server health
-  const checkServerHealth = useCallback(async (): Promise<boolean> => {
-    // Only check health if API_URL is configured
-    // We don't need FRONTEND_URL for health checks
+  const checkServerHealth = useCallback(async (): Promise<"ok" | "cors" | "down" | "skip"> => {
     if (!config.API_URL || !config.API_URL.trim()) {
-      // No API URL configured, assume "reachable" (no server to check)
-      return true;
+      return "skip";
     }
-
-    try {
-      const healthUrl = `${config.API_URL}/health`;
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-      const response = await fetch(healthUrl, {
-        method: "GET",
-        signal: controller.signal,
-        cache: "no-cache",
-      });
-
-      clearTimeout(timeoutId);
-      return response.ok;
-    } catch (error) {
-      // Network error, timeout, or server unreachable
-      console.warn('[Connection] Health check failed:', error instanceof Error ? error.message : 'Unknown error');
-      return false;
-    }
+    return probeApiHealth(`${config.API_URL}/health`);
   }, []);
 
-  // Update connection status
   const updateStatus = useCallback(async () => {
     const isOnline = navigator.onLine;
-    const isServerReachable = isOnline ? await checkServerHealth() : false;
-
-    let status: ConnectionStatus;
     if (!isOnline) {
-      status = "offline";
-    } else if (!isServerReachable) {
+      setState({
+        status: "offline",
+        isOnline: false,
+        isServerReachable: false,
+        isCorsBlocked: false,
+        lastChecked: Date.now(),
+      });
+      return;
+    }
+
+    const health = await checkServerHealth();
+    let status: ConnectionStatus = "online";
+    let isServerReachable = true;
+    let isCorsBlocked = false;
+
+    if (health === "cors") {
+      status = "cors-blocked";
+      isServerReachable = true;
+      isCorsBlocked = true;
+    } else if (health === "down") {
       status = "server-down";
+      isServerReachable = false;
     } else {
+      // ok | skip
       status = "online";
+      isServerReachable = true;
     }
 
     setState({
       status,
-      isOnline,
+      isOnline: true,
       isServerReachable,
+      isCorsBlocked,
       lastChecked: Date.now(),
     });
   }, [checkServerHealth]);
 
-  // Setup listeners and initial check
   useEffect(() => {
-    console.log('[Connection] Setting up connection monitoring, API_URL:', config.API_URL || 'not set');
-    // Use setTimeout to avoid calling setState synchronously in effect
     const initialCheck = setTimeout(() => {
-      console.log('[Connection] Running initial status check');
       updateStatus();
-    }, 100); // Small delay to ensure component is mounted
+    }, 100);
 
-    // Listen to browser online/offline events
     const handleOnline = () => {
       updateStatus();
     };
@@ -100,6 +88,8 @@ export function useConnection() {
         ...prev,
         status: "offline",
         isOnline: false,
+        isServerReachable: false,
+        isCorsBlocked: false,
         lastChecked: Date.now(),
       }));
     };
@@ -107,7 +97,6 @@ export function useConnection() {
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
-    // Periodic health check (every 30 seconds when online)
     const healthCheckInterval = setInterval(() => {
       if (navigator.onLine) {
         updateStatus();
@@ -127,4 +116,3 @@ export function useConnection() {
     refresh: updateStatus,
   };
 }
-

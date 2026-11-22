@@ -41,6 +41,7 @@ import { EditorSection } from "./EditorSection";
 import { PreviewSection } from "./PreviewSection";
 import { FileActionsBar } from "./FileActionsBar";
 import { ApiWarningDialog } from "./dialogs/ApiWarning";
+import { CorsWarningDialog } from "./dialogs/CorsWarning";
 import { LoadFileDialog } from "./dialogs/LoadFile";
 import { LoadSharedContentDialog } from "./dialogs/LoadSharedContent";
 import { SaveDialog } from "./dialogs/Save";
@@ -86,6 +87,8 @@ export default function EditorPage() {
     const [lastSharedContent, setLastSharedContent] = useState<string | null>(null);
     const [lastSharedFileName, setLastSharedFileName] = useState<string | null>(null);
     const [showApiWarning, setShowApiWarning] = useState(false);
+    const [showCorsWarning, setShowCorsWarning] = useState(false);
+    const [corsWarningDetail, setCorsWarningDetail] = useState<string | null>(null);
     const [showThemeToggle, setShowThemeToggle] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isClosed, setIsClosed] = useState(false);
@@ -948,6 +951,11 @@ export default function EditorPage() {
                     setShowApiWarning(false);
                     return;
                 }
+                if (showCorsWarning) {
+                    setShowCorsWarning(false);
+                    setCorsWarningDetail(null);
+                    return;
+                }
                 if (showDeleteWarning) {
                     setShowDeleteWarning(false);
                     return;
@@ -1060,6 +1068,14 @@ export default function EditorPage() {
                 return;
             }
 
+            if (result.shouldShowCorsWarning) {
+                setCorsWarningDetail(result.error || null);
+                setShowCorsWarning(true);
+                toast.warning(result.error || "Share blocked by CORS", { id: "sharing" });
+                setIsSharing(false);
+                return;
+            }
+
             if (result.shouldShowApiWarning) {
                 setShowApiWarning(true);
                 toast.warning(result.error || "API not configured", { id: "sharing" });
@@ -1086,6 +1102,8 @@ export default function EditorPage() {
                 setLastSharedContent(markdown);
                 setLastSharedFileName(currentFileName);
                 setShowApiWarning(false);
+                setShowCorsWarning(false);
+                setCorsWarningDetail(null);
                 setShowSharePanel(true);
                 toast.success("Share link created!", { id: "sharing" });
             } else {
@@ -1420,6 +1438,14 @@ export default function EditorPage() {
         <div className="container mx-auto p-4 min-h-[calc(100vh-200px)] flex flex-col gap-4 animate-fade-in">
             {/* API Configuration Warning */}
             <ApiWarningDialog show={showApiWarning} onClose={() => setShowApiWarning(false)} />
+            <CorsWarningDialog
+                show={showCorsWarning}
+                detail={corsWarningDetail}
+                onClose={() => {
+                    setShowCorsWarning(false);
+                    setCorsWarningDetail(null);
+                }}
+            />
 
             <LoadFileDialog
                 show={showLoadFileDialog}

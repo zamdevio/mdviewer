@@ -65,7 +65,16 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Legacy prefixes from older Next/PWA builds on the same origin.
+// Keep in sync with maintainer/systems/pwa-cache.md — never drop without a dual-clean release.
+const LEGACY_CACHE_PREFIXES = ['mdviewer-', 'workbox-precache', 'workbox-runtime', 'next-'];
+
+function shouldDeleteCache(name) {
+  if (name === CACHE_NAME) return false;
+  return LEGACY_CACHE_PREFIXES.some((prefix) => name === prefix || name.startsWith(prefix));
+}
+
+// Activate event - clean up old caches (current + legacy app shells)
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating service worker, cleaning old caches');
   
@@ -73,7 +82,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name.startsWith('mdviewer-') && name !== CACHE_NAME)
+          .filter((name) => shouldDeleteCache(name))
           .map((name) => {
             console.log('[SW] Deleting old cache:', name);
             return caches.delete(name);

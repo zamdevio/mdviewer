@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useConnection, type ConnectionStatus } from "@/hooks/use-connection";
 import { isApiConfigured } from "@/lib/config";
-import { AlertCircle, Settings, WifiOff } from "lucide-react";
+import { AlertCircle, Settings, ShieldAlert, WifiOff } from "lucide-react";
 
 type DisplayStatus = ConnectionStatus | "api-unset";
 
@@ -22,6 +22,14 @@ function getStatusConfig(status: DisplayStatus): StatusConfig | null {
         dot: "bg-red-500",
         label: "Offline",
         description: "No internet. Editing still works locally.",
+      };
+    case "cors-blocked":
+      return {
+        icon: ShieldAlert,
+        dot: "bg-orange-500",
+        label: "CORS block",
+        description:
+          "API is up but this origin is not allowed. Add it to worker ALLOWED_ORIGINS (localhost needs an entry for local share).",
       };
     case "server-down":
       return {

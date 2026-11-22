@@ -2,7 +2,12 @@
  * API client for markdown sharing
  */
 
-import { config } from './config';
+import { config } from "./config";
+import {
+  ApiRequestError,
+  classifyFetchFailure,
+  type ApiFailureKind,
+} from "./api-errors";
 
 const API_BASE_URL = config.API_URL;
 
@@ -20,35 +25,76 @@ export interface ApiError {
   resetAt?: number;
 }
 
-export async function uploadMarkdown(content: string): Promise<UploadResponse> {
-  const response = await fetch(`${API_BASE_URL}/upload`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain',
-    },
-    body: content,
-  });
+export { ApiRequestError, isCorsFailure } from "./api-errors";
+export type { ApiFailureKind };
 
-  if (!response.ok) {
-    const error: ApiError = await response.json();
-    throw new Error(error.message || 'Failed to upload markdown');
+async function toApiRequestError(
+  error: unknown,
+  probeUrl: string,
+  fallback: string
+): Promise<ApiRequestError> {
+  if (error instanceof ApiRequestError) return error;
+
+  const kind = await classifyFetchFailure(probeUrl);
+  if (kind === "cors") {
+    return new ApiRequestError(
+      "cors",
+      "Share API blocked by CORS. Add this origin to the worker ALLOWED_ORIGINS (e.g. http://localhost:3000 for local dev)."
+    );
   }
 
-  return response.json();
+  return new ApiRequestError(
+    "network",
+    error instanceof Error ? error.message || fallback : fallback
+  );
+}
+
+export async function uploadMarkdown(content: string): Promise<UploadResponse> {
+  const uploadUrl = `${API_BASE_URL}/upload`;
+  try {
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain",
+      },
+      body: content,
+    });
+
+    if (!response.ok) {
+      let message = "Failed to upload markdown";
+      try {
+        const error: ApiError = await response.json();
+        message = error.message || message;
+      } catch {
+        /* ignore body parse */
+      }
+      throw new ApiRequestError("http", message, response.status);
+    }
+
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${API_BASE_URL}/health`, "Failed to upload markdown");
+  }
 }
 
 export async function fetchSharedMarkdown(id: string): Promise<string> {
-  const response = await fetch(`${API_BASE_URL}/share/${id}`, {
-    method: 'GET',
-  });
+  const shareUrl = `${API_BASE_URL}/share/${id}`;
+  try {
+    const response = await fetch(shareUrl, {
+      method: "GET",
+    });
 
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Shared content not found');
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new ApiRequestError("http", "Shared content not found", 404);
+      }
+      throw new ApiRequestError("http", "Failed to fetch shared content", response.status);
     }
-    throw new Error('Failed to fetch shared content');
+
+    return response.text();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${API_BASE_URL}/health`, "Failed to fetch shared content");
   }
-
-  return response.text();
 }
-

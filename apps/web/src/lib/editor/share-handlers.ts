@@ -4,7 +4,7 @@
  * Business logic for sharing markdown content
  */
 
-import { uploadMarkdown } from '@/lib/api';
+import { uploadMarkdown, isCorsFailure } from '@/lib/api';
 import { isApiConfigured, config } from '@/lib/config';
 import { addSharedLink, type SharedLink } from '@/lib/storage';
 import type { EditorState } from '@/types';
@@ -16,6 +16,7 @@ export interface ShareResult {
     error?: string;
     requiresSave?: boolean;
     shouldShowApiWarning?: boolean;
+    shouldShowCorsWarning?: boolean;
 }
 
 /**
@@ -79,9 +80,14 @@ export async function handleShare(
             shouldShowApiWarning: false
         };
     } catch (error) {
-        // Web Share API fallback removed - require API for sharing
-        // Check if it's a connection error (API not available)
-        if (error instanceof Error && error.message.includes('fetch')) {
+        if (isCorsFailure(error)) {
+            return {
+                success: false,
+                shouldShowCorsWarning: true,
+                error: error instanceof Error ? error.message : "Share blocked by CORS",
+            };
+        }
+        if (error instanceof Error && /fetch|network|Failed to connect/i.test(error.message)) {
             return {
                 success: false,
                 shouldShowApiWarning: true,
