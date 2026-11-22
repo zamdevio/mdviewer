@@ -1,5 +1,15 @@
 # Repo health tooling
 
+## vitest
+
+```bash
+pnpm test           # all workspaces
+pnpm worker:test    # password / TTL / fair-use / paths
+pnpm web:test       # preview debounce helpers
+```
+
+Logic-heavy Worker libs and web perf helpers are covered first. Expand as routes grow.
+
 ## knip
 
 ```bash

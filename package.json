@@ -18,7 +18,10 @@
     "knip": "knip",
     "madge:circular": "node scripts/madge/run.mjs circular",
     "madge:orphans": "node scripts/madge/run.mjs orphans",
-    "madge:leaves": "node scripts/madge/run.mjs leaves"
+    "madge:leaves": "node scripts/madge/run.mjs leaves",
+    "test": "pnpm -r --if-present run test",
+    "worker:test": "pnpm --filter @mdviewer/worker test",
+    "web:test": "pnpm --filter @mdviewer/web test"
   },
   "devDependencies": {
     "knip": "^6.12.0",

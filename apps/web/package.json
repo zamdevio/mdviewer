@@ -8,6 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "deploy": "pnpm run build && wrangler pages deploy dist --project-name markview"
   },
   "dependencies": {
@@ -45,6 +47,7 @@
     "typescript": "^5.9.0",
     "unified": "^11.0.5",
     "vite": "^6.3.5",
+    "vitest": "^3.2.7",
     "wrangler": "^4.54.0"
   }
 }
