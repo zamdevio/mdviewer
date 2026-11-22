@@ -11,8 +11,9 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 - [x] Commit hygiene + C–E + perf slices (local; push when ready)
 - [x] Confirm no stale `apps/worker/wrangler.toml` (jsonc only)
 - [ ] Redeploy Pages (`markview`) and Worker (`mdviewer-api`)
-- [ ] Smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml` on prod
-- [ ] Smoke: `#heading` fragment links in editor split preview + `/share`
+- [x] Local smoke (`wrangler dev`): health, compatibility protocol 2, llms*, MCP tools/list+get_share, upload/meta/PUT/DELETE
+- [ ] Prod smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml`
+- [ ] Manual: `#heading` fragment links in editor split preview + `/share`
 
 ## 2. Docs honesty
 

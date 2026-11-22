@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": [
+    "apps/worker/src/lib/llms-content.generated.ts",
+    "apps/web/public/**",
+    "apps/web/dist/**"
+  ],
+  "workspaces": {
+    "apps/web": {
+      "entry": ["src/main.tsx", "src/app-shell/App.tsx", "vite.config.ts"],
+      "project": ["src/**/*.{ts,tsx}", "vite.config.ts"],
+      "ignoreDependencies": ["@tailwindcss/postcss"]
+    },
+    "apps/worker": {
+      "entry": ["src/index.ts", "scripts/**/*.{js,mjs}"],
+      "project": ["src/**/*.ts", "scripts/**/*.{js,mjs}"],
+      "ignoreDependencies": ["@cloudflare/workers-types"]
+    }
+  }
+}

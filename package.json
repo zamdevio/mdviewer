@@ -14,9 +14,15 @@
     "web:deploy": "pnpm --filter @mdviewer/web deploy",
     "worker:dev": "pnpm --filter @mdviewer/worker dev",
     "worker:deploy": "pnpm --filter @mdviewer/worker deploy",
-    "worker:typecheck": "pnpm --filter @mdviewer/worker typecheck"
+    "worker:typecheck": "pnpm --filter @mdviewer/worker typecheck",
+    "knip": "knip",
+    "madge:circular": "node scripts/madge/run.mjs circular",
+    "madge:orphans": "node scripts/madge/run.mjs orphans",
+    "madge:leaves": "node scripts/madge/run.mjs leaves"
   },
   "devDependencies": {
+    "knip": "^6.12.0",
+    "madge": "^8.0.0",
     "typescript": "^5.9.0"
   },
   "engines": {
