@@ -2,7 +2,7 @@
 
 **Order:** 06  
 **Goal:** Make MDViewer installable via [Appflare](https://appflare.dev/) and submit to [appflare/catalog](https://github.com/appflare/catalog) when packaging is green.  
-**Status:** Queued — **docs only for now** (no packaging code until we start the submit pass)  
+**Status:** **Declared** — we will submit; docs/`scripts/appflare/` first, catalog PR when pack is green (no packaging code until that pass starts)  
 **Agent submit guide:** https://appflare.dev/agent/submit.md
 
 ## How submission works

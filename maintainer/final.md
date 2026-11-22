@@ -63,6 +63,16 @@ See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 - [x] Size-aware preview / Mermaid debounce / lazy Mermaid / LRU / scroll throttle / auto-save scaling
 - [ ] **Deferred for v4 claim:** virtual scroll preview + chunked worker parse (do not claim 5–10MB readiness until done — or note deferred in release notes)
 
+## 6b. Protocol 3 — manage token (Focus)
+
+See [`phases/07-manage-token.md`](./phases/07-manage-token.md).
+
+- [ ] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
+- [ ] View password disposable per share; mutate uses Bearer manage token only
+- [ ] Already-shared UX core; Shares page Edit = editor dialog
+- [ ] Compatibility protocol 3 + llms + OpenAPI/MCP docs
+- [ ] Appflare remains declared ([`phases/06-appflare.md`](./phases/06-appflare.md)) — not blocked on 07 finishing, but catalog should describe protocol 3 once live
+
 ## 7. Loose ends
 
 - [ ] Nested projects — **deferred** (optional follow-up; not a v4 blocker unless we advertise it)

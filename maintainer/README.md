@@ -34,7 +34,8 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | [`phases/03-agent-surfaces.md`](phases/03-agent-surfaces.md) | Phase E — MCP / agent surfaces |
 | [`phases/04-perf-large-docs.md`](phases/04-perf-large-docs.md) | Large markdown perf roadmap |
 | [`phases/05-showcase.md`](phases/05-showcase.md) | README / home / docs / agent-parity honesty |
-| [`phases/06-appflare.md`](phases/06-appflare.md) | Appflare catalog readiness + submit gates |
+| [`phases/06-appflare.md`](phases/06-appflare.md) | Appflare catalog readiness + submit gates (**declared**) |
+| [`phases/07-manage-token.md`](phases/07-manage-token.md) | Protocol 3 — manage token vs view password; bulk rotate |
 | [`systems/web.md`](systems/web.md) | Web app map |
 | [`systems/worker.md`](systems/worker.md) | Worker API map |
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
