@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme/provider";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
@@ -29,31 +29,44 @@ function RouteFallback() {
   );
 }
 
+function AppShell() {
+  const pathname = useLocation().pathname;
+  const wide = pathname.startsWith("/editor");
+
+  return (
+    <div className="m-0 flex min-h-screen flex-col bg-background selection:bg-primary/20 selection:text-primary">
+      <Navbar />
+      <main
+        className={`m-0 w-full flex-1 px-4 pb-8 pt-0 sm:px-8 sm:pb-12 sm:pt-4 ${
+          wide ? "max-w-[90rem] mx-auto" : "mx-auto max-w-7xl"
+        }`}
+      >
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/editor" element={<EditorPage />} />
+            <Route path="/files" element={<FilesPage />} />
+            <Route path="/search" element={<SearchPage />} />
+            <Route path="/shares" element={<SharesPage />} />
+            <Route path="/share" element={<SharePage />} />
+            <Route path="/share/:id" element={<SharePage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
 export function App() {
   return (
     <>
       <ServiceWorkerRegister />
       <GlobalKeyboardShortcuts />
       <ThemeProvider>
-        <div className="flex flex-col min-h-screen bg-background selection:bg-primary/20 selection:text-primary m-0">
-          <Navbar />
-          <main className="flex-1 pt-0 sm:pt-4 pb-16 px-4 sm:px-8 max-w-7xl mx-auto w-full m-0">
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/editor" element={<EditorPage />} />
-                <Route path="/files" element={<FilesPage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/shares" element={<SharesPage />} />
-                <Route path="/share" element={<SharePage />} />
-                <Route path="/share/:id" element={<SharePage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </Suspense>
-          </main>
-          <Footer />
-        </div>
+        <AppShell />
         <Toaster />
         <PWAInstallPrompt />
         <UpdatePrompt />

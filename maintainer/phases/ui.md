@@ -1,7 +1,7 @@
 # UI polish
 
 **Goal:** Fix product UI imperfections (home and shell first), without a full redesign.  
-**Status:** Queued — wait for Focus slot after reshape commit + feature-list intake.  
+**Status:** Slice 1 in Focus (home + shell).  
 **Related:** Instinct “five polish ideas” (paste when available) may merge here.
 
 ## Principles
@@ -14,18 +14,18 @@
 
 ## Home (`/`)
 
-- [ ] Hero: tighten headline + one primary CTA (`Editor`); demote secondary links
-- [ ] Feature grid: reduce noise / uneven card weight; consistent icon+copy rhythm
-- [ ] Version / update callouts: don’t compete with the hero
-- [ ] Footer overlap / spacing with long home content
-- [ ] Dark/light: check contrast on muted text and borders
+- [x] Hero: tighten headline + one primary CTA (`Editor`); demote secondary links
+- [x] Feature grid: reduce noise / uneven card weight; consistent icon+copy rhythm
+- [x] Version / update callouts: don’t compete with the hero
+- [x] Footer overlap / spacing with long home content
+- [x] Dark/light: check contrast on muted text and borders
 
 ## Shell (navbar / footer / layout)
 
-- [ ] Active nav state clearer on mobile drawer
-- [ ] Connection indicator: less cryptic when API missing
-- [ ] Footer links / brand alignment on narrow widths
-- [ ] Main padding: editor vs marketing pages (editor may need fuller width)
+- [x] Active nav state clearer on mobile drawer
+- [x] Connection indicator: less cryptic when API missing
+- [x] Footer links / brand alignment on narrow widths
+- [x] Main padding: editor vs marketing pages (editor may need fuller width)
 
 ## Editor / preview
 

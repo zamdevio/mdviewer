@@ -10,9 +10,9 @@ All plans live under `maintainer/phases/`.
 
 | Priority | Vertical | Notes |
 |----------|----------|-------|
-| 1 | Commit + force-push reshape | Authors → `zamdevio <me@zamdev.io>`; WIP uncommitted |
-| 2 | Feature design intake | Instinct share design + new feature list → phase docs |
-| 3 | Hold feature implementation | After phase docs land |
+| 1 | UI polish slice 1 | Home + shell — in progress / shipping |
+| 2 | Feature design intake | Instinct share + polish lists when pasted |
+| 3 | Hold share / perf feature code | After phase docs land |
 
 ## Queued — do not start
 
@@ -20,10 +20,10 @@ All plans live under `maintainer/phases/`.
 |---|------|-----|
 | 1 | Database-free share features | (pending design paste) |
 | 2 | Large-doc performance | [`perf-large-docs.md`](./perf-large-docs.md) |
-| 3 | UI polish | [`ui.md`](./ui.md) |
+| 3 | UI polish slices 2–4 | [`ui.md`](./ui.md) |
 
 ## Next task
 
-1. Owner commits reshape + force-pushes rewritten `main` when ready.
-2. Drop feature lists → sharpen into `phases/`.
-3. Promote at most 3 items into Focus before coding.
+1. Finish / ship UI slice 1 (home + shell).
+2. Paste Instinct designs → phases.
+3. Promote next Focus items before coding them.

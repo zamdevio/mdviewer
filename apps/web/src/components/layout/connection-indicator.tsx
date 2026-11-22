@@ -1,107 +1,116 @@
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useConnection, type ConnectionStatus } from "@/hooks/use-connection";
-import { WifiOff, AlertCircle } from "lucide-react";
+import { isApiConfigured } from "@/lib/config";
+import { AlertCircle, Settings, WifiOff } from "lucide-react";
+
+type DisplayStatus = ConnectionStatus | "api-unset";
 
 interface StatusConfig {
   icon: typeof WifiOff;
-  color: string;
-  text: string;
+  dot: string;
+  label: string;
   description: string;
+  href?: string;
 }
 
-function getStatusConfig(status: ConnectionStatus): StatusConfig | null {
+function getStatusConfig(status: DisplayStatus): StatusConfig | null {
   switch (status) {
     case "offline":
       return {
         icon: WifiOff,
-        color: "bg-red-500",
-        text: "Offline",
-        description: "No internet connection. App is running in offline mode.",
+        dot: "bg-red-500",
+        label: "Offline",
+        description: "No internet. Editing still works locally.",
       };
     case "server-down":
       return {
         icon: AlertCircle,
-        color: "bg-orange-500",
-        text: "Server Unavailable",
-        description: "Internet is connected but the server is unreachable. App is running in offline mode.",
+        dot: "bg-amber-500",
+        label: "API down",
+        description: "Share server unreachable. Local editing still works.",
+      };
+    case "api-unset":
+      return {
+        icon: Settings,
+        dot: "bg-muted-foreground/70",
+        label: "Share off",
+        description: "API URL not set. Configure in Settings to enable share.",
+        href: "/settings",
       };
     case "online":
-    default:
       return null;
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
   }
 }
 
 /**
- * Connection Status Indicator Component
- * 
- * Shows a colored dot indicator in the navbar that reflects:
- * - Orange: Online but server down
- * - Red: Offline
- * 
- * Only shows when there's an issue (hides when online)
+ * Navbar connection cue — only when something needs attention.
  */
 export function ConnectionIndicator() {
   const [mounted, setMounted] = useState(false);
   const { status, lastChecked } = useConnection();
   const [timeAgo, setTimeAgo] = useState<number | null>(null);
-  const config = getStatusConfig(status);
 
-  // Wait for component to mount to prevent hydration mismatch
+  const displayStatus: DisplayStatus =
+    status === "online" && !isApiConfigured() ? "api-unset" : status;
+  const config = getStatusConfig(displayStatus);
+
   useEffect(() => {
-    // Use setTimeout to avoid calling setState synchronously in effect
-    const timer = setTimeout(() => {
-      setMounted(true);
-    }, 0);
+    const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate time ago in a useEffect to avoid calling Date.now() during render
   useEffect(() => {
-    if (!lastChecked) {
-      // Use setTimeout to avoid calling setState synchronously in effect
-      setTimeout(() => setTimeAgo(null), 0);
+    if (!lastChecked || displayStatus === "api-unset") {
+      setTimeAgo(null);
       return;
     }
-
-    const updateTimeAgo = () => {
-      setTimeAgo(Math.floor((Date.now() - lastChecked) / 1000));
-    };
-
-    updateTimeAgo();
-    const interval = setInterval(updateTimeAgo, 1000);
-
+    const tick = () => setTimeAgo(Math.floor((Date.now() - lastChecked) / 1000));
+    tick();
+    const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
-  }, [lastChecked]);
+  }, [lastChecked, displayStatus]);
 
-  // Don't render until mounted to prevent hydration mismatch
-  if (!mounted) {
-    return null;
-  }
-
-  // Don't show indicator when online
-  if (!config) {
-    return null;
-  }
+  if (!mounted || !config) return null;
 
   const Icon = config.icon;
-  const tooltipText = timeAgo !== null
-    ? `${config.text}: ${config.description} (Checked ${timeAgo < 60 ? `${timeAgo}s` : `${Math.floor(timeAgo / 60)}m`} ago)`
-    : `${config.text}: ${config.description}`;
+  const checked =
+    timeAgo !== null
+      ? ` · checked ${timeAgo < 60 ? `${timeAgo}s` : `${Math.floor(timeAgo / 60)}m`} ago`
+      : "";
+  const title = `${config.label}: ${config.description}${checked}`;
+
+  const inner = (
+    <>
+      <span className="relative flex h-2.5 w-2.5">
+        <span className={`absolute inset-0 rounded-full ${config.dot} opacity-40 animate-ping`} />
+        <span className={`relative h-2.5 w-2.5 rounded-full ${config.dot}`} />
+      </span>
+      <Icon className="hidden h-3.5 w-3.5 text-muted-foreground sm:block" />
+      <span className="hidden text-xs font-medium text-muted-foreground sm:inline">
+        {config.label}
+      </span>
+    </>
+  );
+
+  const className =
+    "inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-muted/40 px-2 py-1 transition-colors hover:bg-muted/70";
+
+  if (config.href) {
+    return (
+      <Link to={config.href} className={className} title={title}>
+        {inner}
+      </Link>
+    );
+  }
 
   return (
-    <div 
-      className="flex items-center gap-2 cursor-help group"
-      title={tooltipText}
-    >
-      <div className="relative">
-        <div className={`w-2.5 h-2.5 ${config.color} rounded-full animate-pulse`} />
-        <div
-          className={`absolute inset-0 ${config.color} rounded-full opacity-50 animate-ping`}
-        />
-      </div>
-      <Icon className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+    <div className={className} title={title}>
+      {inner}
     </div>
   );
 }
-
