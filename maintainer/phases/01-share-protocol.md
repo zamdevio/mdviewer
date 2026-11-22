@@ -1,7 +1,7 @@
 # Phase C — Worker share protocol
 
 **Order:** 01 (implement first)  
-**Status:** Queued · Focus  
+**Status:** Shipped (worker protocol 2)  
 **Depends on:** Phases A–B shipped
 
 ## Goals
@@ -57,9 +57,14 @@ Bump `/compatibility` protocol. Migrate/legacy flat keys documented here when im
 
 ## Checklist
 
-- [ ] Layout + metadata schema
-- [ ] Password hash verify
-- [ ] Fixed TTL + cron
-- [ ] Fair-use DO upgrade
-- [ ] CORS methods/headers
-- [ ] `docs/api.md` + worker systems doc
+- [x] Layout + metadata schema
+- [x] Password hash verify
+- [x] Fixed TTL + cron
+- [x] Fair-use DO upgrade
+- [x] CORS methods/headers
+- [x] `docs/api.md` + worker systems doc
+
+## Notes
+
+- SPA upload without password still works (public GET; mutate blocked until password was set at create).
+- Phase D wires password / TTL / protect-view UI.

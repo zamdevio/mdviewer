@@ -2,12 +2,19 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import type { Env } from "./env";
 import { parseAllowedOrigins, resolveRequestOrigins } from "./lib/origins";
+import { sweepExpiredShares } from "./lib/share-store";
 import health from "./routes/health";
 import compatibility from "./routes/compatibility";
 import upload from "./routes/upload";
 import share from "./routes/share";
 
 export { RateLimiter } from "./rate-limiter";
+
+const CORS_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
+const CORS_HEADERS =
+  "Content-Type, X-Share-Password, X-Share-TTL-Seconds, X-Share-View-Protected, X-Share-Type, X-Share-Filename, X-MDViewer-Client";
+const CORS_EXPOSE =
+  "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After, X-Expires-At, X-Content-Size, X-Uploaded-At, X-Share-Filename, X-Share-Legacy";
 
 const app = new OpenAPIHono<{
   Bindings: Env;
@@ -38,8 +45,10 @@ app.use("*", async (c, next) => {
     return new Response(null, {
       headers: {
         "Access-Control-Allow-Origin": corsOrigin,
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": CORS_METHODS,
+        "Access-Control-Allow-Headers": CORS_HEADERS,
+        "Access-Control-Expose-Headers": CORS_EXPOSE,
+        "Access-Control-Max-Age": "86400",
       },
     });
   }
@@ -47,8 +56,9 @@ app.use("*", async (c, next) => {
   await next();
 
   c.res.headers.set("Access-Control-Allow-Origin", corsOrigin);
-  c.res.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  c.res.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  c.res.headers.set("Access-Control-Allow-Methods", CORS_METHODS);
+  c.res.headers.set("Access-Control-Allow-Headers", CORS_HEADERS);
+  c.res.headers.set("Access-Control-Expose-Headers", CORS_EXPOSE);
 });
 
 app.route("/", health);
@@ -60,13 +70,13 @@ app.doc("/openapi.json", {
   openapi: "3.1.0",
   info: {
     title: "MDViewer API",
-    version: "1.0.0",
+    version: "2.0.0",
     description:
-      "Edge API for sharing markdown and text via Cloudflare Workers + R2. Uploads are rate-limited; downloads are unlimited.",
+      "Edge API for sharing markdown via Cloudflare Workers + R2. Protocol 2: prefix layout, fixed TTL, optional password / viewProtected, fair-use (IP+UA). Uploads fair-use limited; downloads unlimited.",
   },
   tags: [
     { name: "System", description: "Health, compatibility handshake, and ops" },
-    { name: "Share", description: "Upload and retrieve shared content" },
+    { name: "Share", description: "Upload, retrieve, update, and delete shared content" },
   ],
 });
 
@@ -74,4 +84,19 @@ app.get("/docs", swaggerUI({ url: "/openapi.json" }));
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
-export default app;
+const worker = {
+  fetch: app.fetch,
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ) {
+    ctx.waitUntil(
+      sweepExpiredShares(env).then((result) => {
+        console.log(`TTL sweep deleted ${result.deleted} expired share(s)`);
+      }),
+    );
+  },
+};
+
+export default worker;

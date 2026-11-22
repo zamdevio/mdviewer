@@ -44,5 +44,10 @@
       "tag": "v1",
       "new_sqlite_classes": ["RateLimiter"]
     }
-  ]
+  ],
+
+  // Daily TTL sweep — deletes expired shares/{id}/ prefixes
+  "triggers": {
+    "crons": ["0 4 * * *"]
+  }
 }

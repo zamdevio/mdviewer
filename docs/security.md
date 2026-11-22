@@ -8,7 +8,7 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 |---------|--------|
 | Browser localStorage (files, settings) | Same-origin XSS is the main risk |
 | Markdown preview (editor + `/share`) | Untrusted Markdown/HTML from user or shared links |
-| Share Worker (`POST /upload`, `GET /share/:id`) | Public pastebin-style API until Phase C (password + TTL) |
+| Share Worker (`POST /upload`, `GET /share/:id`, mutate routes) | Public GET by default; optional view password; mutate requires create-time password (protocol 2) |
 | Settings API override | Must not accept `javascript:` / opaque URLs |
 
 ## Hardened (with proof in code)
@@ -30,10 +30,10 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 
 | Item | Status |
 |------|--------|
-| Public share GET by id (no view password yet) | **Intentional** pastebin model until Phase C |
-| Share mutate/delete without password | **Queued** — [`maintainer/phases/01-share-protocol.md`](../maintainer/phases/01-share-protocol.md) |
-| Fixed TTL + cron expiry | **Queued** — same phase |
-| Fair-use fingerprint DO | **Queued** — same phase |
+| Public share GET by id (no view password) | **Intentional** default; set `viewProtected` + password at create to gate GET |
+| Share mutate/delete without password | **Hardened** — requires `X-Share-Password` when hash was set at create; shares created without password cannot mutate |
+| Fixed TTL + cron expiry | **Hardened** — default 7d / max 30d; daily cron sweep |
+| Fair-use fingerprint DO | **Hardened** — IP+UA (+ CF country); stricter agent-shaped limits |
 | CSP `script-src 'unsafe-inline'` | Needed for inline theme bootstrap in `index.html`; prefer nonce in a later pass |
 | Legacy backup password format (truncated base64) | Accept for decrypt-only; new exports use AES-GCM |
 | XSS → rewrite `mdviewer_api_override` | Mitigated by CSP `connect-src` + URL validation; eliminating XSS is the real fix |

@@ -6,7 +6,15 @@ import {
   generateId,
   MAX_FILE_SIZE,
 } from "../lib/content";
-import { checkRateLimit, getClientIP } from "../lib/rate-limit";
+import { checkFairUse } from "../lib/fair-use";
+import { hashPassword, readSharePassword } from "../lib/password";
+import {
+  putShare,
+  sanitizeShareFilename,
+  type ShareMetadata,
+  type ShareType,
+} from "../lib/share-store";
+import { expiresAtFromTtl, parseTtlHeader } from "../lib/ttl";
 
 const app = new OpenAPIHono<{
   Bindings: Env;
@@ -19,7 +27,7 @@ const uploadRoute = createRoute({
   tags: ["Share"],
   summary: "Upload markdown/text content",
   description:
-    "Accepts text/plain (or markdown content-types) body, or multipart/form-data with a file field. Rate limited per IP.",
+    "Accepts text/plain (or markdown content-types) body, or multipart/form-data. Stores under shares/{id}/ with metadata + fixed TTL. Optional X-Share-Password (hashed), X-Share-TTL-Seconds, X-Share-View-Protected, X-Share-Filename, X-Share-Type. Fair-use limited per IP+UA.",
   request: {
     body: {
       required: true,
@@ -54,6 +62,9 @@ const uploadRoute = createRoute({
             frontendShareUrl: z.string().url(),
             size: z.number(),
             uploadedAt: z.string(),
+            expiresAt: z.string(),
+            viewProtected: z.boolean(),
+            hasPassword: z.boolean(),
           }),
         },
       },
@@ -94,7 +105,7 @@ const uploadRoute = createRoute({
       },
     },
     429: {
-      description: "Rate limit exceeded",
+      description: "Fair-use / rate limit exceeded",
       content: {
         "application/json": {
           schema: z.object({
@@ -119,24 +130,33 @@ const uploadRoute = createRoute({
   },
 });
 
+function parseShareType(request: Request): ShareType {
+  const raw = (request.headers.get("X-Share-Type") || "file").toLowerCase();
+  return raw === "project" ? "project" : "file";
+}
+
+function parseViewProtected(request: Request): boolean {
+  const raw = (request.headers.get("X-Share-View-Protected") || "").toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
 app.openapi(uploadRoute, async (c) => {
   const frontendOrigin = c.get("frontendOrigin");
-  const ip = getClientIP(c.req.raw);
-  const rateLimit = await checkRateLimit(c.env, ip, frontendOrigin);
+  const fairUse = await checkFairUse(c.env, c.req.raw, frontendOrigin);
 
-  if (!rateLimit.allowed) {
+  if (!fairUse.allowed) {
     return c.json(
       {
         error: "Rate limit exceeded",
-        message: `Too many uploads. Please try again after ${Math.ceil((rateLimit.resetAt - Date.now()) / 1000)} seconds.`,
-        resetAt: rateLimit.resetAt,
+        message: `Too many uploads. Please try again after ${Math.ceil((fairUse.resetAt - Date.now()) / 1000)} seconds.`,
+        resetAt: fairUse.resetAt,
       },
       429,
       {
-        "X-RateLimit-Limit": String(rateLimit.limit),
-        "X-RateLimit-Remaining": String(rateLimit.remaining),
-        "X-RateLimit-Reset": String(rateLimit.resetAt),
-        "Retry-After": String(Math.ceil((rateLimit.resetAt - Date.now()) / 1000)),
+        "X-RateLimit-Limit": String(fairUse.limit),
+        "X-RateLimit-Remaining": String(fairUse.remaining),
+        "X-RateLimit-Reset": String(fairUse.resetAt),
+        "Retry-After": String(Math.ceil((fairUse.resetAt - Date.now()) / 1000)),
       },
     );
   }
@@ -187,16 +207,33 @@ app.openapi(uploadRoute, async (c) => {
   }
 
   const id = generateId();
+  const createdAt = new Date().toISOString();
+  const ttlSeconds = parseTtlHeader(c.req.raw);
+  const expiresAt = expiresAtFromTtl(ttlSeconds);
+  const passwordPlain = readSharePassword(c.req.raw);
+  const passwordHash = passwordPlain ? await hashPassword(passwordPlain) : null;
+  const viewProtected = parseViewProtected(c.req.raw);
+  // viewProtected without password is meaningless for GET gate — force off
+  const effectiveViewProtected = Boolean(passwordHash) && viewProtected;
+  const filename = sanitizeShareFilename(
+    c.req.raw.headers.get("X-Share-Filename"),
+  );
+
+  const meta: ShareMetadata = {
+    id,
+    type: parseShareType(c.req.raw),
+    filename,
+    contentType,
+    size: contentSize,
+    createdAt,
+    expiresAt,
+    passwordHash,
+    viewProtected: effectiveViewProtected,
+    protocol: 2,
+  };
+
   try {
-    await c.env.R2_BUCKET.put(id, content, {
-      httpMetadata: {
-        contentType: `${contentType}; charset=utf-8`,
-      },
-      customMetadata: {
-        uploadedAt: new Date().toISOString(),
-        size: String(contentSize),
-      },
-    });
+    await putShare(c.env.R2_BUCKET, meta, content);
 
     const frontendUrlObj = new URL(frontendOrigin);
     frontendUrlObj.pathname = "/share";
@@ -207,13 +244,17 @@ app.openapi(uploadRoute, async (c) => {
         id,
         frontendShareUrl: frontendUrlObj.toString(),
         size: contentSize,
-        uploadedAt: new Date().toISOString(),
+        uploadedAt: createdAt,
+        expiresAt,
+        viewProtected: effectiveViewProtected,
+        hasPassword: Boolean(passwordHash),
       },
       200,
       {
-        "X-RateLimit-Limit": String(rateLimit.limit),
-        "X-RateLimit-Remaining": String(rateLimit.remaining),
-        "X-RateLimit-Reset": String(rateLimit.resetAt),
+        "X-RateLimit-Limit": String(fairUse.limit),
+        "X-RateLimit-Remaining": String(fairUse.remaining),
+        "X-RateLimit-Reset": String(fairUse.resetAt),
+        "X-Expires-At": expiresAt,
       },
     );
   } catch (error) {

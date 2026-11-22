@@ -15,6 +15,10 @@ export interface UploadResponse {
   frontendShareUrl?: string;
   size: number;
   uploadedAt: string;
+  /** Protocol 2+ — fixed wipe time */
+  expiresAt?: string;
+  viewProtected?: boolean;
+  hasPassword?: boolean;
 }
 
 export interface ApiError {
@@ -30,6 +34,19 @@ export interface CompatibilityResponse {
   endpoints: Array<{ method: string; path: string; description?: string }>;
   cors: {
     allowedOriginsConfigured: boolean;
+  };
+  /** Protocol 2+ */
+  features?: {
+    password: boolean;
+    fixedTtl: boolean;
+    viewProtected: boolean;
+    fairUseFingerprint: boolean;
+    legacyFlatKeys: boolean;
+  };
+  ttl?: {
+    defaultSeconds: number;
+    minSeconds: number;
+    maxSeconds: number;
   };
 }
 

@@ -26,12 +26,13 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 
 See [`phases/01-share-protocol.md`](./phases/01-share-protocol.md).
 
-- [ ] R2 prefix layout + `metadata.json`
-- [ ] Password hash; mutate/delete require `X-Share-Password`
-- [ ] Optional `viewProtected` on GET
-- [ ] Fixed TTL (default 7d / max 30d) + cron sweep
-- [ ] Fair-use DO (IP+UA); stricter on agent-shaped traffic
-- [ ] Bump `/compatibility` protocol; update `docs/api.md` + systems worker doc
+- [x] R2 prefix layout + `metadata.json`
+- [x] Password hash; mutate/delete require `X-Share-Password`
+- [x] Optional `viewProtected` on GET
+- [x] Fixed TTL (default 7d / max 30d) + cron sweep
+- [x] Fair-use DO (IP+UA); stricter on agent-shaped traffic
+- [x] Bump `/compatibility` protocol; update `docs/api.md` + systems worker doc
+- [ ] Redeploy Worker so protocol 2 is live on prod
 
 ## 4. Phase D — unified share dialog
 

@@ -62,9 +62,9 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 - GFM, Mermaid, KaTeX, syntax highlighting, image lightbox
 
 ### Edge share
-- Workers + R2, CORS allowlist, upload rate limiting, OpenAPI `/docs`
-- SPA ships [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) + [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt); MCP waits on Phase C + E
-- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`01-share-protocol`](./maintainer/phases/01-share-protocol.md) → dialog → MCP → perf
+- Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, optional share password, OpenAPI `/docs`
+- SPA ships [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) + [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt); MCP waits on Phase E
+- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`02-share-dialog`](./maintainer/phases/02-share-dialog.md) → MCP → perf
 
 ### Security
 - Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode
