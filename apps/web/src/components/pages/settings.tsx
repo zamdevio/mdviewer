@@ -160,6 +160,8 @@ export default function SettingsPage(): React.JSX.Element {
                         setImportPassword("");
                     } else if (showInvalidFilesDialog) {
                         setShowInvalidFilesDialog(false);
+                    } else if (showPasswordPanel) {
+                        closePasswordPanel();
                     }
                 }
                 return;
@@ -190,13 +192,15 @@ export default function SettingsPage(): React.JSX.Element {
                     setImportPassword("");
                 } else if (showInvalidFilesDialog) {
                     setShowInvalidFilesDialog(false);
+                } else if (showPasswordPanel) {
+                    closePasswordPanel();
                 }
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [keyboardShortcuts, showExportWarning, showClearDataWarning, showConflictDialog, showInvalidFilesDialog, setShowConflictDialog, setShowInvalidFilesDialog, handleImport]);
+    }, [keyboardShortcuts, showExportWarning, showClearDataWarning, showConflictDialog, showInvalidFilesDialog, showPasswordPanel, closePasswordPanel, setShowConflictDialog, setShowInvalidFilesDialog, handleImport]);
 
     // Sync theme changes between localStorage and next-themes cookie
     useEffect(() => {

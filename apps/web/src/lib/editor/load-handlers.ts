@@ -5,6 +5,7 @@
  */
 
 import { fetchSharedMarkdown } from '@/lib/api';
+import { isApiConfigured } from '@/lib/config';
 import { saveCurrentContentToFile } from './file-helpers';
 import { hasUnsavedContent } from './validation';
 import { prepareSharedContentState } from './business-logic';
@@ -16,6 +17,7 @@ export interface LoadSharedContentResult {
     newState?: EditorState;
     error?: string;
     requiresSave?: boolean;
+    needsApiConfig?: boolean;
 }
 
 /**
@@ -30,6 +32,14 @@ export async function handleLoadSharedContent(
     saveStatus: 'idle' | 'saving' | 'saved' | 'unsaved',
     currentFileName: string | null
 ): Promise<LoadSharedContentResult> {
+    if (!isApiConfigured()) {
+        return {
+            success: false,
+            error: "Share API is not configured",
+            needsApiConfig: true,
+        };
+    }
+
     const config = getLoadSharedContentHandlerConfig(editorState, markdown, lastSavedContent, saveStatus);
 
     if (!config.canExecute) {

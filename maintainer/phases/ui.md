@@ -1,7 +1,7 @@
 # UI polish
 
 **Goal:** Fix product UI imperfections (home and shell first), without a full redesign.  
-**Status:** Slices 1–4 shipped (home/shell, editor chrome, empty states, settings).  
+**Status:** Slices 1–5 shipped (home/shell through dialogs + list density).  
 **Related:** Instinct “five polish ideas” (paste when available) may merge here.
 
 ## Principles
@@ -30,13 +30,13 @@
 ## Editor / preview
 
 - [x] Status bar / controls crowding on mobile
-- [ ] Dialog stacking and focus trap polish
-- [ ] Empty / error states for load-share and save
+- [x] Dialog stacking and focus trap polish (`ModalShell`)
+- [x] Empty / error states for load-share and save
 
 ## Shares / files / search / settings
 
 - [x] Empty states with one obvious next action
-- [ ] List density and truncation consistency
+- [x] List density and truncation consistency
 - [x] Settings sections: grouping and save feedback
 
 ## Slice order
@@ -45,7 +45,13 @@
 2. Mobile nav + connection clarity — done  
 3. Editor chrome on small screens — done  
 4. Empty/error states across list pages + settings feedback — done  
+5. Shared modal a11y + shares list density + share-load API gate — done  
 
 ## Intake
 
 When Instinct polish notes arrive, map each idea into the checklists above (or a short “Instinct” subsection) before coding.
+
+## Optional leftovers
+
+- Migrate remaining settings portals onto `ModalShell`
+- Image lightbox a11y parity

@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { getApiConfigStatus } from "@/lib/config";
+import { isApiConfigured } from "@/lib/config";
 import { toast } from "sonner";
 import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing } from "@/lib/storage";
 import { getShowDefaultContent, getTempFile, clearTempFile } from "@/lib/storage/helpers";
@@ -111,6 +111,7 @@ export default function EditorPage() {
     const [showLoadDialog, setShowLoadDialog] = useState(false);
     const [loadShareId, setLoadShareId] = useState<string | null>(null);
     const [loadingSharedContent, setLoadingSharedContent] = useState(false);
+    const [loadShareError, setLoadShareError] = useState<string | null>(null);
     const [showLoadFileDialog, setShowLoadFileDialog] = useState(false);
     const [pendingFileId, setPendingFileId] = useState<string | null>(null);
     const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -121,6 +122,7 @@ export default function EditorPage() {
     const [saveDialogInitialValue, setSaveDialogInitialValue] = useState("");
     const [showDeleteWarning, setShowDeleteWarning] = useState(false);
     const [showEmptySaveDialog, setShowEmptySaveDialog] = useState(false);
+    const [emptyDialogKind, setEmptyDialogKind] = useState<'save' | 'share'>('save');
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
     const [keyboardShortcutsEnabled, setKeyboardShortcutsEnabled] = useState(true);
     const [showEditorStatusBar, setShowEditorStatusBar] = useState(true);
@@ -283,13 +285,19 @@ export default function EditorPage() {
             return;
         }
 
+        if (loadId && !isApiConfigured()) {
+            setShowApiWarning(true);
+            toast.error("Share API is not configured");
+            cleanEditorUrl();
+            return;
+        }
+
         // Use hasUnsavedContent which treats DEFAULT_MARKDOWN as empty
         if (loadId && hasUnsavedContent(markdown)) {
-            // There's existing content, show dialog
             setLoadShareId(loadId);
+            setLoadShareError(null);
             setShowLoadDialog(true);
         } else if (loadId) {
-            // No existing content, load directly
             handleLoadSharedContent(loadId, false);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -493,6 +501,7 @@ export default function EditorPage() {
     // Load shared content
     const handleLoadSharedContent = async (shareId: string, saveCurrent: boolean) => {
         setLoadingSharedContent(true);
+        setLoadShareError(null);
 
         try {
             const result = await handleLoadSharedContentLogic(
@@ -506,6 +515,14 @@ export default function EditorPage() {
             );
 
             if (!result.success) {
+                if (result.needsApiConfig) {
+                    setShowApiWarning(true);
+                    setShowLoadDialog(false);
+                    setLoadShareId(null);
+                    cleanEditorUrl();
+                } else if (showLoadDialog) {
+                    setLoadShareError(result.error || "Failed to load shared content");
+                }
                 toast.error(result.error || "Failed to load shared content");
                 setLoadingSharedContent(false);
                 return;
@@ -532,9 +549,14 @@ export default function EditorPage() {
                 // Close dialog
                 setShowLoadDialog(false);
                 setLoadShareId(null);
+                setLoadShareError(null);
             }
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Failed to load shared content");
+            const message = error instanceof Error ? error.message : "Failed to load shared content";
+            if (showLoadDialog) {
+                setLoadShareError(message);
+            }
+            toast.error(message);
         } finally {
             setLoadingSharedContent(false);
         }
@@ -845,7 +867,7 @@ export default function EditorPage() {
 
                 // Check if content is empty before saving (treat DEFAULT_MARKDOWN as normal content for save)
                 if (isContentEmpty(markdown, false)) {
-                    // Show dialog telling user there's nothing to save
+                    setEmptyDialogKind('save');
                     setShowEmptySaveDialog(true);
                 } else {
                     // Always handle save in editor
@@ -991,16 +1013,6 @@ export default function EditorPage() {
         return cleanup;
     }, [mounted, soloMode, isPreview, effectiveMode]);
 
-    // Check API configuration on mount
-    useEffect(() => {
-        if (mounted) {
-            const apiStatus = getApiConfigStatus();
-            if (!apiStatus.isConfigured) {
-                setShowApiWarning(true);
-            }
-        }
-    }, [mounted]);
-
     // Detect if navbar is scrolled out of view
     useEffect(() => {
         if (!mounted) return;
@@ -1056,7 +1068,13 @@ export default function EditorPage() {
             }
 
             if (!result.success) {
-                toast.error(result.error || "Failed to share", { id: "sharing" });
+                toast.dismiss("sharing");
+                if (result.error === "Cannot share empty content") {
+                    setEmptyDialogKind('share');
+                    setShowEmptySaveDialog(true);
+                } else {
+                    toast.error(result.error || "Failed to share");
+                }
                 setIsSharing(false);
                 return;
             }
@@ -1269,6 +1287,7 @@ export default function EditorPage() {
 
         if (!action.canExecute) {
             if (action.infoMessage) {
+                setEmptyDialogKind('save');
                 setShowEmptySaveDialog(true);
             }
             return;
@@ -1420,11 +1439,13 @@ export default function EditorPage() {
                 show={showLoadDialog}
                 loadShareId={loadShareId}
                 loading={loadingSharedContent}
+                error={loadShareError}
                 onSaveAndLoad={() => loadShareId && handleLoadSharedContent(loadShareId, true)}
                 onLoadWithoutSaving={() => loadShareId && handleLoadSharedContent(loadShareId, false)}
                 onCancel={() => {
                     setShowLoadDialog(false);
                     setLoadShareId(null);
+                    setLoadShareError(null);
                     const url = new URL(window.location.href);
                     url.searchParams.delete('load');
                     window.history.replaceState({}, '', url.toString());
@@ -1539,7 +1560,16 @@ export default function EditorPage() {
                 />
             </div>
 
-            <EmptySaveDialog show={showEmptySaveDialog} onClose={() => setShowEmptySaveDialog(false)} />
+            <EmptySaveDialog
+                show={showEmptySaveDialog}
+                onClose={() => setShowEmptySaveDialog(false)}
+                title={emptyDialogKind === 'share' ? 'Nothing to Share' : 'Nothing to Save'}
+                message={
+                    emptyDialogKind === 'share'
+                        ? "The editor is empty. There's nothing to share. Add some content first!"
+                        : "The editor is empty. There's nothing to save. Add some content first!"
+                }
+            />
             <DeleteWarningDialog
                 show={showDeleteWarning}
                 fileName={currentFileName}

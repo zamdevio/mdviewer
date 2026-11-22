@@ -20,10 +20,9 @@ All plans live under `maintainer/phases/`.
 |---|------|-----|
 | 1 | Database-free share features | (pending design paste) |
 | 2 | Large-doc performance | [`perf-large-docs.md`](./perf-large-docs.md) |
-| 3 | Remaining UI polish (dialogs, list density) | [`ui.md`](./ui.md) |
+| 3 | Optional UI leftovers (settings portals → ModalShell, lightbox) | [`ui.md`](./ui.md) |
 
 ## Next task
 
 1. Paste Instinct designs → phases.
 2. Promote next Focus items before coding them.
-3. Optional: dialog/focus-trap + list density leftovers in `ui.md`.
