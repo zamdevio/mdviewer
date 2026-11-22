@@ -30,10 +30,10 @@
 - [ ] Chunked markdown parse in a Web Worker — `apps/web/src/lib/markdown/worker-parser.ts`
 - [ ] Diff-based re-parse for files &gt; 1MB — `viewer.tsx`
 - [ ] Progressive render: structure → text → heavy blocks
-- [ ] Cleanup Mermaid / KaTeX / highlighter on unmount
+- [x] Cleanup Mermaid on unmount (abort in-flight + clear SVG DOM); KaTeX/highlighter still eager
 - [x] LRU Mermaid cache (cap ~50)
 - [ ] WeakMap caches where possible
-- [ ] Memory monitor + warn — `apps/web/src/lib/performance/memory-monitor.ts`
+- [x] Memory monitor + warn — `memory-monitor.ts` (Chromium; toast once at 75% on docs ≥100KB)
 - [x] Dynamic Mermaid debounce (larger files → 1–1.5s) — `mermaidDebounceMs`
 - [x] Size-aware preview debounce — `PreviewSection` + `previewDebounceMs`
 - [x] Throttle scroll position tracking — `scroll.ts`

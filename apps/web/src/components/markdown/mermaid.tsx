@@ -338,6 +338,18 @@ export function MarkdownMermaid({ code }: { code: string }) {
         }
     };
 
+    // Drop DOM SVG payloads when this block unmounts (Phase 04 cleanup)
+    useEffect(() => {
+        const darkEl = mermaidRefDark.current;
+        const lightEl = mermaidRefLight.current;
+        return () => {
+            if (darkEl) darkEl.innerHTML = "";
+            if (lightEl) lightEl.innerHTML = "";
+            diagramIdDarkRef.current = null;
+            diagramIdLightRef.current = null;
+        };
+    }, []);
+
     // Render primary theme (current theme) - loads first
     useEffect(() => {
         if (!inView || !themeReady) return;
@@ -345,6 +357,8 @@ export function MarkdownMermaid({ code }: { code: string }) {
             setIsLoadingPrimary(false);
             return;
         }
+
+        let cancelled = false;
 
         const renderPrimary = async () => {
             const ref = isDarkMode ? mermaidRefDark : mermaidRefLight;
@@ -355,7 +369,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
             const cachedSvg = mermaidCacheGet(cacheKey);
 
             if (cachedSvg) {
-                // Use cached SVG
+                if (cancelled || !ref.current) return;
                 ref.current.innerHTML = cachedSvg;
                 const svgElement = ref.current.querySelector('svg');
                 enhanceSvgLines(svgElement, isDarkMode);
@@ -367,10 +381,9 @@ export function MarkdownMermaid({ code }: { code: string }) {
                 setIsLoadingPrimary(true);
                 setErrorPrimary(null);
 
-                // Dynamically import mermaid library
                 const mermaid = (await import('mermaid')).default;
+                if (cancelled) return;
 
-                // Generate unique ID for this diagram
                 const id = `mermaid-${primaryTheme}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 if (isDarkMode) {
                     diagramIdDarkRef.current = id;
@@ -378,33 +391,30 @@ export function MarkdownMermaid({ code }: { code: string }) {
                     diagramIdLightRef.current = id;
                 }
 
-                // Use generic render function
                 const themeKey = `mermaid-${primaryTheme}`;
                 const svg = await renderMermaidDiagram(mermaid, id, debouncedCode.trim(), primaryTheme, themeKey);
+                if (cancelled) return;
 
-                // Cache the SVG
                 mermaidCacheSet(cacheKey, svg);
 
-                // Insert the rendered SVG into DOM
                 if (ref.current) {
                     ref.current.innerHTML = svg;
-
-
-                    // Enhance line visibility
                     const svgElement = ref.current.querySelector('svg');
                     enhanceSvgLines(svgElement, isDarkMode);
-
                     setIsLoadingPrimary(false);
                 }
             } catch (err) {
-                // Set error for display in UI
+                if (cancelled) return;
                 const errorMessage = err instanceof Error ? err.message : 'Failed to render Mermaid diagram';
                 setErrorPrimary(errorMessage);
                 setIsLoadingPrimary(false);
             }
         };
 
-        renderPrimary();
+        void renderPrimary();
+        return () => {
+            cancelled = true;
+        };
     }, [inView, debouncedCode, primaryTheme, isDarkMode, themeReady, renderMermaidDiagram]);
 
     // Render secondary theme (other theme) - only after primary is done and only if not cached
@@ -418,7 +428,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
         // Only render secondary if primary is done
         if (isLoadingPrimary) return;
 
-        // Check cache first
+        let cancelled = false;
         const cacheKey = getCacheKey(debouncedCode.trim(), secondaryTheme);
         const cachedSvg = mermaidCacheGet(cacheKey);
 
@@ -426,8 +436,8 @@ export function MarkdownMermaid({ code }: { code: string }) {
             const ref = isDarkMode ? mermaidRefLight : mermaidRefDark;
             if (!ref.current) return;
 
-            // If cached, use it immediately
             if (cachedSvg) {
+                if (cancelled || !ref.current) return;
                 ref.current.innerHTML = cachedSvg;
                 const svgElement = ref.current.querySelector('svg');
                 enhanceSvgLines(svgElement, !isDarkMode);
@@ -437,14 +447,12 @@ export function MarkdownMermaid({ code }: { code: string }) {
 
             try {
                 setIsLoadingSecondary(true);
+                await new Promise((resolve) => setTimeout(resolve, 50));
+                if (cancelled) return;
 
-                // Small delay to ensure primary render is complete
-                await new Promise(resolve => setTimeout(resolve, 50));
+                const mermaid = (await import("mermaid")).default;
+                if (cancelled) return;
 
-                // Dynamically import mermaid library
-                const mermaid = (await import('mermaid')).default;
-
-                // Generate unique ID for this diagram
                 const id = `mermaid-${secondaryTheme}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
                 if (isDarkMode) {
                     diagramIdLightRef.current = id;
@@ -452,30 +460,35 @@ export function MarkdownMermaid({ code }: { code: string }) {
                     diagramIdDarkRef.current = id;
                 }
 
-                // Use generic render function
                 const themeKey = `mermaid-${secondaryTheme}`;
-                const svg = await renderMermaidDiagram(mermaid, id, debouncedCode.trim(), secondaryTheme, themeKey);
+                const svg = await renderMermaidDiagram(
+                    mermaid,
+                    id,
+                    debouncedCode.trim(),
+                    secondaryTheme,
+                    themeKey,
+                );
+                if (cancelled) return;
 
-                // Cache the SVG
                 mermaidCacheSet(cacheKey, svg);
 
-                // Insert the rendered SVG into DOM (hidden)
                 if (ref.current) {
                     ref.current.innerHTML = svg;
-
-                    // Enhance line visibility
-                    const svgElement = ref.current.querySelector('svg');
+                    const svgElement = ref.current.querySelector("svg");
                     enhanceSvgLines(svgElement, !isDarkMode);
-
                     setIsLoadingSecondary(false);
                 }
             } catch (err) {
-                console.warn('Mermaid secondary rendering error:', err);
+                if (cancelled) return;
+                console.warn("Mermaid secondary rendering error:", err);
                 setIsLoadingSecondary(false);
             }
         };
 
-        renderSecondary();
+        void renderSecondary();
+        return () => {
+            cancelled = true;
+        };
     }, [inView, debouncedCode, secondaryTheme, isDarkMode, isLoadingPrimary, themeReady, renderMermaidDiagram]);
 
     if (!inView) {

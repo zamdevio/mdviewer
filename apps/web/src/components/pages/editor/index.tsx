@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, getSavedFiles } from "@/lib/storage";
 import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
 import { autoSaveDebounceMs } from "@/lib/performance/preview-debounce";
+import { startMemoryMonitor } from "@/lib/performance/memory-monitor";
 import { getShowDefaultContent, getTempFile, clearTempFile } from "@/lib/storage/helpers";
 import {
     getInitialEditorState,
@@ -716,6 +717,20 @@ export default function EditorPage() {
             }
         };
     }, [markdown, currentFileName]);
+
+    // Large-doc heap warn (Chromium only; once until pressure eases)
+    useEffect(() => {
+        if (!mounted || markdown.length < 100_000) return;
+        return startMemoryMonitor({
+            enabled: true,
+            onWarn: (sample) => {
+                const usedMb = Math.round(sample.usedJSHeapBytes / (1024 * 1024));
+                toast.warning(
+                    `High memory use (~${usedMb} MB). Close other tabs or split the doc if preview feels sluggish.`,
+                );
+            },
+        });
+    }, [mounted, markdown.length]);
 
     // Auto-rename and auto-save untitled files based on first 20 chars
     useEffect(() => {
