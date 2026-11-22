@@ -44,11 +44,40 @@ function serviceWorkerPlugin(): Plugin {
   };
 }
 
+/**
+ * Emit real HTML shells for SPA routes so Pages serves Vite at `/settings` etc.
+ * (Old Next left per-path CDN ghosts when those routes were only `_redirects` fallbacks.)
+ */
+const SPA_HTML_ROUTES = [
+  "settings",
+  "editor",
+  "files",
+  "search",
+  "shares",
+] as const;
+
+function spaHtmlShellsPlugin(): Plugin {
+  return {
+    name: "mdviewer-spa-html-shells",
+    closeBundle() {
+      const outDir = path.resolve(__dirname, "dist");
+      const indexPath = path.join(outDir, "index.html");
+      if (!fs.existsSync(indexPath)) return;
+      const html = fs.readFileSync(indexPath, "utf8");
+      for (const route of SPA_HTML_ROUTES) {
+        const dir = path.join(outDir, route);
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, "index.html"), html, "utf8");
+      }
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, path.resolve(__dirname, "../.."), "");
 
   return {
-    plugins: [react(), serviceWorkerPlugin()],
+    plugins: [react(), serviceWorkerPlugin(), spaHtmlShellsPlugin()],
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),

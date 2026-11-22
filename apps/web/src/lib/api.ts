@@ -193,6 +193,40 @@ export async function deleteRemoteShare(
   }
 }
 
+export type PublicShareMeta = {
+  id: string;
+  type: "file" | "project";
+  filename: string;
+  contentType: string;
+  size: number;
+  createdAt: string;
+  expiresAt: string;
+  viewProtected: boolean;
+  hasPassword: boolean;
+  protocol: 2;
+  legacy?: boolean;
+};
+
+export async function fetchShareMeta(
+  id: string,
+): Promise<PublicShareMeta> {
+  const base = apiBase();
+  const url = `${base}/share/${encodeURIComponent(id)}/meta`;
+  try {
+    const response = await fetch(url, { method: "GET" });
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new ApiRequestError("http", "Share metadata not found", 404);
+      }
+      throw new ApiRequestError("http", "Failed to fetch share metadata", response.status);
+    }
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${base}/health`, "Failed to fetch share metadata");
+  }
+}
+
 export async function fetchSharedMarkdown(
   id: string,
   password?: string,

@@ -45,41 +45,6 @@ jobs:
           command: pages deploy dist --project-name=markview
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
-      # Custom hostname can retain pre-Vite HTML (e.g. /settings) under long s-maxage.
-      # Needs Zone Cache Purge on CLOUDFLARE_API_TOKEN (Zone Read alone is not enough).
-      # Soft-fail: Pages deploy already succeeded; stale CDN is ops, not a ship blocker.
-      - name: Purge custom-domain HTML cache
-        continue-on-error: true
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          # zamdev.dev — override via repo var if the zone moves
-          CF_ZONE_ID: ${{ vars.CF_ZONE_ID }}
-        run: |
-          set -euo pipefail
-          ZONE_ID="${CF_ZONE_ID:-9ab4ab3918d3e9913f9fba87ffb895a0}"
-          BODY=$(python3 - <<'PY'
-          import json
-          files=[
-            "https://mdviewer.zamdev.dev/",
-            "https://mdviewer.zamdev.dev/index.html",
-            "https://mdviewer.zamdev.dev/settings",
-            "https://mdviewer.zamdev.dev/settings/",
-            "https://mdviewer.zamdev.dev/editor",
-            "https://mdviewer.zamdev.dev/files",
-            "https://mdviewer.zamdev.dev/search",
-            "https://mdviewer.zamdev.dev/shares",
-            "https://mdviewer.zamdev.dev/share",
-          ]
-          print(json.dumps({"files": files}))
-          PY
-          )
-          RESP=$(curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/${ZONE_ID}/purge_cache" \
-            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
-            -H "Content-Type: application/json" \
-            --data "$BODY")
-          echo "$RESP"
-          python3 -c 'import json,sys; r=json.loads(sys.argv[1]); raise SystemExit(0 if r.get("success") else 1)' "$RESP"
-
   deploy-worker:
     name: Worker (api)
     runs-on: ubuntu-latest

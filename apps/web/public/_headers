@@ -43,6 +43,27 @@
   Cache-Control: public, max-age=0, must-revalidate
   CDN-Cache-Control: no-store
 
+# Physical SPA shells (copied index.html per route at build)
+/settings/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/editor/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/files/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/search/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/shares/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
 /sw.js
   Cache-Control: no-cache
 

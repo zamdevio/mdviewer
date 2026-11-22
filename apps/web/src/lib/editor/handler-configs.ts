@@ -142,31 +142,12 @@ export function getSaveHandlerConfig(
         };
     }
 
-    const { currentFileName } = state;
-
-    // If content is forked (from share/search), require filename
-    if (isForked && !currentFileName) {
-        return {
-            canExecute: true,
-            requiresDialog: true,
-            dialogType: 'save',
-            infoMessage: 'Please provide a filename to save this content',
-        };
-    }
-
-    if (currentFileName) {
-        // File already exists, just save it
-        return {
-            canExecute: true,
-            requiresDialog: false,
-        };
-    }
-
-    // New file, ask for name
+    // Unnamed / forked: caller auto-names via suggestedSaveName (same as auto-save) — no dialog
+    void isForked;
+    void state;
     return {
         canExecute: true,
-        requiresDialog: true,
-        dialogType: 'save',
+        requiresDialog: false,
     };
 }
 

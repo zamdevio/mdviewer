@@ -99,7 +99,13 @@ export function FileActionsBar({
                     onClick={onSave}
                     disabled={isContentEmpty(markdown, false)}
                     className="gap-2"
-                    title={currentFileName ? (autoSaveEnabled ? "Auto-save enabled (file saves automatically every 2 seconds)" : "Save file") : "Save as new file"}
+                    title={
+                        currentFileName
+                            ? autoSaveEnabled
+                                ? "Auto-save enabled (file saves automatically every 2 seconds)"
+                                : "Save file"
+                            : "Save with auto-suggested name from first line"
+                    }
                 >
                     <Save className="w-4 h-4" />
                     <span className="hidden sm:inline">

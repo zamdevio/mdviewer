@@ -50,7 +50,11 @@ export function Navbar() {
 
   return (
     <header
-      className={`relative z-50 flex items-center justify-center ${isMobile ? "px-2 py-0" : "p-4"}`}
+      className={`relative z-50 flex items-center justify-center ${
+        isMobile
+          ? "px-2 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))]"
+          : "p-4"
+      }`}
     >
       <nav
         ref={navRef}

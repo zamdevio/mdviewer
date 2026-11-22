@@ -2,9 +2,23 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, Check, ArrowLeft, GitFork, FolderPlus } from "lucide-react";
+import { ModalShell } from "@/components/ui/modal-shell";
+import {
+    Loader2,
+    Copy,
+    Check,
+    ArrowLeft,
+    GitFork,
+    FolderPlus,
+    Info,
+} from "lucide-react";
 import { MarkdownViewer } from "@/components/markdown";
-import { fetchSharedMarkdown, ApiRequestError } from "@/lib/api";
+import {
+    fetchSharedMarkdown,
+    fetchShareMeta,
+    ApiRequestError,
+    type PublicShareMeta,
+} from "@/lib/api";
 import { tryParseProjectPack, type ProjectPack } from "@/lib/project-pack";
 import {
     getProjects,
@@ -14,10 +28,127 @@ import {
     setFileContent,
 } from "@/lib/storage";
 import { truncateFilename } from "@/lib/editor";
+import { formatWipeTime } from "@/lib/share/ttl";
 import { toast } from "sonner";
+import { usePlatform } from "@/hooks/use-platform";
+
+function formatBytes(n: number): string {
+    if (!Number.isFinite(n) || n < 0) return "—";
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function ShareDetailsDialog({
+    open,
+    onClose,
+    meta,
+    projectPack,
+    loading,
+    error,
+}: {
+    open: boolean;
+    onClose: () => void;
+    meta: PublicShareMeta | null;
+    projectPack: ProjectPack | null;
+    loading: boolean;
+    error: string | null;
+}) {
+    return (
+        <ModalShell open={open} onClose={onClose} title="Share details" showTitle>
+            {loading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading metadata…
+                </div>
+            )}
+            {!loading && error && (
+                <p className="text-sm text-destructive py-2">{error}</p>
+            )}
+            {!loading && !error && meta && (
+                <dl className="space-y-3 text-sm">
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Type
+                        </dt>
+                        <dd className="font-medium capitalize">
+                            {projectPack ? "project" : meta.type}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Filename
+                        </dt>
+                        <dd className="font-mono text-xs break-all">{meta.filename}</dd>
+                    </div>
+                    {projectPack && (
+                        <div>
+                            <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                                Project
+                            </dt>
+                            <dd className="font-medium">{projectPack.name}</dd>
+                        </div>
+                    )}
+                    {projectPack && (
+                        <div>
+                            <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                                Files in pack
+                            </dt>
+                            <dd className="font-medium">{projectPack.files.length}</dd>
+                        </div>
+                    )}
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Size
+                        </dt>
+                        <dd className="font-medium">{formatBytes(meta.size)}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Created
+                        </dt>
+                        <dd className="font-medium">
+                            {new Date(meta.createdAt).toLocaleString()}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Wipes
+                        </dt>
+                        <dd className="font-medium">{formatWipeTime(meta.expiresAt)}</dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Protection
+                        </dt>
+                        <dd className="font-medium">
+                            {meta.viewProtected
+                                ? "View password required"
+                                : meta.hasPassword
+                                  ? "Mutate password set"
+                                  : "Open"}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground text-xs uppercase tracking-wide">
+                            Share ID
+                        </dt>
+                        <dd className="font-mono text-xs break-all">{meta.id}</dd>
+                    </div>
+                </dl>
+            )}
+            <div className="mt-4 flex justify-end">
+                <Button variant="outline" onClick={onClose}>
+                    Close
+                </Button>
+            </div>
+        </ModalShell>
+    );
+}
 
 export default function ShareViewPage(): React.JSX.Element {
     const navigate = useNavigate();
+    const { isMobile } = usePlatform();
     const { id: routeShareId } = useParams<{ id: string }>();
     const [content, setContent] = useState<string | null>(null);
     const [projectPack, setProjectPack] = useState<ProjectPack | null>(null);
@@ -29,6 +160,10 @@ export default function ShareViewPage(): React.JSX.Element {
     const [needsPassword, setNeedsPassword] = useState(false);
     const [viewPassword, setViewPassword] = useState("");
     const [passwordSubmitting, setPasswordSubmitting] = useState(false);
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [meta, setMeta] = useState<PublicShareMeta | null>(null);
+    const [metaLoading, setMetaLoading] = useState(false);
+    const [metaError, setMetaError] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window !== "undefined" && shareId) {
@@ -77,6 +212,8 @@ export default function ShareViewPage(): React.JSX.Element {
         setLoading(true);
         setError(null);
         setNeedsPassword(false);
+        setMeta(null);
+        setMetaError(null);
         const loadContent = async () => {
             try {
                 const markdown = await fetchSharedMarkdown(shareId);
@@ -92,7 +229,18 @@ export default function ShareViewPage(): React.JSX.Element {
                 setLoading(false);
             }
         };
-        loadContent();
+        void loadContent();
+        void (async () => {
+            setMetaLoading(true);
+            try {
+                const m = await fetchShareMeta(shareId);
+                setMeta(m);
+            } catch (err) {
+                setMetaError(err instanceof Error ? err.message : "Metadata unavailable");
+            } finally {
+                setMetaLoading(false);
+            }
+        })();
     }, [shareId]);
 
     const handleViewPasswordSubmit = async () => {
@@ -164,6 +312,30 @@ export default function ShareViewPage(): React.JSX.Element {
             setImporting(false);
         }
     };
+
+    const detailsButton = (
+        <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => setDetailsOpen(true)}
+            aria-label="Share details"
+        >
+            <Info className="h-4 w-4" />
+            {!isMobile && <span>Details</span>}
+        </Button>
+    );
+
+    const detailsDialog = (
+        <ShareDetailsDialog
+            open={detailsOpen}
+            onClose={() => setDetailsOpen(false)}
+            meta={meta}
+            projectPack={projectPack}
+            loading={metaLoading}
+            error={metaError}
+        />
+    );
 
     if (loading) {
         return (
@@ -243,6 +415,7 @@ export default function ShareViewPage(): React.JSX.Element {
                         Shared Project
                     </h1>
                     <div className="flex gap-2">
+                        {detailsButton}
                         <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-2">
                             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                             <span className="hidden sm:inline">{copied ? "Copied!" : "Copy URL"}</span>
@@ -281,17 +454,19 @@ export default function ShareViewPage(): React.JSX.Element {
                         Import project to Files
                     </Button>
                 </Card>
+                {detailsDialog}
             </div>
         );
     }
 
     return (
         <div className="container mx-auto p-4 min-h-[calc(100vh-100px)] flex flex-col gap-4 animate-fade-in">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
                     Shared Markdown
                 </h1>
                 <div className="flex gap-2">
+                    {detailsButton}
                     <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-2">
                         {copied ? (
                             <>
@@ -323,6 +498,7 @@ export default function ShareViewPage(): React.JSX.Element {
             <Card className="flex-1 p-6 overflow-auto border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm">
                 <MarkdownViewer content={content || ""} />
             </Card>
+            {detailsDialog}
         </div>
     );
 }

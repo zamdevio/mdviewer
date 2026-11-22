@@ -66,6 +66,24 @@ interface ExportFileResult {
 }
 
 /**
+ * Same naming as auto-save: first-line suggestion, else `untitled`.
+ */
+export function suggestedSaveName(markdown: string): string {
+    const suggested = getSuggestedFilename(markdown);
+    return suggested && suggested !== "untitled" ? suggested : "untitled";
+}
+
+/**
+ * Persist unnamed content under the auto-save name (no save dialog).
+ */
+export function autoNameAndSave(
+    markdown: string,
+    currentFileId: string | null = null,
+): SaveFileResult {
+    return saveFileWithState(suggestedSaveName(markdown), markdown, currentFileId);
+}
+
+/**
  * Save file with state management
  */
 export function saveFileWithState(

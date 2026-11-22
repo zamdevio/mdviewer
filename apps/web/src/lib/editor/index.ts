@@ -47,6 +47,8 @@ export { handleShare } from "./share-handlers";
 
 export {
     saveFileWithState,
+    suggestedSaveName,
+    autoNameAndSave,
     getSaveAction,
     handleSaveConfirm,
     getNewFileAction,

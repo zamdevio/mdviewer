@@ -34,6 +34,7 @@ import {
     handleLoadSharedContent as handleLoadSharedContentLogic,
     handleLoadFileConfirm as handleLoadFileConfirmLogic,
     saveFileWithState,
+    autoNameAndSave,
     type EditorState,
 } from "@/lib/editor";
 import { usePlatform } from "@/hooks/use-platform";
@@ -1074,21 +1075,28 @@ export default function EditorPage() {
         );
     })();
 
-    const handleShare = () => {
-        if (!currentFileName) {
-            toast.info("Please save this content with a filename before sharing");
-            setSaveDialogMode('save');
-            setPendingNewFile(false);
-            setSaveFileName("");
-            setSaveDialogInitialValue("");
-            setShowSaveDialog(true);
-            return;
+    const ensureNamedForAction = (): EditorState | null => {
+        if (currentFileName) return editorState;
+        if (!markdown.trim()) return null;
+        const result = autoNameAndSave(markdown, currentFileId);
+        if (!result.success || !result.newState) {
+            toast.error(result.error || "Failed to auto-name file");
+            return null;
         }
+        setEditorState(result.newState);
+        if (result.lastSavedContent) setLastSavedContent(result.lastSavedContent);
+        setSaveStatus("idle");
+        toast.success(`Saved as ${result.newState.currentFileName}.md`);
+        return result.newState;
+    };
+
+    const handleShare = () => {
         if (!markdown.trim()) {
             setEmptyDialogKind('share');
             setShowEmptySaveDialog(true);
             return;
         }
+        if (!ensureNamedForAction()) return;
         if (!isApiConfigured()) {
             setShowApiWarning(true);
             return;
@@ -1104,7 +1112,17 @@ export default function EditorPage() {
         );
 
         try {
-            const result = await handleShareLogic(markdown, editorState, {
+            let stateForShare = editorState;
+            if (!stateForShare.currentFileName) {
+                const named = ensureNamedForAction();
+                if (!named) {
+                    toast.error("Could not auto-name before sharing", { id: "sharing" });
+                    return;
+                }
+                stateForShare = named;
+            }
+
+            const result = await handleShareLogic(markdown, stateForShare, {
                 mode: opts.mode,
                 existingShareId: boundShareFile?.shareId,
                 password: opts.password || undefined,
@@ -1113,14 +1131,8 @@ export default function EditorPage() {
             });
 
             if (result.requiresSave) {
-                toast.dismiss("sharing");
-                toast.info(result.error || "Please save this content with a filename before sharing");
+                toast.error(result.error || "Save required before sharing", { id: "sharing" });
                 setShowShareCompose(false);
-                setSaveDialogMode('save');
-                setPendingNewFile(false);
-                setSaveFileName("");
-                setSaveDialogInitialValue("");
-                setShowSaveDialog(true);
                 return;
             }
 
@@ -1368,22 +1380,12 @@ export default function EditorPage() {
             return;
         }
 
-        if (action.requiresDialog && action.dialogType) {
-            setSaveDialogMode(action.dialogType);
-            setPendingNewFile(false);
-            setSaveFileName("");
-            setSaveDialogInitialValue("");
-            setShowSaveDialog(true);
-            if (action.infoMessage) {
-                toast.info(action.infoMessage);
-            }
+        // Unnamed → same name as auto-save (no dialog). Named → overwrite.
+        if (!currentFileName) {
+            ensureNamedForAction();
             return;
         }
-
-        // File already exists, just save it
-        if (currentFileName) {
-            await saveFile(currentFileName);
-        }
+        await saveFile(currentFileName);
     };
 
     // Handle save dialog confirm
