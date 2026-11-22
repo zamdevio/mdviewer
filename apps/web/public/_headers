@@ -9,9 +9,39 @@
 # SPA shell must never sit in CDN for a week (stale Next HTML was served on /settings)
 /
   Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
 
 /index.html
   Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/settings
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/settings/
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/editor
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/files
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/search
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/shares
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
+
+/share/*
+  Cache-Control: public, max-age=0, must-revalidate
+  CDN-Cache-Control: no-store
 
 /sw.js
   Cache-Control: no-cache
