@@ -1,0 +1,150 @@
+
+import { Link, useLocation } from "react-router-dom";
+import { ThemeToggle } from "@/components/theme"
+import { Button } from "@/components/ui/button"
+import { FileText, Menu, X } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { usePlatform } from "@/hooks/use-platform"
+import { ConnectionIndicator } from "@/components/layout/connection-indicator"
+
+export function Navbar() {
+    const [isOpen, setIsOpen] = useState(false)
+    const navRef = useRef<HTMLElement>(null)
+    const pathname = useLocation().pathname
+    const isHomePage = pathname === "/"
+    const { isMobile } = usePlatform()
+
+    // Auto-close on outside click
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (isOpen && navRef.current && !navRef.current.contains(event.target as Node)) {
+                setIsOpen(false)
+            }
+        }
+
+        // Only add listener if menu is open
+        if (isOpen) {
+            document.addEventListener("mousedown", handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside)
+        }
+    }, [isOpen])
+
+    return (
+        <header className={`relative z-50 flex items-center justify-center ${isMobile ? 'py-0 px-2' : 'p-4'}`}>
+            <nav ref={navRef} className={`relative flex items-center justify-between w-full max-w-5xl ${isMobile ? 'px-3 py-2' : 'px-4 sm:px-6 py-3'} bg-background/70 backdrop-blur-xl border border-white/10 dark:border-white/5 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10`}>
+
+                <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <div className="p-2 bg-primary/10 rounded-xl">
+                        <FileText className="w-6 h-6 text-primary" />
+                    </div>
+                    <span className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 dark:to-blue-400">
+                        MDViewer
+                    </span>
+                </Link>
+
+                {/* Desktop Navigation */}
+                <div className={`hidden md:flex items-center gap-6`}>
+                    <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Home
+                    </Link>
+                    <Link to="/editor" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Editor
+                    </Link>
+                    <Link to="/files" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Files
+                    </Link>
+                    <Link to="/search" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Search
+                    </Link>
+                    <Link to="/shares" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Shares
+                    </Link>
+                    <Link to="/settings" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        Settings
+                    </Link>
+                    <a href="https://github.com/zamdevio/mdviewer" target="_blank" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
+                        GitHub
+                    </a>
+                </div>
+
+                <div className={`hidden md:flex items-center gap-2`}>
+                    <ConnectionIndicator />
+                    <ThemeToggle />
+                    {isHomePage && (
+                        <Link to="/editor">
+                            <Button variant="default" size="sm">
+                                Get Started
+                            </Button>
+                        </Link>
+                    )}
+                </div>
+
+                {/* Mobile Menu Toggle */}
+                <div className={`${isMobile ? 'flex' : 'flex md:hidden'} items-center gap-2`}>
+                    <ConnectionIndicator />
+                    <ThemeToggle />
+                    <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
+                        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                    </Button>
+                </div>
+
+                {/* Mobile Menu Dropdown */}
+                {isOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 p-4 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-xl flex flex-col gap-4 md:hidden animate-fade-in">
+                        <Link to="/"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Home
+                        </Link>
+                        <Link to="/editor"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Editor
+                        </Link>
+                        <Link to="/files"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Files
+                        </Link>
+                        <Link to="/search"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Search
+                        </Link>
+                        <Link to="/shares"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Shares
+                        </Link>
+                        <Link to="/settings"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            Settings
+                        </Link>
+                        <a href="https://github.com/zamdevio/mdviewer"
+                            target="_blank"
+                            className="text-sm font-medium p-2 hover:bg-accent rounded-lg transition-colors"
+                            onClick={() => setIsOpen(false)}
+                        >
+                            GitHub
+                        </a>
+                        {isHomePage && (
+                            <Link to="/editor" onClick={() => setIsOpen(false)}>
+                                <Button className="w-full">Get Started</Button>
+                            </Link>
+                        )}
+                    </div>
+                )}
+            </nav>
+        </header>
+    )
+}

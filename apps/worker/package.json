@@ -1,0 +1,24 @@
+{
+  "name": "@mdviewer/worker",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Cloudflare Workers API for markdown sharing (Hono + OpenAPI).",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/swagger-ui": "^0.5.2",
+    "@hono/zod-openapi": "^0.19.10",
+    "hono": "^4.9.9",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "typescript": "^5.9.0",
+    "wrangler": "^4.54.0"
+  }
+}

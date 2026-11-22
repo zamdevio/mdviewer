@@ -1,51 +1,25 @@
 {
   "name": "mdviewer",
-  "version": "3.1.0",
   "private": true,
+  "version": "3.2.0",
+  "description": "Modern markdown viewer — Vite SPA + Cloudflare Workers share API.",
+  "type": "module",
+  "packageManager": "pnpm@12.21.0",
   "scripts": {
-    "dev": "next dev",
-    "inject-sw-version": "node scripts/inject-sw-version.cjs",
-    "prebuild": "npm run inject-sw-version",
-    "build": "next build",
-    "start": "npx serve@latest out",
-    "lint": "eslint",
-    "deploy": "npm run build && wrangler pages deploy out --project-name markview"
-  },
-  "dependencies": {
-    "@radix-ui/react-slot": "^1.2.4",
-    "@types/mermaid": "^9.1.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "install": "^0.13.0",
-    "katex": "^0.16.27",
-    "lucide-react": "^0.554.0",
-    "mermaid": "^11.12.2",
-    "next": "^16.1.1",
-    "next-themes": "^0.4.6",
-    "nnpm": "^0.0.1",
-    "react": "19.2.0",
-    "react-dom": "19.2.0",
-    "react-markdown": "^10.1.0",
-    "react-syntax-highlighter": "^16.1.0",
-    "rehype-katex": "^7.0.1",
-    "rehype-raw": "^7.0.0",
-    "rehype-sanitize": "^6.0.0",
-    "remark-gfm": "^4.0.1",
-    "remark-math": "^6.0.0",
-    "remark-mermaid": "^0.2.0",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.4.0"
+    "build": "pnpm -r --if-present run build",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "web:dev": "pnpm --filter @mdviewer/web dev",
+    "web:build": "pnpm --filter @mdviewer/web build",
+    "web:preview": "pnpm --filter @mdviewer/web preview",
+    "web:deploy": "pnpm --filter @mdviewer/web deploy",
+    "worker:dev": "pnpm --filter @mdviewer/worker dev",
+    "worker:deploy": "pnpm --filter @mdviewer/worker deploy",
+    "worker:typecheck": "pnpm --filter @mdviewer/worker typecheck"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/react-syntax-highlighter": "^15.5.13",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.3",
-    "sharp": "^0.34.5",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
