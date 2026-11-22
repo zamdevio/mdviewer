@@ -26,18 +26,18 @@
 
 - [ ] Virtual scroll preview — `apps/web/src/components/pages/editor/PreviewSection.tsx`
 - [ ] Virtual scroll editor (optional) — `EditorSection.tsx`
-- [ ] IntersectionObserver lazy Mermaid / Code / Math
+- [x] IntersectionObserver lazy Mermaid (Code/Math still eager)
 - [ ] Chunked markdown parse in a Web Worker — `apps/web/src/lib/markdown/worker-parser.ts`
 - [ ] Diff-based re-parse for files &gt; 1MB — `viewer.tsx`
 - [ ] Progressive render: structure → text → heavy blocks
 - [ ] Cleanup Mermaid / KaTeX / highlighter on unmount
-- [ ] LRU Mermaid cache (cap ~50)
+- [x] LRU Mermaid cache (cap ~50)
 - [ ] WeakMap caches where possible
 - [ ] Memory monitor + warn — `apps/web/src/lib/performance/memory-monitor.ts`
 - [x] Dynamic Mermaid debounce (larger files → 1–1.5s) — `mermaidDebounceMs`
 - [x] Size-aware preview debounce — `PreviewSection` + `previewDebounceMs`
-- [ ] Throttle scroll sync on large files — `scroll.ts`
-- [ ] Longer auto-save debounce for files &gt; 1MB — `auto-save.ts`
+- [x] Throttle scroll position tracking — `scroll.ts`
+- [x] Longer auto-save debounce for large files — `autoSaveDebounceMs`
 
 ## P2 — Enhancements
 

@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import { throttle } from "@/lib/performance/preview-debounce";
 
 export type SoloMode = "both" | "editor" | "preview";
 
@@ -351,7 +352,11 @@ export class ScrollManager {
     setupScrollListeners(): () => void {
         const { textareaRef, editorRef, previewRef, effectiveMode } = this.config;
         
-        const saveScrollPositions = () => this.saveScrollPositions();
+        // Throttle tracking on large docs / busy scroll (Phase 04)
+        const saveScrollPositions = throttle(
+            () => this.saveScrollPositions(),
+            80,
+        );
         
         const editorElement = editorRef.current;
         const previewElement = previewRef.current;

@@ -8,19 +8,19 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 
 ## 1. Uncommitted / deploy debt
 
-- [ ] Commit + push wrangler.jsonc + llms/SEO/`#heading` slice (if still local)
-- [ ] Confirm no stale `apps/worker/wrangler.toml` (use `wrangler.jsonc` only)
-- [ ] Redeploy Pages (`markview`) and Worker (`mdviewer-api`) after that slice
+- [x] Commit hygiene + C–E + perf slices (local; push when ready)
+- [x] Confirm no stale `apps/worker/wrangler.toml` (jsonc only)
+- [ ] Redeploy Pages (`markview`) and Worker (`mdviewer-api`)
 - [ ] Smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml` on prod
 - [ ] Smoke: `#heading` fragment links in editor split preview + `/share`
 
 ## 2. Docs honesty
 
-- [ ] [`apps/web/public/llms-full.txt`](../apps/web/public/llms-full.txt) — only protocol-1 endpoints claimed; C/E marked not available
-- [ ] [`README.md`](../README.md) — no password/TTL/MCP as shipped
-- [ ] [`docs/api.md`](../docs/api.md) — matches live Worker until protocol bump
-- [ ] [`docs/security.md`](../docs/security.md) — queued rows still point at Phase C doc
-- [ ] Root [`SECURITY.md`](../SECURITY.md) / [`CONTRIBUTING.md`](../CONTRIBUTING.md) present and linked
+- [x] [`apps/web/public/llms-full.txt`](../apps/web/public/llms-full.txt) — protocol 2 + MCP documented; Worker embeds generated copy
+- [x] [`README.md`](../README.md) — password/TTL/MCP listed as shipped where true
+- [x] [`docs/api.md`](../docs/api.md) — protocol 2 + MCP
+- [x] [`docs/security.md`](../docs/security.md) — Phase C rows marked hardened
+- [x] Root [`SECURITY.md`](../SECURITY.md) / [`CONTRIBUTING.md`](../CONTRIBUTING.md) present and linked
 
 ## 3. Phase C — share protocol
 
@@ -57,18 +57,19 @@ See [`phases/03-agent-surfaces.md`](./phases/03-agent-surfaces.md).
 
 See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
-- [ ] P1 virtual scroll + lazy heavy blocks (minimum bar for v4 if we claim large-doc readiness; else defer explicitly in release notes)
+- [x] Size-aware preview / Mermaid debounce / lazy Mermaid / LRU / scroll throttle / auto-save scaling
+- [ ] **Deferred for v4 claim:** virtual scroll preview + chunked worker parse (do not claim 5–10MB readiness until done — or note deferred in release notes)
 
 ## 7. Loose ends
 
-- [ ] Nested projects (optional; was follow-up on files tree)
-- [ ] CSP: prefer nonce over `script-src 'unsafe-inline'` for theme bootstrap
-- [ ] Settings portals → `ModalShell` migration where still open
-- [ ] Root + `@mdviewer/web` package versions stay in sync
+- [ ] Nested projects — **deferred** (optional follow-up; not a v4 blocker unless we advertise it)
+- [ ] CSP: prefer nonce over `script-src 'unsafe-inline'` for theme bootstrap — **deferred**
+- [ ] Settings portals → `ModalShell` migration where still open — **deferred**
+- [x] Root + `@mdviewer/web` package versions stay in sync (3.x line)
 
 ## 8. Release gate
 
-- [ ] Sections 1–7 accepted (or explicitly deferred with notes)
-- [ ] Bump root + `apps/web` to **4.0.0**; tag release
+- [ ] Sections 1–7 accepted (or explicitly deferred with notes) — **needs human + agent approval**
+- [ ] Bump root + `apps/web` to **4.0.0**; tag release — **blocked until approval**
 - [ ] Update home / README “Now Available” to 4.0; refresh llms briefs for new protocol
 - [ ] Append row to [`shipped/README.md`](./shipped/README.md)

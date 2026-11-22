@@ -4,6 +4,7 @@ import { isApiConfigured } from "@/lib/config";
 import { toast } from "sonner";
 import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, getSavedFiles } from "@/lib/storage";
 import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
+import { autoSaveDebounceMs } from "@/lib/performance/preview-debounce";
 import { getShowDefaultContent, getTempFile, clearTempFile } from "@/lib/storage/helpers";
 import {
     getInitialEditorState,
@@ -582,7 +583,8 @@ export default function EditorPage() {
             clearTimeout(autoSaveTimerRef.current);
         }
 
-        // Auto-save every 2 seconds
+        // Auto-save — longer interval for large docs (Phase 04)
+        const saveDelay = autoSaveDebounceMs(markdown);
         autoSaveTimerRef.current = setTimeout(() => {
             setSaveStatus('saving');
 
@@ -641,7 +643,7 @@ export default function EditorPage() {
             }, 300); // Small artificial delay to show "saving" state
 
             autoSaveTimerRef.current = null;
-        }, 2000); // Save every 2 seconds
+        }, saveDelay);
 
         return () => {
             if (autoSaveTimerRef.current) {

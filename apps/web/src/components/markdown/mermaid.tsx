@@ -8,8 +8,28 @@ import { useTheme } from "next-themes";
 import { onStorageChange, getSettings } from "@/lib/storage";
 import { toast } from "sonner";
 
-// Cache for rendered Mermaid SVGs: Map<codeHash-theme, svgString>
+// Cache for rendered Mermaid SVGs: Map<codeHash-theme, svgString> (LRU cap)
+const MERMAID_CACHE_MAX = 50;
 const mermaidCache = new Map<string, string>();
+
+function mermaidCacheGet(key: string): string | undefined {
+    const value = mermaidCache.get(key);
+    if (value === undefined) return undefined;
+    // refresh LRU order
+    mermaidCache.delete(key);
+    mermaidCache.set(key, value);
+    return value;
+}
+
+function mermaidCacheSet(key: string, value: string): void {
+    if (mermaidCache.has(key)) mermaidCache.delete(key);
+    mermaidCache.set(key, value);
+    while (mermaidCache.size > MERMAID_CACHE_MAX) {
+        const oldest = mermaidCache.keys().next().value;
+        if (oldest === undefined) break;
+        mermaidCache.delete(oldest);
+    }
+}
 
 // Track mermaid initialization per theme to allow theme switching
 const mermaidInitializedThemes = new Set<string>();
@@ -112,6 +132,8 @@ function enhanceSvgLines(svgElement: SVGElement | null, isDark: boolean) {
  * 6. When theme changes, just swaps visibility (instant, no re-render needed)
  */
 export function MarkdownMermaid({ code }: { code: string }) {
+    const [inView, setInView] = useState(false);
+    const hostRef = useRef<HTMLDivElement>(null);
     const [isLoadingPrimary, setIsLoadingPrimary] = useState(true);
     const [isLoadingSecondary, setIsLoadingSecondary] = useState(true);
     const [errorPrimary, setErrorPrimary] = useState<string | null>(null);
@@ -122,6 +144,23 @@ export function MarkdownMermaid({ code }: { code: string }) {
     const diagramIdDarkRef = useRef<string | null>(null);
     const diagramIdLightRef = useRef<string | null>(null);
     const { resolvedTheme } = useTheme();
+
+    // Lazy: only render when near viewport (Phase 04 P1)
+    useEffect(() => {
+        const el = hostRef.current;
+        if (!el) return;
+        const io = new IntersectionObserver(
+            ([entry]) => {
+                if (entry?.isIntersecting) {
+                    setInView(true);
+                    io.disconnect();
+                }
+            },
+            { rootMargin: "240px 0px" },
+        );
+        io.observe(el);
+        return () => io.disconnect();
+    }, []);
 
     // State to track theme from storage (for real-time updates)
     const [storageTheme, setStorageTheme] = useState<'dark' | 'light' | 'system' | null>(null);
@@ -301,7 +340,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
 
     // Render primary theme (current theme) - loads first
     useEffect(() => {
-        if (!themeReady) return;
+        if (!inView || !themeReady) return;
         if (!debouncedCode || debouncedCode.trim() === '') {
             setIsLoadingPrimary(false);
             return;
@@ -313,7 +352,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
 
             // Check cache first
             const cacheKey = getCacheKey(debouncedCode.trim(), primaryTheme);
-            const cachedSvg = mermaidCache.get(cacheKey);
+            const cachedSvg = mermaidCacheGet(cacheKey);
 
             if (cachedSvg) {
                 // Use cached SVG
@@ -344,7 +383,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
                 const svg = await renderMermaidDiagram(mermaid, id, debouncedCode.trim(), primaryTheme, themeKey);
 
                 // Cache the SVG
-                mermaidCache.set(cacheKey, svg);
+                mermaidCacheSet(cacheKey, svg);
 
                 // Insert the rendered SVG into DOM
                 if (ref.current) {
@@ -366,11 +405,11 @@ export function MarkdownMermaid({ code }: { code: string }) {
         };
 
         renderPrimary();
-    }, [debouncedCode, primaryTheme, isDarkMode, themeReady, renderMermaidDiagram]);
+    }, [inView, debouncedCode, primaryTheme, isDarkMode, themeReady, renderMermaidDiagram]);
 
     // Render secondary theme (other theme) - only after primary is done and only if not cached
     useEffect(() => {
-        if (!themeReady) return;
+        if (!inView || !themeReady) return;
         if (!debouncedCode || debouncedCode.trim() === '') {
             setIsLoadingSecondary(false);
             return;
@@ -381,7 +420,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
 
         // Check cache first
         const cacheKey = getCacheKey(debouncedCode.trim(), secondaryTheme);
-        const cachedSvg = mermaidCache.get(cacheKey);
+        const cachedSvg = mermaidCacheGet(cacheKey);
 
         const renderSecondary = async () => {
             const ref = isDarkMode ? mermaidRefLight : mermaidRefDark;
@@ -418,7 +457,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
                 const svg = await renderMermaidDiagram(mermaid, id, debouncedCode.trim(), secondaryTheme, themeKey);
 
                 // Cache the SVG
-                mermaidCache.set(cacheKey, svg);
+                mermaidCacheSet(cacheKey, svg);
 
                 // Insert the rendered SVG into DOM (hidden)
                 if (ref.current) {
@@ -437,13 +476,22 @@ export function MarkdownMermaid({ code }: { code: string }) {
         };
 
         renderSecondary();
-    }, [debouncedCode, secondaryTheme, isDarkMode, isLoadingPrimary, themeReady, renderMermaidDiagram]);
+    }, [inView, debouncedCode, secondaryTheme, isDarkMode, isLoadingPrimary, themeReady, renderMermaidDiagram]);
 
+    if (!inView) {
+        return (
+            <div
+                ref={hostRef}
+                className="my-4 min-h-[120px] w-full rounded-md border border-dashed border-muted-foreground/30 bg-muted/20"
+                aria-hidden
+            />
+        );
+    }
 
     // Show error if primary fails (most important - this is what user sees)
     if (errorPrimary) {
         return (
-            <div className="my-4 relative group inline-block w-full">
+            <div ref={hostRef} className="my-4 relative group inline-block w-full">
                 {/* Action buttons - Copy code */}
                 <div className="absolute top-2 right-2 z-20 flex gap-2">
                     <Button
@@ -499,7 +547,7 @@ export function MarkdownMermaid({ code }: { code: string }) {
         (!isDarkMode && mermaidRefLight.current?.innerHTML);
 
     return (
-        <div className="my-4 relative group">
+        <div ref={hostRef} className="my-4 relative group">
             {/* Action buttons - Copy code and Save SVG */}
             {!isLoading && (
                 <div className="absolute top-2 right-2 z-20 flex gap-2">
