@@ -831,22 +831,18 @@ export const storage = StorageManager.getInstance();
 
 // Export convenience functions
 export const getSettings = () => storage.getSettings();
-export const getSetting = <K extends keyof SettingsData>(key: K) => storage.getSetting(key);
 export const setSettings = (settings: Partial<SettingsData>) => storage.setSettings(settings);
 export const updateSetting = <K extends keyof SettingsData>(key: K, value: SettingsData[K]) => storage.updateSetting(key, value);
 
 export const getContent = () => storage.getContent();
 export const setContent = (content: string) => storage.setContent(content);
-export const removeContent = () => storage.removeContent();
 
 export const getEditingFile = () => storage.getEditingFile();
 export const setEditingFile = (filename: string) => storage.setEditingFile(filename);
-export const removeEditingFile = () => storage.removeEditingFile();
 
 export const getSavedFiles = () => storage.getSavedFiles();
 export const setSavedFiles = (files: SavedFile[]) => storage.setSavedFiles(files);
 export const upsertSavedFile = (file: SavedFile) => storage.upsertSavedFile(file);
-export const removeSavedFile = (fileId: string) => storage.removeSavedFile(fileId);
 export const findSavedFileById = (fileId: string) => storage.findSavedFileById(fileId);
 export const findSavedFileByFilename = (filename: string) => storage.findSavedFileByFilename(filename);
 
@@ -873,7 +869,6 @@ export const onStorageChange = (callback: (key: string | null) => void) => stora
 export const getProjects = () => storage.getProjects();
 export const setProjects = (projects: Project[]) => storage.setProjects(projects);
 export const upsertProject = (project: Project) => storage.upsertProject(project);
-export const removeProject = (projectId: string) => storage.removeProject(projectId);
 
 export const isTrashEnabled = () => storage.isTrashEnabled();
 export const getTrash = () => storage.getTrash();

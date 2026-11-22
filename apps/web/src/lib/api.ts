@@ -3,11 +3,7 @@
  */
 
 import { getEffectiveApiConfig } from "./config";
-import {
-  ApiRequestError,
-  classifyFetchFailure,
-  type ApiFailureKind,
-} from "./api-errors";
+import { ApiRequestError, classifyFetchFailure } from "./api-errors";
 
 export interface UploadResponse {
   id: string;
@@ -53,7 +49,6 @@ export interface CompatibilityResponse {
 }
 
 export { ApiRequestError, isCorsFailure } from "./api-errors";
-export type { ApiFailureKind };
 
 function apiBase(): string {
   return getEffectiveApiConfig().API_URL;

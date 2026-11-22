@@ -8,7 +8,7 @@ pnpm worker:test    # password / TTL / fair-use / paths
 pnpm web:test       # preview debounce helpers
 ```
 
-Logic-heavy Worker libs and web perf helpers are covered first. Expand as routes grow.
+Colocated `*.test.ts` next to the module under test (`ttl.test.ts` ↔ `ttl.ts`). Expand as routes grow.
 
 ## knip
 
@@ -16,7 +16,7 @@ Logic-heavy Worker libs and web perf helpers are covered first. Expand as routes
 pnpm knip
 ```
 
-Config: [`knip.json`](../../knip.json). Reports unused deps/exports. Barrel re-exports in `lib/editor` are noisy by design — clean in a dedicated deslop pass.
+Config: [`knip.json`](../../knip.json). Should exit clean (unused deps/exports trimmed; barrels only re-export what pages/hooks import).
 
 ## madge
 
@@ -26,7 +26,4 @@ pnpm madge:orphans
 pnpm madge:leaves
 ```
 
-Known cycles (tracked, not blocking 3.x):
-
-1. `components/markdown/index.tsx` ↔ `viewer.tsx`
-2. `lib/editor/file-helpers.ts` ↔ `file-operations.ts`
+No circular deps. Viewer imports siblings directly; `saveCurrentContentToFile` lives in `file-operations` so helpers no longer cycle.

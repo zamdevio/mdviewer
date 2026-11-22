@@ -19,7 +19,7 @@ import {
 } from '@/lib/storage';
 import type { EditorState } from '@/types';
 
-export interface ShareResult {
+interface ShareResult {
   success: boolean;
   shareUrl?: string;
   shareId?: string;
@@ -159,23 +159,6 @@ export async function handleShare(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to share. Please try again.',
-    };
-  }
-}
-
-/**
- * Copy share URL to clipboard
- */
-export async function copyShareUrl(
-  shareUrl: string,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await navigator.clipboard.writeText(shareUrl);
-    return { success: true };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }

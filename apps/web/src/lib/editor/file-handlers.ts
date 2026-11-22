@@ -38,7 +38,7 @@ import {
 } from './utils';
 import type { EditorState } from '@/types';
 
-export interface SaveFileResult {
+interface SaveFileResult {
     success: boolean;
     newState?: EditorState;
     error?: string;
@@ -46,21 +46,21 @@ export interface SaveFileResult {
     lastSavedContent?: string;
 }
 
-export interface DeleteFileResult {
+interface DeleteFileResult {
     success: boolean;
     newState?: EditorState;
     error?: string;
 }
 
-export interface ImportFileResult {
+interface ImportFileResult {
     success: boolean;
     newState?: EditorState;
     error?: string;
     requiresSave?: boolean;
-    dialogType?: 'save' | 'new';
+    dialogType?: "save" | "new";
 }
 
-export interface ExportFileResult {
+interface ExportFileResult {
     success: boolean;
     error?: string;
 }

@@ -2,8 +2,6 @@
  * Shared types for editor functionality
  */
 
-import type { SavedFile } from "@/lib/storage";
-
 /**
  * Editor state structure
  */
@@ -14,13 +12,3 @@ export interface EditorState {
     isUntitled: boolean;
     isForked: boolean;
 }
-
-/**
- * Editor state callbacks
- */
-export interface EditorStateCallbacks {
-    onStateChange?: (state: EditorState) => void;
-    onFileSaved?: (file: SavedFile) => void;
-    onFileLoaded?: (file: SavedFile) => void;
-}
-

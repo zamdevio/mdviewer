@@ -4,16 +4,11 @@
  * Helper functions for file operations and content management
  */
 
-import { getShowDefaultContent } from '../storage/helpers';
-import { DEFAULT_MARKDOWN } from './constants';
-import { isContentEmpty } from './validation';
-import { saveFile } from './file-operations';
-
 /**
  * Filename length constants
  */
 export const MAX_FILENAME_LENGTH = 47; // Max filename without .md extension (47 + ".md" = 50 total)
-export const MAX_DISPLAY_FILENAME_LENGTH = 30; // Max characters to display in UI
+const MAX_DISPLAY_FILENAME_LENGTH = 30; // Max characters to display in UI
 
 /**
  * Sanitize filename — strip every trailing `.md` so user-typed
@@ -53,32 +48,6 @@ export function truncateFilename(filename: string): string {
     }
 
     return `${nameWithoutExt.substring(0, MAX_FILENAME_LENGTH)}.md`;
-}
-
-/**
- * Save current content to file (for unsaved content)
- * Returns filename if successful, null otherwise
- * @param markdown - The markdown content to save
- * @param ignoreDefaultMarkdown - If true (default), treats DEFAULT_MARKDOWN as empty. If false, treats it as normal content.
- */
-export async function saveCurrentContentToFile(
-    markdown: string,
-    ignoreDefaultMarkdown: boolean = true
-): Promise<string | null> {
-    const showDefault = getShowDefaultContent();
-    if (isContentEmpty(markdown, ignoreDefaultMarkdown) || (showDefault && ignoreDefaultMarkdown && markdown === DEFAULT_MARKDOWN)) {
-        return null;
-    }
-
-    // Save to storage with timestamp
-    const filename = `saved-${Date.now()}`;
-    const result = saveFile(filename, markdown, null);
-    
-    if (result.success && result.file) {
-        return result.file.filename;
-    }
-    
-    return null;
 }
 
 /**
@@ -128,7 +97,10 @@ export function createExportBlob(markdown: string): Blob {
  * Generate unique filename by checking existing files and adding/incrementing suffix
  * Handles: filename.md -> filename-1.md -> filename-2.md, etc.
  */
-export function generateUniqueFilename(baseFilename: string, existingFilenames: string[]): string {
+export function generateUniqueFilename(
+    baseFilename: string,
+    existingFilenames: string[],
+): string {
     const baseName = baseFilename.replace(/\.md$/i, '');
     const fullBaseName = `${baseName}.md`;
     

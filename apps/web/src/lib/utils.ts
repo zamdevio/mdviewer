@@ -6,26 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Share text using Web Share API or clipboard fallback
- */
-export async function shareText(text: string, title?: string): Promise<boolean> {
-  if (navigator.share) {
-    try {
-      await navigator.share({ text, title });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Encode string to base64 (UTF-8 safe)
  */
 export function encodeBase64(str: string): string {

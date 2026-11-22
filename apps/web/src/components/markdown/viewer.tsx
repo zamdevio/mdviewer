@@ -24,9 +24,13 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeKatex from "rehype-katex";
 import rehypeSlug from "rehype-slug";
-import { MarkdownImage, MarkdownMermaid, MarkdownCodeBlock, MarkdownBadges, sanitizeSchema } from './index';
-import { remarkEmoji } from '@/lib/remark-emoji';
-import { scrollToMarkdownHeading } from '@/lib/markdown/heading-anchors';
+import { MarkdownBadges } from "./badges";
+import { MarkdownCodeBlock } from "./code";
+import { sanitizeSchema } from "./html";
+import { MarkdownImage } from "./image";
+import { MarkdownMermaid } from "./mermaid";
+import { remarkEmoji } from "@/lib/remark-emoji";
+import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
 import type { Components } from "react-markdown";
 
 let katexCssRequested = false;

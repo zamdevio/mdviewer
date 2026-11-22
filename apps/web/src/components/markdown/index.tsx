@@ -1,15 +1,6 @@
-
 /**
- * Markdown Components Index
- * Exports all markdown rendering components for easy import
+ * Markdown public surface — preview/share pages import MarkdownViewer.
+ * Sibling components are imported directly by viewer.tsx (avoids barrel cycles).
  */
 
-export { MarkdownImage } from './image';
-export { MarkdownMermaid } from './mermaid';
-export { MarkdownMath } from './math';
-export { MarkdownHTML, sanitizeSchema } from './html';
-export { MarkdownCodeBlock } from './code';
-export { MarkdownBadges } from './badges';
-export { MarkdownViewer } from './viewer';
-
-
+export { MarkdownViewer } from "./viewer";

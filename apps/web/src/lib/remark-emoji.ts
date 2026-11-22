@@ -6,8 +6,8 @@
  * during React rendering as it avoids recursive tree traversal.
  */
 
-import { Node, Parent, Root, Text } from 'mdast';
-import { Plugin } from 'unified';
+import type { Node, Parent, Root, Text } from "mdast";
+import type { Plugin } from "unified";
 
 const emojiMap: Record<string, string> = {
     ':smile:': '😊',

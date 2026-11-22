@@ -1,22 +1,3 @@
-import { Fragment } from "react";
-import type { ReactNode } from "react";
-
-/**
- * HTML Component Handler
- * Sanitizes and renders HTML elements safely
- * This component is used by rehype-raw to render HTML in markdown
- */
-export function MarkdownHTML({
-    children,
-}: {
-    node: React.ReactNode;
-    children?: ReactNode;
-}) {
-    // This is handled by rehype-sanitize configuration
-    // We just need to pass through the rendered HTML
-    return <Fragment>{children}</Fragment>;
-}
-
 /**
  * Sanitization schema for rehype-sanitize
  * Tight allowlist — no inline style (overlay phishing), no data: URLs

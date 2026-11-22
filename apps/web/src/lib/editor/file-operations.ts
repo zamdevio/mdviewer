@@ -17,14 +17,16 @@ import {
     getSavedFiles,
     type SavedFile
 } from '../storage';
-import { clearTempFile } from '../storage/helpers';
+import { clearTempFile, getShowDefaultContent } from '../storage/helpers';
+import { DEFAULT_MARKDOWN } from './constants';
 import { generateUniqueFilename } from './file-helpers';
+import { isContentEmpty } from './validation';
 import type { EditorState } from '@/types';
 
 /**
  * Generate a unique file ID
  */
-export function generateFileId(): string {
+function generateFileId(): string {
     return `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
@@ -148,11 +150,29 @@ export function loadFile(fileId: string): { success: boolean; state: EditorState
 }
 
 /**
- * Load file from files page (by fileId)
- * Alias for loadFile for backward compatibility
+ * Save current content to a new file (for unsaved content before load/share).
+ * Returns filename if successful, null otherwise.
  */
-export function loadFileToEditor(fileId: string): { success: boolean; state: EditorState | null; error?: string } {
-    return loadFile(fileId);
+export async function saveCurrentContentToFile(
+    markdown: string,
+    ignoreDefaultMarkdown: boolean = true
+): Promise<string | null> {
+    const showDefault = getShowDefaultContent();
+    if (
+        isContentEmpty(markdown, ignoreDefaultMarkdown) ||
+        (showDefault && ignoreDefaultMarkdown && markdown === DEFAULT_MARKDOWN)
+    ) {
+        return null;
+    }
+
+    const filename = `saved-${Date.now()}`;
+    const result = saveFile(filename, markdown, null);
+
+    if (result.success && result.file) {
+        return result.file.filename;
+    }
+
+    return null;
 }
 
 /**

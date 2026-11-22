@@ -110,25 +110,3 @@ export function canLoadSharedContent(
     return checkActionState(state, markdown, lastSavedContent, saveStatus);
 }
 
-/**
- * Determine save status based on state
- */
-export function determineSaveStatus(
-    markdown: string,
-    lastSavedContent: string,
-    currentFileName: string | null,
-    currentFileId: string | null
-): SaveStatus {
-    if (!markdown.trim()) {
-        return 'idle';
-    }
-
-    if (currentFileName && currentFileId) {
-        // File is saved, check if content changed
-        return markdown === lastSavedContent ? 'saved' : 'unsaved';
-    }
-
-    // Unsaved content
-    return lastSavedContent ? 'unsaved' : 'idle';
-}
-

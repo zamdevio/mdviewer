@@ -10,7 +10,6 @@
  */
 
 export const APP_VERSION = __APP_VERSION__;
-export const CACHE_VERSION = __CACHE_VERSION__;
 
 const API_OVERRIDE_KEY = "mdviewer_api_override";
 
@@ -27,15 +26,6 @@ function readEnvUrl(value: unknown): string {
 export const buildTimeConfig = {
   API_URL: readEnvUrl(import.meta.env.VITE_API_URL),
   FRONTEND_URL: readEnvUrl(import.meta.env.VITE_FRONTEND_URL),
-} as const;
-
-/**
- * @deprecated Prefer getEffectiveApiConfig() for share/health calls.
- * Kept as build-time snapshot for Default reset UI.
- */
-export const config = {
-  API_URL: buildTimeConfig.API_URL,
-  FRONTEND_URL: buildTimeConfig.FRONTEND_URL,
 } as const;
 
 export interface ApiOverride {
@@ -115,15 +105,6 @@ export function getEffectiveApiConfig(): {
     FRONTEND_URL,
     usingOverride: Boolean(override?.apiUrl || override?.frontendUrl),
   };
-}
-
-export function isLocalhostApi(): boolean {
-  try {
-    const url = getEffectiveApiConfig().API_URL;
-    return url.includes("localhost") || url.includes("127.0.0.1");
-  } catch {
-    return false;
-  }
 }
 
 export function isApiConfigured(): boolean {

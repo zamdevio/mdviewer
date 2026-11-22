@@ -6,13 +6,13 @@
 
 import { fetchSharedMarkdown } from '@/lib/api';
 import { isApiConfigured } from '@/lib/config';
-import { saveCurrentContentToFile } from './file-helpers';
+import { saveCurrentContentToFile } from './file-operations';
 import { hasUnsavedContent } from './validation';
 import { prepareSharedContentState } from './business-logic';
 import { getLoadSharedContentHandlerConfig } from './handler-configs';
 import type { EditorState } from '@/types';
 
-export interface LoadSharedContentResult {
+interface LoadSharedContentResult {
     success: boolean;
     newState?: EditorState;
     error?: string;
