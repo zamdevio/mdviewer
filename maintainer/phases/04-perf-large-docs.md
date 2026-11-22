@@ -1,8 +1,9 @@
 # Large-doc performance
 
-**Order:** 04  
+**Focus label:** **After that** ([`focus.md`](./focus.md)) — after 07 + 05  
+**Order:** remaining work after protocol 3 honesty  
 **Goal:** Smooth edit/preview for 5–10MB markdown.  
-**Status:** In progress (Focus) — slice 1 shipped (size-aware preview + Mermaid debounce)  
+**Status:** Slice 1 shipped (size-aware preview + Mermaid debounce / lazy Mermaid / LRU); virtual scroll + worker parse still open  
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -70,7 +71,12 @@
 
 ## Slice order
 
-1. Virtual scroll + lazy viewport blocks  
-2. Worker parse + incremental update  
-3. Per-component opts (code / Mermaid / math / tables)  
-4. Chunking / IndexedDB / metrics  
+| Slice | Scope | Status |
+|-------|--------|--------|
+| **0** | Size-aware preview debounce, Mermaid debounce/lazy/LRU, scroll throttle, auto-save scaling, memory warn | **Shipped** |
+| **1** | Virtual scroll preview (+ optional editor) + lazy viewport blocks | **Open** — start here when Focus says After that |
+| **2** | Chunked markdown parse in Web Worker + diff/incremental for &gt;1MB | Open |
+| **3** | Per-component opts (code / Mermaid / math / tables / images) | Open (P2) |
+| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open |
+
+v4 claim for 5–10MB needs **at least slices 1–2** (or an explicit defer note in release notes).  

@@ -1,9 +1,19 @@
 # Appflare catalog readiness
 
-**Order:** 06  
+**Focus label:** **Then** ([`focus.md`](./focus.md)) — after 07 / 05 / 04 remaining  
+**Order:** packaging + catalog after protocol 3 is live enough to describe honestly  
 **Goal:** Make MDViewer installable via [Appflare](https://appflare.dev/) and submit to [appflare/catalog](https://github.com/appflare/catalog) when packaging is green.  
-**Status:** **Declared** — we will submit; docs/`scripts/appflare/` first, catalog PR when pack is green (no packaging code until that pass starts)  
+**Status:** **Declared** — we will submit; design/docs ok to keep warm; **no pack code until Focus says Then**  
 **Agent submit guide:** https://appflare.dev/agent/submit.md
+
+## Slices
+
+| Slice | Scope |
+|-------|--------|
+| **1** | Scaffold `scripts/appflare/` + Appflare-only wrangler (leave prod configs alone) |
+| **2** | `pnpm validate` + `pnpm pack-app` against a catalog fork; health green |
+| **3** | Manifest (protocol 3 summary, `paid`, `r2`) → PR to `appflare/catalog` |
+| **4** | Optional Install badge; later full-product SPA+API pack if wanted |
 
 ## How submission works
 
@@ -53,7 +63,7 @@ Custom builder under `scripts/appflare/` that builds Vite + emits Worker assets 
   "$schema": "https://appflare.github.io/catalog/schema/v1.json",
   "slug": "mdviewer-api",
   "name": "MDViewer API",
-  "summary": "Protocol-2 markdown share API on Workers + R2 with optional password, fixed TTL, and MCP.",
+  "summary": "Protocol-3 markdown share API on Workers + R2 with manage token, optional view password, fixed TTL, and MCP.",
   "tagline": "Share markdown from your own Worker",
   "repo": "zamdevio/mdviewer",
   "license": "MIT",

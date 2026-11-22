@@ -1,7 +1,8 @@
 # Phase D — Unified share dialog
 
+**Focus label:** **Shipped** ([`focus.md`](./focus.md))  
 **Order:** 02  
-**Status:** Shipped  
+**Status:** Shipped — UX evolves under [`07-manage-token.md`](./07-manage-token.md) (already-shared + disposable view pw)  
 **Depends on:** Phase C ([`01-share-protocol.md`](./01-share-protocol.md))
 
 ## Goals

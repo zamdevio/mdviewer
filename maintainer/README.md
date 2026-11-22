@@ -27,7 +27,7 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 
 | Doc | Role |
 |-----|------|
-| [`phases/focus.md`](phases/focus.md) | Current Focus (max 3) |
+| [`phases/focus.md`](phases/focus.md) | Focus order (Now / Next / After that / Then / Parked) |
 | [`final.md`](final.md) | Pre–v4.0 release checklist |
 | [`phases/01-share-protocol.md`](phases/01-share-protocol.md) | Phase C — password / TTL / fair-use |
 | [`phases/02-share-dialog.md`](phases/02-share-dialog.md) | Phase D — unified share dialog |

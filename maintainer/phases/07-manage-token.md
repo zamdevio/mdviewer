@@ -1,9 +1,24 @@
 # Phase 07 — Manage token + view-password split (protocol 3)
 
-**Order:** 07 (next protocol change after 01–03 shipped)  
+**Focus label:** **Now** ([`focus.md`](./focus.md))  
+**Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
 **Status:** Spec’d — not started  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.
+
+---
+
+## Slices (implement in order)
+
+| Slice | Scope | Done when |
+|-------|--------|-----------|
+| **A** Worker | `manageTokenHash` + optional view `passwordHash`; Bearer manage on mutate/delete/PATCH; `X-Share-Password` view-only; bulk rotate ≤N; `/compatibility` protocol 3 + flags; OpenAPI notes | Worker tests/smoke green; legacy protocol-2 mutate path documented |
+| **B** SPA settings + compose | `#token` rename; auto-gen; block share if missing; rotate confirm → bulk rotate local ids; view-protect → disposable auto-gen field; already-shared (existing / new link / edit protect / delete) | Editor share flow uses manage token only |
+| **C** Shares page | Edit next to Copy (mobile-friendly) → same already-shared dialog | Parity with editor; no second delete-only UX |
+| **D** Agents + public docs | `llms.txt` / `llms-full.txt`; MCP args (`manageToken` vs view password); regen Worker embed; `docs/api.md` + `security.md` + README | Agents cannot treat view password as admin |
+| **E** Migrate + smoke | Settings key migrate; protocol-2 object handling; local + prod smoke | Focus promotes **Next** (05) |
+
+Do not start B until A’s auth split is deployable. C may land in the same PR as B if the dialog is already shared. D can share a PR with E.
 
 ---
 
