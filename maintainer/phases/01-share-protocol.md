@@ -1,7 +1,8 @@
 # Phase C — Worker share protocol
 
-**Status:** Queued  
-**Depends on:** Phase B (or can parallel after A if Focus allows — prefer after B)
+**Order:** 01 (implement first)  
+**Status:** Queued · Focus  
+**Depends on:** Phases A–B shipped
 
 ## Goals
 

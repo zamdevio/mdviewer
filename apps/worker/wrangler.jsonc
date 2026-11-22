@@ -1,0 +1,48 @@
+{
+  // Cloudflare Worker — MDViewer share API
+  // After clone: set ALLOWED_ORIGINS, optional routes / R2 bucket name.
+  "name": "mdviewer-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+
+  // CORS + share URL origins (comma-separated). Include localhost for `pnpm web:dev`.
+  // Examples: "https://mdviewer.zamdev.dev", "https://a.com,https://b.com"
+  "vars": {
+    "ALLOWED_ORIGINS": "https://mdviewer.zamdev.dev,https://markview.pages.dev,http://localhost:3000,http://127.0.0.1:3000",
+    // Rate limit window (seconds) and max requests per IP per window
+    "RATE_LIMIT_WINDOW": "60",
+    "RATE_LIMIT_MAX_REQUESTS": "10"
+  },
+
+  // Custom domain (optional). Comment out or replace for your zone.
+  "routes": [
+    {
+      "pattern": "api.mdviewer.zamdev.dev",
+      "zone_name": "zamdev.dev",
+      "custom_domain": true
+    }
+  ],
+
+  "r2_buckets": [
+    {
+      "binding": "R2_BUCKET",
+      "bucket_name": "mdviewer"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER",
+        "class_name": "RateLimiter"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RateLimiter"]
+    }
+  ]
+}

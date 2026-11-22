@@ -1,0 +1,53 @@
+# MDViewer — full agent brief
+
+> Same product as /llms.txt with API details agents need. Share protocol upgrades (password, TTL, MCP) are planned — see maintainer/phases/01-share-protocol.md and maintainer/final.md (pre-v4.0).
+
+## Product
+
+- SPA: `apps/web` — local files/projects in browser storage, GFM + Mermaid + KaTeX preview
+- Worker: `apps/worker` — optional share upload/download on R2
+- Config: public Vite defaults (`VITE_API_URL`, `VITE_FRONTEND_URL`) or Settings → Share override (http/https only)
+
+## Public Worker API (protocol 1)
+
+Base: `https://api.mdviewer.zamdev.dev` (or self-hosted worker)
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/health` | `{ ok: true }` |
+| GET | `/compatibility` | Versioned handshake; no secret origins leaked |
+| POST | `/upload` | Create share; text/plain or multipart; rate limited |
+| GET | `/share/:id` | Raw markdown text |
+| GET | `/docs` | Swagger UI |
+| GET | `/openapi.json` | OpenAPI document |
+
+CORS / constructed frontend share URLs use worker `ALLOWED_ORIGINS` (see `apps/worker/wrangler.jsonc`).
+
+## Share URLs (frontend)
+
+- `https://mdviewer.zamdev.dev/share?id=<id>`
+- `https://mdviewer.zamdev.dev/share/<id>`
+
+In-doc fragment links (`#heading`) work in editor preview and share viewer (first matching heading wins).
+
+## Not available yet (Phase C / E — pre-v4.0)
+
+- Password-gated mutate / optional view protection — maintainer/phases/01-share-protocol.md
+- Fixed TTL + expiry cron — same
+- Fair-use Durable Object beyond basic upload rate limit — same
+- MCP tools on the same worker (`get_share`, `upload_share`, …) — maintainer/phases/03-agent-surfaces.md
+- Worker-hosted `/llms.txt` routes (SPA hosts these files today)
+
+Do not invent auth headers or MCP endpoints until `/compatibility` protocol bumps and docs/api.md lists them. Track release readiness in maintainer/final.md.
+
+## Security notes
+
+- Preview: rehype-sanitize after KaTeX; Mermaid `securityLevel: "strict"`
+- Pages: CSP, X-Frame-Options DENY, COOP
+- Details: https://github.com/zamdevio/mdviewer/blob/main/docs/security.md
+
+## Links
+
+- Short brief: https://mdviewer.zamdev.dev/llms.txt
+- Repo: https://github.com/zamdevio/mdviewer
+- Phases: https://github.com/zamdevio/mdviewer/tree/main/maintainer/phases

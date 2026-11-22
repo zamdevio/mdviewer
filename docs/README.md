@@ -9,3 +9,5 @@ Helpful project docs (public-facing notes). Internal planning lives in [`../main
 | [`api.md`](api.md) | Worker endpoints + OpenAPI/Swagger |
 | [`deploy.md`](deploy.md) | Pages + Worker deploy |
 | [`security.md`](security.md) | Threat model, mitigations, remaining gaps |
+
+Agent/SEO briefs also ship on the SPA: [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt), [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt), [`/robots.txt`](https://mdviewer.zamdev.dev/robots.txt).

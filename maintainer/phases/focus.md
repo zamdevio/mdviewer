@@ -2,7 +2,9 @@
 
 **Rule:** Focus now = **max 3**. Everything else stays queued until a Focus slot frees.
 
-All plans live under `maintainer/phases/`.
+**Versioning:** Ship **3.x.x** until [`../final.md`](../final.md) is cleared; then **v4.0.0**.
+
+Active phase docs (implement order): `01` → `02` → `03` → `04`.
 
 ---
 
@@ -10,7 +12,7 @@ All plans live under `maintainer/phases/`.
 
 | Priority | Vertical | Notes |
 |----------|----------|-------|
-| 1 | Phase C — Worker password + fixed TTL + fair-use | [`share-password-protocol.md`](./share-password-protocol.md) |
+| 1 | Phase C — Worker password + fixed TTL + fair-use | [`01-share-protocol.md`](./01-share-protocol.md) |
 | 2 | — | Slot free |
 | 3 | — | Slot free |
 
@@ -18,13 +20,13 @@ All plans live under `maintainer/phases/`.
 
 | # | Item | Doc |
 |---|------|-----|
-| 1 | Phase D — Unified share dialog | [`share-dialog-unify.md`](./share-dialog-unify.md) |
-| 2 | Phase E — llms.txt + MCP | [`agent-surfaces.md`](./agent-surfaces.md) |
-| 3 | Large-doc performance | [`perf-large-docs.md`](./perf-large-docs.md) |
-| 4 | Nested projects | [`files-share-selfhost.md`](./files-share-selfhost.md) follow-ups |
+| 1 | Phase D — Unified share dialog | [`02-share-dialog.md`](./02-share-dialog.md) |
+| 2 | Phase E — MCP (+ optional worker llms) | [`03-agent-surfaces.md`](./03-agent-surfaces.md) |
+| 3 | Large-doc performance | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
+| 4 | Nested projects + other loose ends | [`../final.md`](../final.md) §7 |
 
 ## Next task
 
-1. Phases A–B shipped.
-2. Implement Phase C (worker protocol) when ready — D depends on it.
-3. Promote D/E after C.
+1. Phases A–B and earlier slices are shipped — see [`../shipped/README.md`](../shipped/README.md).
+2. Implement Phase C ([`01-share-protocol.md`](./01-share-protocol.md)).
+3. Promote D → E → perf via Focus; track gaps in [`../final.md`](../final.md).

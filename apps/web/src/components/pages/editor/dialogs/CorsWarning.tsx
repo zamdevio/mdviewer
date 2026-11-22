@@ -47,7 +47,7 @@ export function CorsWarningDialog({
             <p>
               Fix: add that origin to{" "}
               <code className="bg-muted px-1 rounded text-xs">ALLOWED_ORIGINS</code> in{" "}
-              <code className="bg-muted px-1 rounded text-xs">apps/worker/wrangler.toml</code>, then
+              <code className="bg-muted px-1 rounded text-xs">apps/worker/wrangler.jsonc</code>, then
               redeploy the worker. Local share needs{" "}
               <code className="bg-muted px-1 rounded text-xs">http://localhost:3000</code>.
             </p>

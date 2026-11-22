@@ -1,7 +1,7 @@
 
 /**
  * Shared Markdown Viewer Component
- * 
+ *
  * This is the main component for rendering markdown with all features:
  * - HTML support (with sanitization)
  * - Math/LaTeX (KaTeX)
@@ -11,19 +11,22 @@
  * - Badge images in rows
  * - Emoji support (recursive)
  * - Strikethrough support
- * 
+ * - In-doc `#heading` fragment links (editor preview + share)
+ *
  * Used by both editor preview and share pages
  */
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeKatex from "rehype-katex";
+import rehypeSlug from "rehype-slug";
 import { MarkdownImage, MarkdownMermaid, MarkdownCodeBlock, MarkdownBadges, sanitizeSchema } from './index';
 import { remarkEmoji } from '@/lib/remark-emoji';
+import { scrollToMarkdownHeading } from '@/lib/markdown/heading-anchors';
 import type { Components } from "react-markdown";
 
 let katexCssRequested = false;
@@ -38,7 +41,26 @@ interface MarkdownViewerProps {
     className?: string;
 }
 
+const HEADING_SCROLL_CLASS = "scroll-mt-24";
+
+function headingComponent(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"): Components[typeof Tag] {
+    return ({ children, className, ...rest }) => (
+        <Tag
+            className={[HEADING_SCROLL_CLASS, className].filter(Boolean).join(" ")}
+            {...rest}
+        >
+            {children}
+        </Tag>
+    );
+}
+
 const MarkdownComponents: Components = {
+    h1: headingComponent("h1"),
+    h2: headingComponent("h2"),
+    h3: headingComponent("h3"),
+    h4: headingComponent("h4"),
+    h5: headingComponent("h5"),
+    h6: headingComponent("h6"),
     code(props) {
         const { children, className: codeClassName, ...rest } = props;
 
@@ -99,31 +121,98 @@ const MarkdownComponents: Components = {
     p: MarkdownBadges,
     span: (props) => <span {...props} />,
     div: (props) => <div {...props} />,
-    a: ({ href, children, ...rest }) => (
-        <a
-            href={href}
-            {...rest}
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            {children}
-        </a>
-    ),
+    a: ({ href, children, onClick, ...rest }) => {
+        const isFragment = typeof href === "string" && href.startsWith("#") && href.length > 1;
+
+        if (isFragment) {
+            return (
+                <a
+                    href={href}
+                    {...rest}
+                    onClick={(event) => {
+                        onClick?.(event);
+                        if (event.defaultPrevented) return;
+                        event.preventDefault();
+                        const article = (event.currentTarget as HTMLElement).closest("article.markdown-body");
+                        const ok = scrollToMarkdownHeading(href, article);
+                        if (ok) {
+                            const id = href.slice(1);
+                            try {
+                                history.replaceState(null, "", `#${decodeURIComponent(id)}`);
+                            } catch {
+                                // ignore history failures (sandboxed / opaque origins)
+                            }
+                        }
+                    }}
+                >
+                    {children}
+                </a>
+            );
+        }
+
+        return (
+            <a
+                href={href}
+                {...rest}
+                onClick={onClick}
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                {children}
+            </a>
+        );
+    },
 };
 
 export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps) {
+    const articleRef = useRef<HTMLElement>(null);
+
     useEffect(() => {
         ensureKatexCss();
     }, []);
 
+    // Deep-link / refresh: scroll to hash after content paints (share URL or editor split)
+    useEffect(() => {
+        const hash = window.location.hash;
+        if (!hash || hash.length < 2) return;
+
+        let cancelled = false;
+        const run = () => {
+            if (cancelled) return;
+            scrollToMarkdownHeading(hash, articleRef.current, "smooth");
+        };
+
+        // Two frames: rehype needs a paint after ReactMarkdown commit
+        const id = requestAnimationFrame(() => {
+            requestAnimationFrame(run);
+        });
+        const t = window.setTimeout(run, 120);
+        return () => {
+            cancelled = true;
+            cancelAnimationFrame(id);
+            window.clearTimeout(t);
+        };
+    }, [content]);
+
+    useEffect(() => {
+        const onHashChange = () => {
+            const hash = window.location.hash;
+            if (!hash || hash.length < 2) return;
+            scrollToMarkdownHeading(hash, articleRef.current, "smooth");
+        };
+        window.addEventListener("hashchange", onHashChange);
+        return () => window.removeEventListener("hashchange", onHashChange);
+    }, []);
+
     return (
-        <article className={`markdown-body ${className}`}>
+        <article ref={articleRef} className={`markdown-body ${className}`}>
             <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath, remarkEmoji]}
                 rehypePlugins={[
                     rehypeRaw,
                     rehypeKatex,
-                    // Sanitize after KaTeX so generated HTML is filtered too
+                    rehypeSlug,
+                    // Sanitize after KaTeX/slug so generated HTML + ids are filtered (user-content- prefix)
                     [rehypeSanitize, sanitizeSchema],
                 ]}
                 components={MarkdownComponents}
@@ -133,4 +222,3 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
         </article>
     );
 }
-

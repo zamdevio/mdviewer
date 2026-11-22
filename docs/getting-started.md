@@ -62,4 +62,4 @@ On **Files**, toggle **Grid** / **Tree**. Preference is saved in settings (`file
 
 ## Local CORS
 
-For share from `http://localhost:3000`, ensure that origin is listed in `ALLOWED_ORIGINS` in [`apps/worker/wrangler.toml`](../apps/worker/wrangler.toml) and redeploy the worker.
+For share from `http://localhost:3000`, ensure that origin is listed in `ALLOWED_ORIGINS` in [`apps/worker/wrangler.jsonc`](../apps/worker/wrangler.jsonc) and redeploy the worker.

@@ -35,7 +35,7 @@ pnpm worker:deploy
 
 SPA fallback: `apps/web/public/_redirects` → `/* /index.html 200`.
 
-Configure `ALLOWED_ORIGINS` in [`apps/worker/wrangler.toml`](../apps/worker/wrangler.toml) (include `http://localhost:3000` for local share). Ensure R2 bucket + Durable Object migration exist.
+Configure `ALLOWED_ORIGINS` in [`apps/worker/wrangler.jsonc`](../apps/worker/wrangler.jsonc) (include `http://localhost:3000` for local share). Ensure R2 bucket + Durable Object migration exist.
 
 ## PWA / cache
 

@@ -3,7 +3,7 @@
 
   <h1>MDViewer</h1>
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
   [![Node.js >= 20](https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![pnpm](https://img.shields.io/badge/pnpm-package%20manager-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
@@ -32,6 +32,7 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 | **Pages** | [markview.pages.dev](https://markview.pages.dev) | Cloudflare Pages deploy |
 | **Worker API** | [api.mdviewer.zamdev.dev](https://api.mdviewer.zamdev.dev) | Upload / share / health / compatibility |
 | **API docs** | [api.mdviewer.zamdev.dev/docs](https://api.mdviewer.zamdev.dev/docs) | Swagger UI (OpenAPI) |
+| **llms.txt** | [mdviewer.zamdev.dev/llms.txt](https://mdviewer.zamdev.dev/llms.txt) | Agent/SEO brief ([llms-full.txt](https://mdviewer.zamdev.dev/llms-full.txt)) |
 | **GitHub** | [github.com/zamdevio/mdviewer](https://github.com/zamdevio/mdviewer) | Source and issues |
 
 ## Why MDViewer
@@ -62,12 +63,13 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 
 ### Edge share
 - Workers + R2, CORS allowlist, upload rate limiting, OpenAPI `/docs`
-- Roadmap (see `maintainer/phases/`): fixed TTL, password-gated mutate, fair-use fingerprints, MCP / `llms.txt`
+- SPA ships [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) + [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt); MCP waits on Phase C + E
+- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`01-share-protocol`](./maintainer/phases/01-share-protocol.md) → dialog → MCP → perf
 
 ### Security
 - Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode
 - Pages security headers (CSP, frame deny, COOP); share API override accepts http(s) only
-- Details, mitigations, and remaining gaps: [`docs/security.md`](./docs/security.md)
+- Report vulns: [`SECURITY.md`](./SECURITY.md) · threat model: [`docs/security.md`](./docs/security.md)
 
 ## Quick start
 
@@ -126,8 +128,12 @@ pnpm web:deploy      # Pages → markview
 pnpm worker:deploy   # Workers → mdviewer-api
 ```
 
-Env names: see [`.env.example`](./.env.example). Worker CORS / share origins: `ALLOWED_ORIGINS` in [`apps/worker/wrangler.toml`](./apps/worker/wrangler.toml) (include `http://localhost:3000` for local share).
+Env names: see [`.env.example`](./.env.example). Worker CORS / share origins: `ALLOWED_ORIGINS` in [`apps/worker/wrangler.jsonc`](./apps/worker/wrangler.jsonc) (include `http://localhost:3000` for local share).
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md). Maintainer Focus / pre–v4.0 checklist: [`maintainer/phases/focus.md`](./maintainer/phases/focus.md), [`maintainer/final.md`](./maintainer/final.md).
 
 ## License
 
-MIT — [zamdevio](https://github.com/zamdevio)
+MIT — see [`LICENSE`](./LICENSE). [zamdevio](https://github.com/zamdevio)

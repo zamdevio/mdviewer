@@ -21,7 +21,7 @@ app.use("*", async (c, next) => {
       {
         error: "Configuration error",
         message:
-          "ALLOWED_ORIGINS environment variable is not set or invalid. Configure it in wrangler.toml.",
+          "ALLOWED_ORIGINS environment variable is not set or invalid. Configure it in wrangler.jsonc.",
       },
       500,
     );

@@ -16,7 +16,8 @@ Discoverable API for agents without accounts.
 
 ## Checklist
 
-- [ ] llms.txt + llms-full.txt routes
-- [ ] MCP tools + docs
-- [ ] Compatibility + `docs/api.md`
-- [ ] README note for agents
+- [x] `llms.txt` + `llms-full.txt` on SPA (`apps/web/public/`) — agent discoverability / SEO
+- [ ] Worker-hosted `/llms.txt` routes (optional; SPA copy is live)
+- [ ] MCP tools + docs (needs Phase C auth/TTL/fair-use first)
+- [ ] Compatibility + `docs/api.md` when MCP ships
+- [x] README note for agents (points at llms files; MCP still queued)

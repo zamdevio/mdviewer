@@ -93,6 +93,7 @@ export const sanitizeSchema = {
         annotation: ["encoding"],
     },
     protocols: {
+        // Relative + `#fragment` always allowed when protocols is set (hast-util-sanitize)
         href: ["http", "https", "mailto"],
         src: ["http", "https"],
     },

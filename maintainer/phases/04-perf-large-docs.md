@@ -1,5 +1,6 @@
 # Large-doc performance
 
+**Order:** 04  
 **Goal:** Smooth edit/preview for 5–10MB markdown.  
 **Status:** Queued (do not start until Focus frees a slot).  
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.

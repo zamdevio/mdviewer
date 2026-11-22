@@ -1,0 +1,17 @@
+# MDViewer — https://mdviewer.zamdev.dev
+User-agent: *
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+
+# App surfaces (user data / no SEO value)
+Disallow: /editor
+Disallow: /files
+Disallow: /settings
+Disallow: /shares
+Disallow: /search
+Disallow: /share
+
+Sitemap: https://mdviewer.zamdev.dev/sitemap.xml
+Sitemap: https://markview.pages.dev/sitemap.xml

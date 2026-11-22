@@ -1,7 +1,8 @@
 # Phase D — Unified share dialog
 
+**Order:** 02  
 **Status:** Queued  
-**Depends on:** Phase C (worker protocol)
+**Depends on:** Phase C ([`01-share-protocol.md`](./01-share-protocol.md))
 
 ## Goals
 

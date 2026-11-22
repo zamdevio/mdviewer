@@ -31,7 +31,7 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 | Item | Status |
 |------|--------|
 | Public share GET by id (no view password yet) | **Intentional** pastebin model until Phase C |
-| Share mutate/delete without password | **Queued** — [`maintainer/phases/share-password-protocol.md`](../maintainer/phases/share-password-protocol.md) |
+| Share mutate/delete without password | **Queued** — [`maintainer/phases/01-share-protocol.md`](../maintainer/phases/01-share-protocol.md) |
 | Fixed TTL + cron expiry | **Queued** — same phase |
 | Fair-use fingerprint DO | **Queued** — same phase |
 | CSP `script-src 'unsafe-inline'` | Needed for inline theme bootstrap in `index.html`; prefer nonce in a later pass |
@@ -40,4 +40,6 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 
 ## Reporting
 
-Open a GitHub issue or contact the maintainers. Please do not post private exploit PoCs against production share hosts without coordination.
+Follow [`SECURITY.md`](../SECURITY.md) (private advisory preferred). Please do not post private exploit PoCs against production share hosts without coordination.
+
+Pre–v4.0 tracking: [`maintainer/final.md`](../maintainer/final.md).
