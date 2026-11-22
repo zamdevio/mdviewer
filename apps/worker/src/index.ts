@@ -3,6 +3,7 @@ import { swaggerUI } from "@hono/swagger-ui";
 import type { Env } from "./env";
 import { parseAllowedOrigins, resolveRequestOrigins } from "./lib/origins";
 import health from "./routes/health";
+import compatibility from "./routes/compatibility";
 import upload from "./routes/upload";
 import share from "./routes/share";
 
@@ -51,6 +52,7 @@ app.use("*", async (c, next) => {
 });
 
 app.route("/", health);
+app.route("/", compatibility);
 app.route("/", upload);
 app.route("/", share);
 
@@ -63,7 +65,7 @@ app.doc("/openapi.json", {
       "Edge API for sharing markdown and text via Cloudflare Workers + R2. Uploads are rate-limited; downloads are unlimited.",
   },
   tags: [
-    { name: "System", description: "Health and ops" },
+    { name: "System", description: "Health, compatibility handshake, and ops" },
     { name: "Share", description: "Upload and retrieve shared content" },
   ],
 });

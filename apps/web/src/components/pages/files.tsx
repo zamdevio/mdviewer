@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Download } from "lucide-react";
+import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Download, LayoutGrid, FolderTree } from "lucide-react";
 import { toast } from "sonner";
-import { getSettings, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, type SavedFile } from "@/lib/storage";
+import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, removeProject, type SavedFile, type Project } from "@/lib/storage";
 import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile } from "@/lib/editor";
+import { FilesTree } from "@/components/pages/files/FilesTree";
 
 export default function FilesPage(): React.JSX.Element {
     const [files, setFiles] = useState<SavedFile[]>([]);
+    const [projects, setProjectsState] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingFileId, setEditingFileId] = useState<string | null>(null);
     const [renamingFile, setRenamingFile] = useState<string | null>(null);
@@ -24,12 +26,16 @@ export default function FilesPage(): React.JSX.Element {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [itemsPerPage, setItemsPerPage] = useState(12);
     const [currentPage, setCurrentPage] = useState(1);
+    const [filesLayout, setFilesLayout] = useState<'grid' | 'tree'>('grid');
 
     // Load items per page setting
     useEffect(() => {
         const settings = getSettings();
         if (settings && settings.itemsPerPage) {
             setItemsPerPage(settings.itemsPerPage);
+        }
+        if (settings?.filesLayout) {
+            setFilesLayout(settings.filesLayout);
         }
         
         // Listen for settings changes
@@ -40,6 +46,9 @@ export default function FilesPage(): React.JSX.Element {
                     if (parsed.itemsPerPage) {
                         setItemsPerPage(parsed.itemsPerPage);
                         setCurrentPage(1); // Reset to first page when items per page changes
+                    }
+                    if (parsed.filesLayout === 'tree' || parsed.filesLayout === 'grid') {
+                        setFilesLayout(parsed.filesLayout);
                     }
                 } catch {
                     // Ignore
@@ -60,8 +69,8 @@ export default function FilesPage(): React.JSX.Element {
         
         // Listen for storage changes to sync with editor (only reload if files actually changed)
         const unsubscribe = onStorageChange((key) => {
-            // Only reload if mdviewer_saved_files changed, not just editing_file
-            if (key === 'mdviewer_saved_files') {
+            // Only reload if mdviewer_saved_files / projects changed, not just editing_file
+            if (key === 'mdviewer_saved_files' || key === 'mdviewer_projects' || key === null) {
                 loadFiles();
                 // Update editing file status after reloading files
                 const editingFileData = getEditingFileFromSavedFiles();
@@ -121,6 +130,8 @@ export default function FilesPage(): React.JSX.Element {
             const editingFileData = getEditingFileFromSavedFiles();
             const editingFileId = editingFileData?.id || null;
             
+            setProjectsState(getProjects());
+
             const filesWithContent = Array.from(filesById.values()).map((file: SavedFile) => {
                 const content = getFileContent(file.filename) || undefined;
                 return {
@@ -128,6 +139,7 @@ export default function FilesPage(): React.JSX.Element {
                     filename: file.filename,
                     content,
                     timestamp: file.timestamp,
+                    projectId: file.projectId,
                     editing: file.id === editingFileId, // Mark as editing if this file's ID matches
                 };
             });
@@ -360,16 +372,48 @@ export default function FilesPage(): React.JSX.Element {
 
     return (
         <div className={`container mx-auto p-4 min-h-[calc(100vh-100px)] flex flex-col gap-6 animate-fade-in`}>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
                     Saved Files
                 </h1>
-                <Link to="/editor?new" onClick={() => clearAllEditingFlags()}>
-                    <Button variant="default" className="gap-2">
-                        <Edit3 className="w-4 h-4" />
-                        New Editor
-                    </Button>
-                </Link>
+                <div className="flex items-center gap-2">
+                    <div className="inline-flex rounded-md border border-border p-0.5">
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant={filesLayout === 'grid' ? 'default' : 'ghost'}
+                            className="gap-1.5 h-8"
+                            onClick={() => {
+                                setFilesLayout('grid');
+                                updateSetting('filesLayout', 'grid');
+                            }}
+                            title="Grid layout"
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                            <span className="hidden sm:inline">Grid</span>
+                        </Button>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant={filesLayout === 'tree' ? 'default' : 'ghost'}
+                            className="gap-1.5 h-8"
+                            onClick={() => {
+                                setFilesLayout('tree');
+                                updateSetting('filesLayout', 'tree');
+                            }}
+                            title="Tree / projects layout"
+                        >
+                            <FolderTree className="w-4 h-4" />
+                            <span className="hidden sm:inline">Tree</span>
+                        </Button>
+                    </div>
+                    <Link to="/editor?new" onClick={() => clearAllEditingFlags()}>
+                        <Button variant="default" className="gap-2">
+                            <Edit3 className="w-4 h-4" />
+                            New Editor
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -495,6 +539,54 @@ export default function FilesPage(): React.JSX.Element {
                         Clear search
                     </Button>
                 </Card>
+            ) : filesLayout === 'tree' ? (
+                <FilesTree
+                    projects={projects}
+                    files={filteredFiles}
+                    onOpenFile={(file) => {
+                        if (file.content !== undefined) {
+                            handleLoadToEditor(file.filename, file.content || '', file.id);
+                        } else {
+                            const content = getFileContent(file.filename) || '';
+                            handleLoadToEditor(file.filename, content, file.id);
+                        }
+                    }}
+                    onCreateProject={(name) => {
+                        const project: Project = {
+                            id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+                            name,
+                            createdAt: new Date().toISOString(),
+                        };
+                        upsertProject(project);
+                        setProjectsState(getProjects());
+                        toast.success(`Project “${name}” created`);
+                    }}
+                    onRenameProject={(id, name) => {
+                        const existing = projects.find((p) => p.id === id);
+                        if (!existing) return;
+                        upsertProject({ ...existing, name });
+                        setProjectsState(getProjects());
+                        toast.success("Project renamed");
+                    }}
+                    onDeleteProject={(id) => {
+                        removeProject(id);
+                        setProjectsState(getProjects());
+                        loadFiles();
+                        toast.success("Project deleted");
+                    }}
+                    onAssignProject={(fileId, projectId) => {
+                        const file = files.find((f) => f.id === fileId);
+                        if (!file) return;
+                        upsertSavedFile({
+                            id: file.id,
+                            filename: file.filename,
+                            timestamp: file.timestamp,
+                            projectId,
+                            editing: file.editing,
+                        });
+                        loadFiles();
+                    }}
+                />
             ) : (
                 <>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -568,6 +660,28 @@ export default function FilesPage(): React.JSX.Element {
                                     <p className="text-xs text-muted-foreground mt-1 font-mono truncate" title={file.id}>
                                         ID: <span className="truncate inline-block max-w-full">{file.id}</span>
                                     </p>
+                                    <select
+                                        className="mt-2 w-full text-xs border border-input rounded-md px-2 py-1.5 bg-background"
+                                        value={file.projectId || ""}
+                                        onChange={(e) => {
+                                            upsertSavedFile({
+                                                id: file.id,
+                                                filename: file.filename,
+                                                timestamp: file.timestamp,
+                                                projectId: e.target.value || undefined,
+                                                editing: file.editing,
+                                            });
+                                            loadFiles();
+                                        }}
+                                        title="Project"
+                                    >
+                                        <option value="">Ungrouped</option>
+                                        {projects.map((p) => (
+                                            <option key={p.id} value={p.id}>
+                                                {p.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                     {file.content && (
                                         <>
                                             <p className="text-xs text-muted-foreground mt-1">

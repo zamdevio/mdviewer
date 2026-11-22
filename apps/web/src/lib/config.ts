@@ -1,113 +1,141 @@
 /**
  * Application configuration
  *
- * Required environment variables (Vite):
+ * Build-time (Vite):
  * - VITE_API_URL (or API_URL via vite.config define)
  * - VITE_FRONTEND_URL (or FRONTEND_URL via vite.config define)
  *
- * Version comes from apps/web/package.json via Vite `define`
- * (same source as the emitted service worker cache name).
+ * Runtime overlay: localStorage `mdviewer_api_override` (Settings → Share).
+ * Version comes from apps/web/package.json via Vite `define`.
  */
 
 export const APP_VERSION = __APP_VERSION__;
 export const CACHE_VERSION = __CACHE_VERSION__;
 
-// Remove trailing slash helper
+const API_OVERRIDE_KEY = "mdviewer_api_override";
+
 function removeTrailingSlash(url: string): string {
-  return url.endsWith('/') ? url.slice(0, -1) : url;
+  return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-export const config = {
-  /**
-   * Cloudflare Workers API URL for the share feature
-   * 
-   * Must be set via API_URL environment variable.
-   * No default is provided to prevent mismatches.
-   */
-  API_URL: (() => {
-    // Vite injects VITE_* at build time (also accepts API_URL via vite.config define)
-    const envUrl = import.meta.env.VITE_API_URL;
+function readEnvUrl(value: unknown): string {
+  if (typeof value !== "string" || !value.trim()) return "";
+  return removeTrailingSlash(value.trim());
+}
 
-    if (!envUrl || !envUrl.trim()) {
-      if (typeof window !== 'undefined') {
-        console.warn('VITE_API_URL / API_URL is not set. Share feature will not work. Set it in .env.local or Cloudflare Pages.');
-      }
-      return '';
-    }
-
-    return removeTrailingSlash(envUrl.trim());
-  })(),
-
-  /**
-   * Frontend website URL for share links
-   *
-   * Must be set via VITE_FRONTEND_URL / FRONTEND_URL.
-   * No default is provided to prevent mismatches.
-   */
-  FRONTEND_URL: (() => {
-    const envUrl = import.meta.env.VITE_FRONTEND_URL;
-
-    if (!envUrl || !envUrl.trim()) {
-      if (typeof window !== 'undefined') {
-        console.warn('VITE_FRONTEND_URL / FRONTEND_URL is not set. Share feature will not work. Set it in .env.local or Cloudflare Pages.');
-      }
-      return '';
-    }
-
-    return removeTrailingSlash(envUrl.trim());
-  })(),
+/** Build-time defaults from env (never mutated). */
+export const buildTimeConfig = {
+  API_URL: readEnvUrl(import.meta.env.VITE_API_URL),
+  FRONTEND_URL: readEnvUrl(import.meta.env.VITE_FRONTEND_URL),
 } as const;
 
 /**
- * Check if the API URL is localhost (for development)
+ * @deprecated Prefer getEffectiveApiConfig() for share/health calls.
+ * Kept as build-time snapshot for Default reset UI.
  */
+export const config = {
+  API_URL: buildTimeConfig.API_URL,
+  FRONTEND_URL: buildTimeConfig.FRONTEND_URL,
+} as const;
+
+export interface ApiOverride {
+  apiUrl?: string;
+  frontendUrl?: string;
+}
+
+export function getApiOverride(): ApiOverride | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(API_OVERRIDE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ApiOverride;
+    return {
+      apiUrl: parsed.apiUrl?.trim() ? removeTrailingSlash(parsed.apiUrl.trim()) : undefined,
+      frontendUrl: parsed.frontendUrl?.trim()
+        ? removeTrailingSlash(parsed.frontendUrl.trim())
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function setApiOverride(override: ApiOverride): void {
+  if (typeof window === "undefined") return;
+  const next: ApiOverride = {};
+  if (override.apiUrl?.trim()) {
+    next.apiUrl = removeTrailingSlash(override.apiUrl.trim());
+  }
+  if (override.frontendUrl?.trim()) {
+    next.frontendUrl = removeTrailingSlash(override.frontendUrl.trim());
+  }
+  localStorage.setItem(API_OVERRIDE_KEY, JSON.stringify(next));
+  window.dispatchEvent(new Event("storage"));
+}
+
+export function clearApiOverride(): void {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(API_OVERRIDE_KEY);
+  window.dispatchEvent(new Event("storage"));
+}
+
+export function hasApiOverride(): boolean {
+  const o = getApiOverride();
+  return Boolean(o?.apiUrl || o?.frontendUrl);
+}
+
+export function getEffectiveApiConfig(): {
+  API_URL: string;
+  FRONTEND_URL: string;
+  usingOverride: boolean;
+} {
+  const override = getApiOverride();
+  const API_URL = override?.apiUrl || buildTimeConfig.API_URL;
+  const FRONTEND_URL = override?.frontendUrl || buildTimeConfig.FRONTEND_URL;
+  return {
+    API_URL,
+    FRONTEND_URL,
+    usingOverride: Boolean(override?.apiUrl || override?.frontendUrl),
+  };
+}
+
 export function isLocalhostApi(): boolean {
   try {
-    const url = config.API_URL;
-    return url.includes('localhost') || url.includes('127.0.0.1');
+    const url = getEffectiveApiConfig().API_URL;
+    return url.includes("localhost") || url.includes("127.0.0.1");
   } catch {
     return false;
   }
 }
 
-/**
- * Check if the API is properly configured
- * Returns true if both API_URL and FRONTEND_URL are set and not empty
- */
 export function isApiConfigured(): boolean {
   try {
-    const apiUrl = config.API_URL;
-    const frontendUrl = config.FRONTEND_URL;
-    return Boolean(
-      apiUrl && apiUrl.trim().length > 0 &&
-      frontendUrl && frontendUrl.trim().length > 0
-    );
+    const { API_URL, FRONTEND_URL } = getEffectiveApiConfig();
+    return Boolean(API_URL && FRONTEND_URL);
   } catch {
     return false;
   }
 }
 
-/**
- * Check if API configuration is missing
- * Returns object with details about what's missing
- */
 export function getApiConfigStatus(): {
   isConfigured: boolean;
   missingApiUrl: boolean;
   missingFrontendUrl: boolean;
   apiUrl: string | null;
   frontendUrl: string | null;
+  usingOverride: boolean;
 } {
   try {
-    const apiUrl = config.API_URL?.trim() || null;
-    const frontendUrl = config.FRONTEND_URL?.trim() || null;
-    
+    const { API_URL, FRONTEND_URL, usingOverride } = getEffectiveApiConfig();
+    const apiUrl = API_URL || null;
+    const frontendUrl = FRONTEND_URL || null;
     return {
       isConfigured: Boolean(apiUrl && frontendUrl),
       missingApiUrl: !apiUrl,
       missingFrontendUrl: !frontendUrl,
       apiUrl,
       frontendUrl,
+      usingOverride,
     };
   } catch {
     return {
@@ -116,6 +144,7 @@ export function getApiConfigStatus(): {
       missingFrontendUrl: true,
       apiUrl: null,
       frontendUrl: null,
+      usingOverride: false,
     };
   }
 }

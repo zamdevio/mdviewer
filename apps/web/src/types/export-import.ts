@@ -10,6 +10,13 @@ export interface ExportFile {
     filename: string;
     content: string;
     timestamp?: string;
+    projectId?: string;
+}
+
+export interface ExportProject {
+    id: string;
+    name: string;
+    createdAt: string;
 }
 
 /**
@@ -25,6 +32,7 @@ export interface ExportSettings {
     defaultEditorMode?: 'both' | 'editor' | 'preview';
     showEditorStatusBar?: boolean;
     showSpellChecker?: boolean;
+    filesLayout?: 'grid' | 'tree';
 }
 
 /**
@@ -36,6 +44,7 @@ export interface ExportImportData {
     exportDate: string;
     settings: ExportSettings;
     files: ExportFile[];
+    projects?: ExportProject[];
     currentContent?: string | null;
     editingFile?: string | null;
 }

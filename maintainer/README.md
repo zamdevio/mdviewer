@@ -28,6 +28,7 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | [`phases/platform.md`](phases/platform.md) | Open platform / reshape notes |
 | [`phases/perf-large-docs.md`](phases/perf-large-docs.md) | Large markdown perf roadmap |
 | [`phases/ui.md`](phases/ui.md) | UI polish (home, shell, empty states) |
+| [`phases/files-share-selfhost.md`](phases/files-share-selfhost.md) | Projects/tree, BYO share API, badge dialogs |
 | [`systems/web.md`](systems/web.md) | Web app map |
 | [`systems/worker.md`](systems/worker.md) | Worker API map |
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |

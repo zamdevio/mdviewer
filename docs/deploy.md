@@ -20,7 +20,11 @@ Repository **Variables** (you add these yourself — build-time for the SPA):
 | `VITE_API_URL` | `https://api.mdviewer.zamdev.dev` |
 | `VITE_FRONTEND_URL` | `https://mdviewer.zamdev.dev` |
 
-Without those Variables, Pages still deploys, but the built SPA has empty API/frontend URLs (share stays off / broken in prod).
+Without those Variables, Pages still deploys, but the built SPA has empty API/frontend URLs (share stays off until the user sets **Settings → Share**).
+
+### Self-host share worker
+
+Users can point any deployed SPA at a custom worker via Settings → Share. Document `/compatibility` for integrators — see [`api.md`](./api.md).
 
 ## Manual deploy
 

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, X } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { config } from "@/lib/config";
+import { getEffectiveApiConfig } from "@/lib/config";
 
 export function CorsWarningDialog({
   show,
@@ -14,6 +14,7 @@ export function CorsWarningDialog({
 }) {
   const origin =
     typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+  const { API_URL } = getEffectiveApiConfig();
 
   return (
     <ModalShell open={show} onClose={onClose} title="Share blocked by CORS">
@@ -40,7 +41,7 @@ export function CorsWarningDialog({
             <p>
               API:{" "}
               <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono break-all">
-                {config.API_URL || "(unset)"}
+                {API_URL || "(unset)"}
               </code>
             </p>
             <p>

@@ -21,15 +21,26 @@ import {
     AlertCircle,
     RefreshCw,
     Package,
-    List
+    List,
+    Share2,
+    Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useImportExport } from "@/hooks/use-import-export";
-import { getSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, clearAllData } from "@/lib/storage";
+import { getSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, clearAllData, getProjects } from "@/lib/storage";
 import { encryptData } from "@/lib/utils";
 import { truncateFilenameForDisplay } from "@/lib/editor";
 import { getAppVersion, getCacheVersion, checkForUpdate, triggerUpdate } from "@/lib/pwa-version";
+import {
+    buildTimeConfig,
+    clearApiOverride,
+    getEffectiveApiConfig,
+    hasApiOverride,
+    setApiOverride,
+} from "@/lib/config";
+import { isCorsFailure, testShareConnection } from "@/lib/api";
+import { ModalShell } from "@/components/ui/modal-shell";
 import type { SavedFile } from "@/lib/storage";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
@@ -79,6 +90,16 @@ export default function SettingsPage(): React.JSX.Element {
     const [lastChosenAction, setLastChosenAction] = useState<ConflictAction>('skip'); // Default to 'skip'
     const [showExportWarning, setShowExportWarning] = useState(false);
     const [showClearDataWarning, setShowClearDataWarning] = useState(false);
+    const [showResetShareWarning, setShowResetShareWarning] = useState(false);
+    const [shareApiUrl, setShareApiUrl] = useState(() => {
+        if (typeof window === "undefined") return "";
+        return getEffectiveApiConfig().API_URL;
+    });
+    const [shareFrontendUrl, setShareFrontendUrl] = useState(() => {
+        if (typeof window === "undefined") return "";
+        return getEffectiveApiConfig().FRONTEND_URL;
+    });
+    const [testingShare, setTestingShare] = useState(false);
     const [clearDataConfirmText, setClearDataConfirmText] = useState("");
     const [cacheVersion, setCacheVersion] = useState<string | null>(null);
     const [updateStatus, setUpdateStatus] = useState<{ hasUpdate: boolean; waiting: boolean; installing: boolean } | null>(null);
@@ -99,6 +120,13 @@ export default function SettingsPage(): React.JSX.Element {
             setIsMounted(true);
         });
     }, []);
+
+    useEffect(() => {
+        if (!isMounted) return;
+        if (window.location.hash !== "#share") return;
+        const el = document.getElementById("share");
+        el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, [isMounted]);
     
     // Load cache version and update status
     useEffect(() => {
@@ -242,7 +270,9 @@ export default function SettingsPage(): React.JSX.Element {
                 filename: file.filename,
                 content: getFileContent(file.filename) || '',
                 timestamp: file.timestamp,
+                projectId: file.projectId,
             }));
+            data.projects = getProjects();
 
             // Encrypt if password provided
             let exportData: string;
@@ -306,6 +336,138 @@ export default function SettingsPage(): React.JSX.Element {
                     Customize your MD Viewer experience
                 </p>
             </div>
+
+            {/* Share API — deep link /settings#share */}
+            <Card id="share" className="p-6 scroll-mt-24">
+                <div className="flex items-center gap-3 mb-1">
+                    <Share2 className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Share API</h2>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                    Point MDViewer at your own Workers backend, or keep the build-time defaults.
+                    {hasApiOverride() ? " Using a browser override." : " Using build-time / empty defaults."}
+                </p>
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-sm font-medium mb-1 block" htmlFor="share-api-url">
+                            Worker API URL
+                        </label>
+                        <input
+                            id="share-api-url"
+                            type="url"
+                            placeholder={buildTimeConfig.API_URL || "https://api.example.com"}
+                            value={shareApiUrl}
+                            onChange={(e) => setShareApiUrl(e.target.value)}
+                            disabled={!isMounted}
+                            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Base URL for /health, /upload, /share, /compatibility
+                        </p>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium mb-1 block" htmlFor="share-frontend-url">
+                            Frontend URL (for share links)
+                        </label>
+                        <input
+                            id="share-frontend-url"
+                            type="url"
+                            placeholder={
+                                buildTimeConfig.FRONTEND_URL ||
+                                (typeof window !== "undefined" ? window.location.origin : "https://app.example.com")
+                            }
+                            value={shareFrontendUrl}
+                            onChange={(e) => setShareFrontendUrl(e.target.value)}
+                            disabled={!isMounted}
+                            className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                        />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <Button
+                            size="sm"
+                            className="gap-2"
+                            disabled={!isMounted}
+                            onClick={() => {
+                                if (!shareApiUrl.trim() || !shareFrontendUrl.trim()) {
+                                    toast.error("Both API URL and Frontend URL are required");
+                                    return;
+                                }
+                                setApiOverride({
+                                    apiUrl: shareApiUrl.trim(),
+                                    frontendUrl: shareFrontendUrl.trim(),
+                                });
+                                toast.success("Share API settings saved", { id: "settings-saved" });
+                            }}
+                        >
+                            <Check className="w-4 h-4" />
+                            Save
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            disabled={!isMounted || testingShare}
+                            onClick={async () => {
+                                setTestingShare(true);
+                                try {
+                                    // Persist draft URLs for the probe if fields filled
+                                    if (shareApiUrl.trim() && shareFrontendUrl.trim()) {
+                                        setApiOverride({
+                                            apiUrl: shareApiUrl.trim(),
+                                            frontendUrl: shareFrontendUrl.trim(),
+                                        });
+                                    }
+                                    const result = await testShareConnection();
+                                    if (result.compatibility) {
+                                        toast.success(
+                                            `Connected — ${result.compatibility.name} v${result.compatibility.version} (protocol ${result.compatibility.protocol})`
+                                        );
+                                    } else {
+                                        toast.success("Health OK (no /compatibility response)");
+                                    }
+                                } catch (error) {
+                                    if (isCorsFailure(error)) {
+                                        toast.error(error instanceof Error ? error.message : "CORS blocked");
+                                    } else {
+                                        toast.error(
+                                            error instanceof Error ? error.message : "Connection test failed"
+                                        );
+                                    }
+                                } finally {
+                                    setTestingShare(false);
+                                }
+                            }}
+                        >
+                            {testingShare ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="w-4 h-4" />
+                            )}
+                            Test connection
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={!isMounted}
+                            onClick={() => setShowResetShareWarning(true)}
+                        >
+                            Default
+                        </Button>
+                    </div>
+                    {(buildTimeConfig.API_URL || buildTimeConfig.FRONTEND_URL) && (
+                        <p className="text-xs text-muted-foreground">
+                            Build defaults:{" "}
+                            <code className="bg-muted px-1 rounded text-[10px]">
+                                {buildTimeConfig.API_URL || "(no API)"}
+                            </code>
+                            {" · "}
+                            <code className="bg-muted px-1 rounded text-[10px]">
+                                {buildTimeConfig.FRONTEND_URL || "(no frontend)"}
+                            </code>
+                        </p>
+                    )}
+                </div>
+            </Card>
 
             {/* Theme Settings */}
             <Card className="p-6">
@@ -1271,6 +1433,61 @@ export default function SettingsPage(): React.JSX.Element {
                 </div>,
                 document.body
             )}
+
+            <ModalShell
+                open={showResetShareWarning}
+                onClose={() => setShowResetShareWarning(false)}
+                title="Reset share API to defaults"
+            >
+                <div className="flex items-start gap-3 mb-4">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1">Reset to build defaults?</h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                            This clears your browser override and restores the build-time API / frontend
+                            URLs. Unsaved edits in the fields above will be discarded.
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                            Defaults:{" "}
+                            <code className="bg-muted px-1 rounded">
+                                {buildTimeConfig.API_URL || "(empty)"}
+                            </code>
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                variant="default"
+                                onClick={() => {
+                                    clearApiOverride();
+                                    setShareApiUrl(buildTimeConfig.API_URL);
+                                    setShareFrontendUrl(buildTimeConfig.FRONTEND_URL);
+                                    setShowResetShareWarning(false);
+                                    toast.success("Share API reset to defaults", {
+                                        id: "settings-saved",
+                                    });
+                                }}
+                                className="w-full"
+                            >
+                                Reset to defaults
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowResetShareWarning(false)}
+                                className="w-full"
+                            >
+                                Keep my URLs
+                            </Button>
+                        </div>
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowResetShareWarning(false)}
+                        className="h-6 w-6 p-0"
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                </div>
+            </ModalShell>
 
             {showInvalidFilesDialog && invalidFiles.length > 0 && typeof document !== 'undefined' && createPortal(
                 <div

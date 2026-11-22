@@ -2,19 +2,17 @@
  * API client for markdown sharing
  */
 
-import { config } from "./config";
+import { getEffectiveApiConfig } from "./config";
 import {
   ApiRequestError,
   classifyFetchFailure,
   type ApiFailureKind,
 } from "./api-errors";
 
-const API_BASE_URL = config.API_URL;
-
 export interface UploadResponse {
   id: string;
-  shareUrl: string; // API URL
-  frontendShareUrl?: string; // Frontend route (if provided by API)
+  shareUrl: string;
+  frontendShareUrl?: string;
   size: number;
   uploadedAt: string;
 }
@@ -25,8 +23,22 @@ export interface ApiError {
   resetAt?: number;
 }
 
+export interface CompatibilityResponse {
+  name: string;
+  version: string;
+  protocol: number;
+  endpoints: Array<{ method: string; path: string; description?: string }>;
+  cors: {
+    allowedOriginsConfigured: boolean;
+  };
+}
+
 export { ApiRequestError, isCorsFailure } from "./api-errors";
 export type { ApiFailureKind };
+
+function apiBase(): string {
+  return getEffectiveApiConfig().API_URL;
+}
 
 async function toApiRequestError(
   error: unknown,
@@ -50,7 +62,8 @@ async function toApiRequestError(
 }
 
 export async function uploadMarkdown(content: string): Promise<UploadResponse> {
-  const uploadUrl = `${API_BASE_URL}/upload`;
+  const base = apiBase();
+  const uploadUrl = `${base}/upload`;
   try {
     const response = await fetch(uploadUrl, {
       method: "POST",
@@ -74,12 +87,13 @@ export async function uploadMarkdown(content: string): Promise<UploadResponse> {
     return response.json();
   } catch (error) {
     if (error instanceof ApiRequestError) throw error;
-    throw await toApiRequestError(error, `${API_BASE_URL}/health`, "Failed to upload markdown");
+    throw await toApiRequestError(error, `${base}/health`, "Failed to upload markdown");
   }
 }
 
 export async function fetchSharedMarkdown(id: string): Promise<string> {
-  const shareUrl = `${API_BASE_URL}/share/${id}`;
+  const base = apiBase();
+  const shareUrl = `${base}/share/${id}`;
   try {
     const response = await fetch(shareUrl, {
       method: "GET",
@@ -95,6 +109,49 @@ export async function fetchSharedMarkdown(id: string): Promise<string> {
     return response.text();
   } catch (error) {
     if (error instanceof ApiRequestError) throw error;
-    throw await toApiRequestError(error, `${API_BASE_URL}/health`, "Failed to fetch shared content");
+    throw await toApiRequestError(error, `${base}/health`, "Failed to fetch shared content");
   }
+}
+
+export async function fetchCompatibility(): Promise<CompatibilityResponse> {
+  const base = apiBase();
+  if (!base) {
+    throw new ApiRequestError("network", "Share API URL is not configured");
+  }
+  const url = `${base}/compatibility`;
+  try {
+    const response = await fetch(url, { method: "GET", cache: "no-cache" });
+    if (!response.ok) {
+      throw new ApiRequestError(
+        "http",
+        "Compatibility endpoint failed",
+        response.status
+      );
+    }
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${base}/health`, "Failed to reach compatibility endpoint");
+  }
+}
+
+export async function testShareConnection(): Promise<{
+  health: boolean;
+  compatibility: CompatibilityResponse | null;
+}> {
+  const base = apiBase();
+  if (!base) {
+    throw new ApiRequestError("network", "Share API URL is not configured");
+  }
+  const healthRes = await fetch(`${base}/health`, { method: "GET", cache: "no-cache" });
+  if (!healthRes.ok) {
+    throw new ApiRequestError("http", "Health check failed", healthRes.status);
+  }
+  let compatibility: CompatibilityResponse | null = null;
+  try {
+    compatibility = await fetchCompatibility();
+  } catch {
+    compatibility = null;
+  }
+  return { health: true, compatibility };
 }

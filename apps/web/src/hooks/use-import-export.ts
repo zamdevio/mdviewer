@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { setSettings as updateSettings, getSavedFiles, setSavedFiles, setFileContent, setContent, setEditingFile, type SettingsData, SavedFile } from "@/lib/storage";
+import { setSettings as updateSettings, getSavedFiles, setSavedFiles, setFileContent, setContent, setEditingFile, setProjects, type SettingsData, SavedFile } from "@/lib/storage";
 import { encodeBase64, decodeBase64, decryptData, isEncryptedFormat } from "@/lib/utils";
 import { truncateFilename } from "@/lib/editor";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
@@ -29,8 +29,19 @@ export function useImportExport() {
                     defaultEditorMode: data.settings.defaultEditorMode ?? 'both',
                     showEditorStatusBar: data.settings.showEditorStatusBar ?? true,
                     showSpellChecker: data.settings.showSpellChecker ?? true,
+                    filesLayout: data.settings.filesLayout === 'tree' ? 'tree' : 'grid',
                 };
                 updateSettings(settings);
+
+                if (data.projects && Array.isArray(data.projects)) {
+                    setProjects(
+                        data.projects.map((p) => ({
+                            id: p.id,
+                            name: p.name,
+                            createdAt: p.createdAt || new Date().toISOString(),
+                        }))
+                    );
+                }
                 // Call callback if provided
                 if (onSettingsUpdate) {
                     onSettingsUpdate(settings);
@@ -84,6 +95,7 @@ export function useImportExport() {
                         id: file.id || `file_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
                         filename: file.filename,
                         timestamp: file.timestamp || new Date().toISOString(),
+                        projectId: file.projectId,
                     };
                     if (existingIndex >= 0) {
                         savedFiles[existingIndex] = fileData;

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Search, ExternalLink, FileText, Settings } from "lucide-react";
 import { fetchSharedMarkdown } from "@/lib/api";
 import { toast } from "sonner";
-import { config, isApiConfigured } from "@/lib/config";
+import { getEffectiveApiConfig, isApiConfigured } from "@/lib/config";
 
 export default function SearchPage(): React.JSX.Element {
     const [shareId, setShareId] = useState("");
@@ -113,12 +113,12 @@ export default function SearchPage(): React.JSX.Element {
                     <Settings className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
                     <h2 className="text-lg font-semibold mb-2">Share API not configured</h2>
                     <p className="text-sm text-muted-foreground mb-4">
-                        Set <code className="text-xs">VITE_API_URL</code> / frontend URL so search can reach the worker.
+                        Set the share worker URL under Settings → Share (or build-time VITE_* vars).
                     </p>
                     <Button asChild variant="outline" className="gap-2">
-                        <Link to="/settings">
+                        <Link to="/settings#share">
                             <Settings className="w-4 h-4" />
-                            Open settings
+                            Open share settings
                         </Link>
                     </Button>
                 </Card>
@@ -130,8 +130,8 @@ export default function SearchPage(): React.JSX.Element {
                         ref={searchInputRef}
                         type="text"
                         placeholder={
-                            config.FRONTEND_URL
-                                ? `Share ID or URL (e.g. abc123 or ${config.FRONTEND_URL}/share?id=…)`
+                            getEffectiveApiConfig().FRONTEND_URL
+                                ? `Share ID or URL (e.g. abc123 or ${getEffectiveApiConfig().FRONTEND_URL}/share?id=…)`
                                 : "Share ID or full share URL"
                         }
                         value={shareId}

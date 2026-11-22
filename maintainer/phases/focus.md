@@ -11,7 +11,7 @@ All plans live under `maintainer/phases/`.
 | Priority | Vertical | Notes |
 |----------|----------|-------|
 | 1 | Feature design intake | Instinct share + polish lists when pasted |
-| 2 | Hold share / perf feature code | After phase docs land |
+| 2 | Hold large-doc perf until promoted | [`perf-large-docs.md`](./perf-large-docs.md) |
 | 3 | — | Slot free |
 
 ## Queued — do not start
@@ -20,7 +20,7 @@ All plans live under `maintainer/phases/`.
 |---|------|-----|
 | 1 | Database-free share features | (pending design paste) |
 | 2 | Large-doc performance | [`perf-large-docs.md`](./perf-large-docs.md) |
-| 3 | Optional UI leftovers (settings portals → ModalShell, lightbox) | [`ui.md`](./ui.md) |
+| 3 | Nested projects / drag-drop | [`files-share-selfhost.md`](./files-share-selfhost.md) follow-ups |
 
 ## Next task
 

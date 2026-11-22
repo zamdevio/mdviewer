@@ -5,7 +5,7 @@
  */
 
 import { uploadMarkdown, isCorsFailure } from '@/lib/api';
-import { isApiConfigured, config } from '@/lib/config';
+import { isApiConfigured, getEffectiveApiConfig } from '@/lib/config';
 import { addSharedLink, type SharedLink } from '@/lib/storage';
 import type { EditorState } from '@/types';
 
@@ -60,7 +60,8 @@ export async function handleShare(
         
         // Use frontendShareUrl from response directly (it's already a full URL)
         // Only construct URL if frontendShareUrl is not provided
-        const fullUrl = result.frontendShareUrl || `${config.FRONTEND_URL}/share?id=${result.id}`;
+        const { FRONTEND_URL } = getEffectiveApiConfig();
+        const fullUrl = result.frontendShareUrl || `${FRONTEND_URL}/share?id=${result.id}`;
 
         // Store shared link
         const sharedLink: SharedLink = {

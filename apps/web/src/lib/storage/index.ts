@@ -14,6 +14,13 @@ export interface SettingsData {
     defaultEditorMode: 'both' | 'editor' | 'preview';
     showEditorStatusBar: boolean;
     showSpellChecker: boolean;
+    filesLayout: 'grid' | 'tree';
+}
+
+export interface Project {
+    id: string;
+    name: string;
+    createdAt: string;
 }
 
 export interface SavedFile {
@@ -22,6 +29,7 @@ export interface SavedFile {
     content?: string;
     timestamp?: string;
     editing?: boolean; // Mark file as currently being edited
+    projectId?: string; // Virtual project / folder (optional)
 }
 
 export interface SharedLink {
@@ -46,6 +54,7 @@ class StorageManager {
         ACTIVATE_DISMISSED: 'mdviewer_activate_dismissed',
         SHARED_LINKS: 'mdviewer_shared_links',
         TEMP_FILE: 'mdviewer_temp_file', // Temporary unsaved content
+        PROJECTS: 'mdviewer_projects',
     } as const;
 
     private constructor() {
@@ -85,6 +94,7 @@ class StorageManager {
                 defaultEditorMode: parsed.defaultEditorMode ?? 'both',
                 showEditorStatusBar: parsed.showEditorStatusBar ?? true,
                 showSpellChecker: parsed.showSpellChecker ?? true,
+                filesLayout: parsed.filesLayout === 'tree' ? 'tree' : 'grid',
             };
         } catch {
             return null;
@@ -107,6 +117,7 @@ class StorageManager {
                 defaultEditorMode: 'both',
                 showEditorStatusBar: true,
                 showSpellChecker: true,
+                filesLayout: 'grid',
             };
             return defaults[key];
         }
@@ -130,6 +141,7 @@ class StorageManager {
                 defaultEditorMode: settings.defaultEditorMode ?? current?.defaultEditorMode ?? 'both',
                 showEditorStatusBar: settings.showEditorStatusBar ?? current?.showEditorStatusBar ?? true,
                 showSpellChecker: settings.showSpellChecker ?? current?.showSpellChecker ?? true,
+                filesLayout: settings.filesLayout ?? current?.filesLayout ?? 'grid',
             };
             
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(updated));
@@ -383,6 +395,47 @@ class StorageManager {
     /**
      * Get all shared links
      */
+    // ============================================
+    // Projects (virtual folders)
+    // ============================================
+
+    getProjects(): Project[] {
+        if (typeof window === 'undefined') return [];
+        try {
+            const data = localStorage.getItem(this.KEYS.PROJECTS);
+            if (!data) return [];
+            return JSON.parse(data) as Project[];
+        } catch {
+            return [];
+        }
+    }
+
+    setProjects(projects: Project[]): void {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(this.KEYS.PROJECTS, JSON.stringify(projects));
+        window.dispatchEvent(new Event('storage'));
+    }
+
+    upsertProject(project: Project): void {
+        const projects = this.getProjects();
+        const idx = projects.findIndex((p) => p.id === project.id);
+        if (idx >= 0) {
+            projects[idx] = project;
+        } else {
+            projects.push(project);
+        }
+        this.setProjects(projects);
+    }
+
+    removeProject(projectId: string): void {
+        this.setProjects(this.getProjects().filter((p) => p.id !== projectId));
+        // Unassign files from deleted project
+        const files = this.getSavedFiles().map((f) =>
+            f.projectId === projectId ? { ...f, projectId: undefined } : f
+        );
+        this.setSavedFiles(files);
+    }
+
     getSharedLinks(): SharedLink[] {
         if (typeof window === 'undefined') return [];
         
@@ -513,6 +566,8 @@ class StorageManager {
             localStorage.removeItem(this.KEYS.TEMP_FILE);
             localStorage.removeItem(this.KEYS.SHARED_LINKS);
             localStorage.removeItem(this.KEYS.ACTIVATE_DISMISSED);
+            localStorage.removeItem('mdviewer_api_override');
+            localStorage.removeItem('mdviewer_projects');
             
             // Clear all editing flags from saved files
             this.clearAllEditingFlags();
@@ -527,6 +582,7 @@ class StorageManager {
                 defaultEditorMode: 'both',
                 showEditorStatusBar: true,
                 showSpellChecker: true,
+                filesLayout: 'grid',
             };
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(defaultSettings));
             
@@ -600,4 +656,9 @@ export const clearAllData = () => storage.clearAllData();
 export const getEditingFileFromSavedFiles = () => storage.getEditingFileFromSavedFiles();
 
 export const onStorageChange = (callback: (key: string | null) => void) => storage.onStorageChange(callback);
+
+export const getProjects = () => storage.getProjects();
+export const setProjects = (projects: Project[]) => storage.setProjects(projects);
+export const upsertProject = (project: Project) => storage.upsertProject(project);
+export const removeProject = (projectId: string) => storage.removeProject(projectId);
 

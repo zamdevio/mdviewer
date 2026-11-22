@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { config } from "@/lib/config";
+import { getEffectiveApiConfig } from "@/lib/config";
 import { probeApiHealth } from "@/lib/api-errors";
 
 export type ConnectionStatus = "online" | "offline" | "server-down" | "cors-blocked";
@@ -28,10 +28,11 @@ export function useConnection() {
   });
 
   const checkServerHealth = useCallback(async (): Promise<"ok" | "cors" | "down" | "skip"> => {
-    if (!config.API_URL || !config.API_URL.trim()) {
+    const { API_URL } = getEffectiveApiConfig();
+    if (!API_URL || !API_URL.trim()) {
       return "skip";
     }
-    return probeApiHealth(`${config.API_URL}/health`);
+    return probeApiHealth(`${API_URL}/health`);
   }, []);
 
   const updateStatus = useCallback(async () => {
