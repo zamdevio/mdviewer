@@ -616,6 +616,19 @@ class StorageManager {
         this.setTrash([]);
     }
 
+    /** Restore every trash entry (newest-first order preserved via restore). */
+    restoreAllTrash(): { restored: number; failed: number } {
+        const ids = this.getTrash().map((e) => e.id);
+        let restored = 0;
+        let failed = 0;
+        for (const id of ids) {
+            const result = this.restoreTrashEntry(id);
+            if (result.success) restored += 1;
+            else failed += 1;
+        }
+        return { restored, failed };
+    }
+
     getSharedLinks(): SharedLink[] {
         if (typeof window === 'undefined') return [];
         
@@ -851,4 +864,5 @@ export const trashOrDeleteProject = (projectId: string) => storage.trashOrDelete
 export const restoreTrashEntry = (entryId: string) => storage.restoreTrashEntry(entryId);
 export const purgeTrashEntry = (entryId: string) => storage.purgeTrashEntry(entryId);
 export const emptyTrash = () => storage.emptyTrash();
+export const restoreAllTrash = () => storage.restoreAllTrash();
 

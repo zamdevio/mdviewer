@@ -99,6 +99,16 @@ const MarkdownComponents: Components = {
     p: MarkdownBadges,
     span: (props) => <span {...props} />,
     div: (props) => <div {...props} />,
+    a: ({ href, children, ...rest }) => (
+        <a
+            href={href}
+            {...rest}
+            target="_blank"
+            rel="noopener noreferrer"
+        >
+            {children}
+        </a>
+    ),
 };
 
 export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps) {
@@ -112,8 +122,9 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
                 remarkPlugins={[remarkGfm, remarkMath, remarkEmoji]}
                 rehypePlugins={[
                     rehypeRaw,
-                    [rehypeSanitize, sanitizeSchema],
                     rehypeKatex,
+                    // Sanitize after KaTeX so generated HTML is filtered too
+                    [rehypeSanitize, sanitizeSchema],
                 ]}
                 components={MarkdownComponents}
             >

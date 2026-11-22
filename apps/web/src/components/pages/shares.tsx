@@ -150,7 +150,7 @@ export default function SharesPage(): React.JSX.Element {
                                     </Button>
                                 </div>
                                 <div className="flex gap-2">
-                                    <a href={link.url} target="_blank" className="flex-1 min-w-0">
+                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0">
                                         <Button variant="default" size="sm" className="w-full gap-2">
                                             <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                             <span className="hidden sm:inline">View</span>

@@ -60,14 +60,32 @@ export function getApiOverride(): ApiOverride | null {
   }
 }
 
+/** Only allow http(s) absolute URLs for share API overrides (no javascript:). */
+export function isSafeHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 export function setApiOverride(override: ApiOverride): void {
   if (typeof window === "undefined") return;
   const next: ApiOverride = {};
   if (override.apiUrl?.trim()) {
-    next.apiUrl = removeTrailingSlash(override.apiUrl.trim());
+    const apiUrl = removeTrailingSlash(override.apiUrl.trim());
+    if (!isSafeHttpUrl(apiUrl)) {
+      throw new Error("API URL must be an http(s) URL");
+    }
+    next.apiUrl = apiUrl;
   }
   if (override.frontendUrl?.trim()) {
-    next.frontendUrl = removeTrailingSlash(override.frontendUrl.trim());
+    const frontendUrl = removeTrailingSlash(override.frontendUrl.trim());
+    if (!isSafeHttpUrl(frontendUrl)) {
+      throw new Error("Frontend URL must be an http(s) URL");
+    }
+    next.frontendUrl = frontendUrl;
   }
   localStorage.setItem(API_OVERRIDE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event("storage"));

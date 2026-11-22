@@ -47,6 +47,9 @@ const features = [
   },
 ] as const;
 
+const securityBlurb =
+  "Local-first by default. Preview HTML is sanitized, Mermaid runs strict, and Pages ships CSP + frame protections. See docs/security.md.";
+
 export default function Home() {
   const [mounted, setMounted] = useState(false);
 
@@ -139,6 +142,28 @@ export default function Home() {
               </div>
             </div>
           ))}
+        </section>
+
+        <section
+          className={`w-full max-w-3xl text-center transition duration-1000 delay-700 ${
+            mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          }`}
+        >
+          <h2
+            className="text-lg font-semibold text-foreground"
+            style={{ fontFamily: "inherit" }}
+          >
+            Security-minded by design
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">{securityBlurb}</p>
+          <a
+            href="https://github.com/zamdevio/mdviewer/blob/main/docs/security.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-block text-sm text-primary underline-offset-4 hover:underline"
+          >
+            Read the security notes
+          </a>
         </section>
       </div>
     </div>

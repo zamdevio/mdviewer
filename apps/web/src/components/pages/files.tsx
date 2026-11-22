@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, LayoutGrid, FolderTree } from "lucide-react";
+import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, LayoutGrid, FolderTree, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, trashOrDeleteFile, trashOrDeleteProject, isTrashEnabled, addSharedLink, type SavedFile, type Project } from "@/lib/storage";
-import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile } from "@/lib/editor";
+import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile, processImportedFile, saveFile } from "@/lib/editor";
 import { FilesTree } from "@/components/pages/files/FilesTree";
 import { ProjectPicker } from "@/components/pages/files/ProjectPicker";
 import { packProject } from "@/lib/project-pack";
@@ -416,6 +416,47 @@ export default function FilesPage(): React.JSX.Element {
                             <span className="hidden sm:inline">Tree</span>
                         </Button>
                     </div>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = ".md,.txt,text/markdown,text/plain";
+                            input.onchange = async (e) => {
+                                const file = (e.target as HTMLInputElement).files?.[0];
+                                if (!file) return;
+                                try {
+                                    const { filename, content } =
+                                        await processImportedFile(file);
+                                    // Ungrouped: no projectId; keep import name (unique if clash)
+                                    const result = saveFile(filename, content, null, true);
+                                    if (!result.success || !result.file) {
+                                        toast.error(
+                                            result.error || "Failed to import file"
+                                        );
+                                        return;
+                                    }
+                                    clearAllEditingFlags();
+                                    loadFiles();
+                                    toast.success(
+                                        `Imported “${truncateFilenameForDisplay(result.file.filename)}” (Ungrouped)`
+                                    );
+                                } catch (error) {
+                                    toast.error(
+                                        error instanceof Error
+                                            ? error.message
+                                            : "Failed to import file"
+                                    );
+                                }
+                            };
+                            input.click();
+                        }}
+                    >
+                        <Upload className="w-4 h-4" />
+                        <span className="hidden sm:inline">Import</span>
+                    </Button>
                     <Link to="/editor?new" onClick={() => clearAllEditingFlags()}>
                         <Button variant="default" className="gap-2">
                             <Edit3 className="w-4 h-4" />

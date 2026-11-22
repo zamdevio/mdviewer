@@ -64,6 +64,11 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 - Workers + R2, CORS allowlist, upload rate limiting, OpenAPI `/docs`
 - Roadmap (see `maintainer/phases/`): fixed TTL, password-gated mutate, fair-use fingerprints, MCP / `llms.txt`
 
+### Security
+- Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode
+- Pages security headers (CSP, frame deny, COOP); share API override accepts http(s) only
+- Details, mitigations, and remaining gaps: [`docs/security.md`](./docs/security.md)
+
 ## Quick start
 
 Requires **Node.js >= 20** and **pnpm**.
@@ -107,6 +112,7 @@ maintainer/     Internal phases, systems maps, agent guides
 | [`docs/architecture.md`](./docs/architecture.md) | High-level layout |
 | [`docs/api.md`](./docs/api.md) | Worker endpoints + compatibility |
 | [`docs/deploy.md`](./docs/deploy.md) | Pages + Worker + CI |
+| [`docs/security.md`](./docs/security.md) | Threat model + mitigations |
 | [`maintainer/`](./maintainer/) | Focus, phases, systems (contributors) |
 
 ## Development

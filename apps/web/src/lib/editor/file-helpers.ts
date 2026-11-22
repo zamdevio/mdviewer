@@ -182,13 +182,17 @@ export function generateUniqueFilename(baseFilename: string, existingFilenames: 
  */
 export async function processImportedFile(file: File): Promise<{ filename: string; content: string }> {
     const text = await file.text();
-    let importedFileName = file.name.replace(/\.(md|txt)$/i, '');
-    
-    // Truncate to max length if needed
+    let importedFileName = sanitizeFileName(file.name.replace(/\.(txt)$/i, ""));
+
+    const validation = validateFileName(importedFileName);
+    if (!validation.valid) {
+        throw new Error(validation.error || "Invalid filename");
+    }
+
     if (importedFileName.length > MAX_FILENAME_LENGTH) {
         importedFileName = importedFileName.substring(0, MAX_FILENAME_LENGTH);
     }
-    
+
     return {
         filename: importedFileName,
         content: text,

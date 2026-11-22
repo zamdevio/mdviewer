@@ -41,6 +41,7 @@ import {
     getProjects,
     getTrash,
     restoreTrashEntry,
+    restoreAllTrash,
     purgeTrashEntry,
     emptyTrash,
     onStorageChange,
@@ -110,6 +111,7 @@ export default function SettingsPage(): React.JSX.Element {
     });
     const [confirmDisableTrash, setConfirmDisableTrash] = useState(false);
     const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
+    const [confirmPurgeTrashId, setConfirmPurgeTrashId] = useState<string | null>(null);
     const [exportPassword, setExportPassword] = useState("");
     const [importPassword, setImportPassword] = useState("");
     const [showExportPassword, setShowExportPassword] = useState(false);
@@ -435,11 +437,21 @@ export default function SettingsPage(): React.JSX.Element {
                                     toast.error("Both API URL and Frontend URL are required");
                                     return;
                                 }
-                                setApiOverride({
-                                    apiUrl: shareApiUrl.trim(),
-                                    frontendUrl: shareFrontendUrl.trim(),
-                                });
-                                toast.success("Share API settings saved", { id: "settings-saved" });
+                                try {
+                                    setApiOverride({
+                                        apiUrl: shareApiUrl.trim(),
+                                        frontendUrl: shareFrontendUrl.trim(),
+                                    });
+                                    toast.success("Share API settings saved", {
+                                        id: "settings-saved",
+                                    });
+                                } catch (error) {
+                                    toast.error(
+                                        error instanceof Error
+                                            ? error.message
+                                            : "Invalid share API URL"
+                                    );
+                                }
                             }}
                         >
                             <Check className="w-4 h-4" />
@@ -455,10 +467,19 @@ export default function SettingsPage(): React.JSX.Element {
                                 try {
                                     // Persist draft URLs for the probe if fields filled
                                     if (shareApiUrl.trim() && shareFrontendUrl.trim()) {
-                                        setApiOverride({
-                                            apiUrl: shareApiUrl.trim(),
-                                            frontendUrl: shareFrontendUrl.trim(),
-                                        });
+                                        try {
+                                            setApiOverride({
+                                                apiUrl: shareApiUrl.trim(),
+                                                frontendUrl: shareFrontendUrl.trim(),
+                                            });
+                                        } catch (error) {
+                                            toast.error(
+                                                error instanceof Error
+                                                    ? error.message
+                                                    : "Invalid share API URL"
+                                            );
+                                            return;
+                                        }
                                     }
                                     const result = await testShareConnection();
                                     if (result.compatibility) {
@@ -1036,26 +1057,46 @@ export default function SettingsPage(): React.JSX.Element {
                                                 variant="ghost"
                                                 className="h-7 w-7 p-0 shrink-0 text-destructive"
                                                 title="Delete forever"
-                                                onClick={() => {
-                                                    purgeTrashEntry(entry.id);
-                                                    setTrashItems(getTrash());
-                                                    toast.success("Deleted forever");
-                                                }}
+                                                onClick={() => setConfirmPurgeTrashId(entry.id)}
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
                                     ))}
                                 </div>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    className="gap-2"
-                                    onClick={() => setConfirmEmptyTrash(true)}
-                                >
-                                    Empty trash
-                                </Button>
+                                <div className="flex flex-wrap items-center justify-end gap-2">
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() => {
+                                            const { restored, failed } = restoreAllTrash();
+                                            setTrashItems(getTrash());
+                                            if (failed > 0) {
+                                                toast.warning(
+                                                    `Restored ${restored}, ${failed} failed`
+                                                );
+                                            } else {
+                                                toast.success(
+                                                    `Restored ${restored} item${restored === 1 ? "" : "s"}`
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        Restore all
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="destructive"
+                                        className="gap-2"
+                                        onClick={() => setConfirmEmptyTrash(true)}
+                                    >
+                                        Empty trash
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1618,6 +1659,26 @@ export default function SettingsPage(): React.JSX.Element {
                     toast.success("Trash emptied");
                 }}
                 onCancel={() => setConfirmEmptyTrash(false)}
+            />
+
+            <ConfirmDeleteDialog
+                open={!!confirmPurgeTrashId}
+                title="Delete forever"
+                name={(() => {
+                    const entry = trashItems.find((e) => e.id === confirmPurgeTrashId);
+                    if (!entry) return null;
+                    return entry.kind === "file" ? entry.file.filename : entry.project.name;
+                })()}
+                description="Permanently remove this item from Trash. This cannot be undone."
+                confirmLabel="Delete forever"
+                onConfirm={() => {
+                    if (!confirmPurgeTrashId) return;
+                    purgeTrashEntry(confirmPurgeTrashId);
+                    setTrashItems(getTrash());
+                    setConfirmPurgeTrashId(null);
+                    toast.success("Deleted forever");
+                }}
+                onCancel={() => setConfirmPurgeTrashId(null)}
             />
 
             <ModalShell

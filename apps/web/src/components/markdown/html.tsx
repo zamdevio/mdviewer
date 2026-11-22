@@ -1,4 +1,3 @@
-
 import { Fragment } from "react";
 import type { ReactNode } from "react";
 
@@ -7,10 +6,10 @@ import type { ReactNode } from "react";
  * Sanitizes and renders HTML elements safely
  * This component is used by rehype-raw to render HTML in markdown
  */
-export function MarkdownHTML({ 
-    children 
-}: { 
-    node: React.ReactNode; 
+export function MarkdownHTML({
+    children,
+}: {
+    node: React.ReactNode;
     children?: ReactNode;
 }) {
     // This is handled by rehype-sanitize configuration
@@ -20,40 +19,84 @@ export function MarkdownHTML({
 
 /**
  * Sanitization schema for rehype-sanitize
- * Allows safe HTML elements and attributes
+ * Tight allowlist — no inline style (overlay phishing), no data: URLs
  */
 export const sanitizeSchema = {
     tagNames: [
-        'div', 'span', 'p', 'br', 'hr',
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'strong', 'em', 'u', 's', 'code', 'pre',
-        'ul', 'ol', 'li',
-        'blockquote',
-        'a', 'img',
-        'table', 'thead', 'tbody', 'tr', 'th', 'td',
-        'details', 'summary',
-        'abbr', 'b', 'i', 'small', 'sub', 'sup',
+        "div",
+        "span",
+        "p",
+        "br",
+        "hr",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "strong",
+        "em",
+        "u",
+        "s",
+        "code",
+        "pre",
+        "ul",
+        "ol",
+        "li",
+        "blockquote",
+        "a",
+        "img",
+        "table",
+        "thead",
+        "tbody",
+        "tr",
+        "th",
+        "td",
+        "details",
+        "summary",
+        "abbr",
+        "b",
+        "i",
+        "small",
+        "sub",
+        "sup",
+        // KaTeX / math fragments after rehype-katex
+        "math",
+        "semantics",
+        "annotation",
+        "mrow",
+        "mi",
+        "mo",
+        "mn",
+        "msup",
+        "msub",
+        "mfrac",
+        "msqrt",
+        "mroot",
+        "mtable",
+        "mtr",
+        "mtd",
     ],
     attributes: {
-        '*': ['id', 'class', 'title', 'className'],
-        'div': ['align', 'style'],
-        'span': ['align', 'style'],
-        'p': ['align', 'style'],
-        'code': ['className', 'class'],
-        'pre': ['className', 'class'],
-        'a': ['href', 'title', 'target', 'rel'],
-        'img': ['src', 'alt', 'title', 'width', 'height', 'style'],
-        'table': ['align', 'style'],
-        'th': ['align', 'colspan', 'rowspan', 'style'],
-        'td': ['align', 'colspan', 'rowspan', 'style'],
-        'details': ['open'],
+        "*": ["id", "class", "title", "className"],
+        div: ["align"],
+        span: ["align"],
+        p: ["align"],
+        code: ["className", "class"],
+        pre: ["className", "class"],
+        a: ["href", "title", "target", "rel"],
+        img: ["src", "alt", "title", "width", "height"],
+        table: ["align"],
+        th: ["align", "colspan", "rowspan"],
+        td: ["align", "colspan", "rowspan"],
+        details: ["open"],
+        annotation: ["encoding"],
     },
     protocols: {
-        href: ['http', 'https', 'mailto'],
-        src: ['http', 'https', 'data'],
+        href: ["http", "https", "mailto"],
+        src: ["http", "https"],
     },
-    clobber: ['id', 'name'],
-    clobberPrefix: 'user-content-',
-    strip: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button'],
+    clobber: ["id", "name"],
+    clobberPrefix: "user-content-",
+    strip: ["script", "iframe", "object", "embed", "form", "input", "button"],
 };
-
