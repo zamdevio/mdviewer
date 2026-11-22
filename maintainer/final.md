@@ -10,10 +10,11 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 
 - [x] Commit hygiene + C–E + perf slices (local; push when ready)
 - [x] Confirm no stale `apps/worker/wrangler.toml` (jsonc only)
-- [ ] Redeploy Pages (`markview`) and Worker (`mdviewer-api`)
+- [x] Redeploy Pages (`markview`) and Worker (`mdviewer-api`) (CI on main; cron on Paid Workers)
 - [x] Local smoke (`wrangler dev`): health, compatibility protocol 2, llms*, MCP tools/list+get_share, upload/meta/PUT/DELETE
-- [ ] Prod smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml`
+- [x] Prod smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml` (+ Worker `/health` `/compatibility` `/mcp`)
 - [ ] Manual: `#heading` fragment links in editor split preview + `/share`
+- [x] Confirm Worker `/favicon.svg` + MCP `serverInfo.icons` after favicon deploy (`b0d9ca2`)
 
 ## 2. Docs honesty
 
@@ -33,7 +34,7 @@ See [`phases/01-share-protocol.md`](./phases/01-share-protocol.md).
 - [x] Fixed TTL (default 7d / max 30d) + cron sweep
 - [x] Fair-use DO (IP+UA); stricter on agent-shaped traffic
 - [x] Bump `/compatibility` protocol; update `docs/api.md` + systems worker doc
-- [ ] Redeploy Worker so protocol 2 is live on prod
+- [x] Redeploy Worker so protocol 2 is live on prod
 
 ## 4. Phase D — unified share dialog
 
@@ -52,7 +53,8 @@ See [`phases/03-agent-surfaces.md`](./phases/03-agent-surfaces.md).
 - [x] Worker MCP tools on same service (`get_share`, `upload_share`, …)
 - [x] Worker-hosted `/llms*` routes
 - [x] Compatibility + `docs/api.md` when MCP ships
-- [ ] Redeploy Worker so `/mcp` + `/llms*` are live on prod
+- [x] Redeploy Worker so `/mcp` + `/llms*` are live on prod
+- [x] MCP brand icon (`/favicon.svg` + SEP-973 `serverInfo.icons`) live after `b0d9ca2` deploy
 
 ## 6. Perf (large docs)
 
