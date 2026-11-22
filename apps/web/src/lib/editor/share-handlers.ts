@@ -93,7 +93,7 @@ export async function handleShare(
       resultId = updated.id;
       expiresAt = updated.expiresAt;
       const { FRONTEND_URL } = getEffectiveApiConfig();
-      frontendShareUrl = `${FRONTEND_URL}/share?id=${resultId}`;
+      frontendShareUrl = `${FRONTEND_URL}/share/${encodeURIComponent(resultId)}`;
     } else {
       const result = await uploadMarkdown(markdown, uploadOpts);
       resultId = result.id;
@@ -103,7 +103,8 @@ export async function handleShare(
 
     const { FRONTEND_URL } = getEffectiveApiConfig();
     const fullUrl =
-      frontendShareUrl || `${FRONTEND_URL}/share?id=${resultId}`;
+      frontendShareUrl ||
+      `${FRONTEND_URL}/share/${encodeURIComponent(resultId)}`;
 
     const sharedLink: SharedLink = {
       id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,

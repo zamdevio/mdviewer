@@ -20,6 +20,10 @@ MDViewer is a client-side Markdown app (Vite + React) with an optional edge shar
 - [MCP](https://api.mdviewer.zamdev.dev/mcp): JSON-RPC tools (`POST`)
 - [Source](https://github.com/zamdevio/mdviewer): GitHub
 
+## Share links
+
+Use path form only: SPA `https://mdviewer.zamdev.dev/share/<id>`, Worker raw `https://api.mdviewer.zamdev.dev/share/<id>`.
+
 ## Optional
 
 - [Pages deploy](https://markview.pages.dev/): Cloudflare Pages mirror

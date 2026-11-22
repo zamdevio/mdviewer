@@ -9,7 +9,8 @@ const pkg = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "package.json"), "utf8"),
 ) as { version: string };
 const APP_VERSION = pkg.version;
-const CACHE_VERSION = `v${APP_VERSION.split(".").slice(0, 2).join(".")}`;
+// Full semver so every patch deploy busts SW caches (major.minor left stale Next shells around)
+const CACHE_VERSION = `v${APP_VERSION}`;
 const SW_PLACEHOLDER = "__MDVIEWER_CACHE_VERSION__";
 
 function readSwTemplate(): string {

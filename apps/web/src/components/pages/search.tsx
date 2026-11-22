@@ -28,24 +28,17 @@ export default function SearchPage(): React.JSX.Element {
         if (!trimmed) return null;
 
         try {
-            // Try to parse as URL
             const url = new URL(trimmed);
-            // Check if it's a share URL
-            if (url.pathname.startsWith('/share')) {
-                // Extract from query param: ?id=abc123
-                const id = url.searchParams.get('id');
-                if (id) return id;
-                // Extract from path: /share/abc123
-                const pathMatch = url.pathname.match(/^\/share\/([^\/]+)/);
+            if (url.pathname.startsWith("/share/")) {
+                const pathMatch = url.pathname.match(/^\/share\/([^/]+)/);
                 if (pathMatch) return pathMatch[1];
             }
-            // Check if it's a share URL without protocol
-            if (trimmed.includes('/share')) {
-                const match = trimmed.match(/\/share[\/?]id=([^&\s]+)|\/share\/([^\/\s]+)/);
-                if (match) return match[1] || match[2];
-            }
         } catch {
-            // Not a URL, treat as ID
+            // Not a URL — bare share id below
+        }
+        if (trimmed.includes("/share/")) {
+            const pathMatch = trimmed.match(/\/share\/([^/?#\s]+)/);
+            if (pathMatch) return pathMatch[1];
         }
 
         // If it's just an ID (alphanumeric, no spaces, no slashes)
@@ -131,7 +124,7 @@ export default function SearchPage(): React.JSX.Element {
                         type="text"
                         placeholder={
                             getEffectiveApiConfig().FRONTEND_URL
-                                ? `Share ID or URL (e.g. abc123 or ${getEffectiveApiConfig().FRONTEND_URL}/share?id=…)`
+                                ? `Share ID or URL (e.g. abc123 or ${getEffectiveApiConfig().FRONTEND_URL}/share/…)`
                                 : "Share ID or full share URL"
                         }
                         value={shareId}
@@ -191,7 +184,7 @@ export default function SearchPage(): React.JSX.Element {
                     </div>
 
                     <div className="flex gap-2 flex-wrap">
-                        <Link to={`/share?id=${shareId}`} className="flex-1 min-w-[120px]">
+                        <Link to={`/share/${encodeURIComponent(shareId)}`} className="flex-1 min-w-[120px]">
                             <Button variant="default" className="w-full gap-2">
                                 <ExternalLink className="w-4 h-4" />
                                 View Full Content

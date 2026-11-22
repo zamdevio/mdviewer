@@ -37,10 +37,15 @@ Upload headers: `X-Share-Password`, `X-Share-TTL-Seconds` (default 7d, max 30d),
 
 `get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share` — same semantics as REST; mutating tools take a `password` argument. Fair-use is stricter for MCP (`X-MDViewer-Client: mcp`).
 
-## Share URLs (frontend)
+## Share URLs (same path shape everywhere)
 
-- `https://mdviewer.zamdev.dev/share?id=<id>`
-- `https://mdviewer.zamdev.dev/share/<id>`
+| Surface | URL | Returns |
+|---------|-----|---------|
+| SPA viewer | `https://mdviewer.zamdev.dev/share/<id>` | Rendered markdown UI |
+| Worker raw | `https://api.mdviewer.zamdev.dev/share/<id>` | Plain markdown (`text/plain`) |
+| Worker meta | `https://api.mdviewer.zamdev.dev/share/<id>/meta` | JSON metadata |
+
+MCP `upload_share` returns `frontendShareUrl` (SPA) and `contentUrl` (Worker raw). Both are `/share/<id>`.
 
 In-doc fragment links (`#heading`) work in editor preview and share viewer (first matching heading wins).
 

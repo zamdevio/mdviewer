@@ -209,18 +209,26 @@ async function callTool(
         protocol: 2,
       };
       await putShare(env.R2_BUCKET, meta, content);
-      const shareUrl = new URL(frontendOrigin);
-      shareUrl.pathname = "/share";
-      shareUrl.searchParams.set("id", id);
+      const frontendShareUrl = new URL(frontendOrigin);
+      frontendShareUrl.pathname = `/share/${encodeURIComponent(id)}`;
+      frontendShareUrl.search = "";
+      frontendShareUrl.hash = "";
+      // Raw markdown is always path-style on the Worker (same shape as SPA viewer).
+      const contentUrl = new URL(request.url);
+      contentUrl.pathname = `/share/${encodeURIComponent(id)}`;
+      contentUrl.search = "";
+      contentUrl.hash = "";
       return toolText(
         JSON.stringify(
           {
             id,
-            frontendShareUrl: shareUrl.toString(),
+            frontendShareUrl: frontendShareUrl.toString(),
+            contentUrl: contentUrl.toString(),
             expiresAt,
             hasPassword: Boolean(passwordHash),
             viewProtected,
             size,
+            note: "SPA viewer and Worker raw content both use /share/:id (path).",
           },
           null,
           2,
@@ -362,13 +370,15 @@ app.post("/mcp", async (c) => {
 
 app.get("/mcp", (c) => {
   const apiOrigin = new URL(c.req.url).origin;
+  const icons = mcpIcons(apiOrigin);
+  c.header("Link", `<${apiOrigin}/favicon.svg>; rel="icon"; type="image/svg+xml"`);
   return c.json({
     name: "mdviewer-api",
     title: "MDViewer",
     transport: "streamable-http-jsonrpc",
     endpoint: "POST /mcp",
     tools: TOOLS.map((t) => t.name),
-    icons: mcpIcons(apiOrigin),
+    icons,
     favicon: `${apiOrigin}/favicon.svg`,
     docs: "/llms-full.txt",
   });

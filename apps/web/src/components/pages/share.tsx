@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 export default function ShareViewPage(): React.JSX.Element {
     const navigate = useNavigate();
+    const { id: routeShareId } = useParams<{ id: string }>();
     const [content, setContent] = useState<string | null>(null);
     const [projectPack, setProjectPack] = useState<ProjectPack | null>(null);
     const [loading, setLoading] = useState(true);
@@ -47,23 +48,16 @@ export default function ShareViewPage(): React.JSX.Element {
     }, [shareId]);
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            const pathname = window.location.pathname;
-            const searchParams = new URLSearchParams(window.location.search);
-            const pathMatch = pathname.match(/^\/share\/([^/]+)/);
-            let id = pathMatch ? pathMatch[1] : null;
-            if (!id) id = searchParams.get("id");
-            if (!id && window.location.hash) {
-                id = window.location.hash.replace("#", "");
-            }
-            if (id) {
-                setShareId(id);
-            } else {
-                setError("No share ID provided in URL");
-                setLoading(false);
-            }
+        const id = routeShareId?.trim() || null;
+        if (id) {
+            setShareId(id);
+            setError(null);
+        } else {
+            setShareId(null);
+            setError("Share URL must be /share/<id>");
+            setLoading(false);
         }
-    }, []);
+    }, [routeShareId]);
 
     const applyMarkdown = (markdown: string) => {
         const pack = tryParseProjectPack(markdown);

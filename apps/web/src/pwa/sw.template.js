@@ -29,20 +29,14 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-const LEGACY_CACHE_PREFIXES = ['mdviewer-', 'workbox-precache', 'workbox-runtime', 'next-'];
-
-function shouldDeleteCache(name) {
-  if (name === CACHE_NAME) return false;
-  return LEGACY_CACHE_PREFIXES.some((prefix) => name === prefix || name.startsWith(prefix));
-}
-
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating', CACHE_VERSION);
   event.waitUntil(
     caches
       .keys()
+      // Drop every other cache (incl. old Next/workbox/mdviewer-*) so stale shells cannot stick
       .then((names) =>
-        Promise.all(names.filter((n) => shouldDeleteCache(n)).map((n) => caches.delete(n)))
+        Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
       )
       .then(() => self.clients.claim())
   );

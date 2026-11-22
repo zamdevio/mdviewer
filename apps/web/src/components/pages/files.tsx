@@ -1058,7 +1058,7 @@ export default function FilesPage(): React.JSX.Element {
                                 );
                                 id = updated.id;
                                 expiresAt = updated.expiresAt;
-                                url = `${FRONTEND_URL}/share?id=${id}`;
+                                url = `${FRONTEND_URL}/share/${encodeURIComponent(id)}`;
                             } else {
                                 const result = await uploadMarkdown(content, {
                                     password: opts.password || undefined,
@@ -1071,7 +1071,7 @@ export default function FilesPage(): React.JSX.Element {
                                 expiresAt = result.expiresAt;
                                 url =
                                     result.frontendShareUrl ||
-                                    `${FRONTEND_URL}/share?id=${id}`;
+                                    `${FRONTEND_URL}/share/${encodeURIComponent(id)}`;
                             }
                             upsertSavedFile({
                                 ...file,
@@ -1118,7 +1118,7 @@ export default function FilesPage(): React.JSX.Element {
                                 );
                                 id = updated.id;
                                 expiresAt = updated.expiresAt;
-                                url = `${FRONTEND_URL}/share?id=${id}`;
+                                url = `${FRONTEND_URL}/share/${encodeURIComponent(id)}`;
                             } else {
                                 const result = await uploadMarkdown(pack, {
                                     password: opts.password || undefined,
@@ -1131,7 +1131,7 @@ export default function FilesPage(): React.JSX.Element {
                                 expiresAt = result.expiresAt;
                                 url =
                                     result.frontendShareUrl ||
-                                    `${FRONTEND_URL}/share?id=${id}`;
+                                    `${FRONTEND_URL}/share/${encodeURIComponent(id)}`;
                             }
                             upsertProject({
                                 ...project,

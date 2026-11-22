@@ -9,6 +9,8 @@ export interface UploadResponse {
   id: string;
   shareUrl: string;
   frontendShareUrl?: string;
+  /** Worker raw markdown at `/share/:id` */
+  contentUrl?: string;
   size: number;
   uploadedAt: string;
   /** Protocol 2+ — fixed wipe time */

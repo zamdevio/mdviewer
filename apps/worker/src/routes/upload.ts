@@ -60,6 +60,7 @@ const uploadRoute = createRoute({
           schema: z.object({
             id: z.string(),
             frontendShareUrl: z.string().url(),
+            contentUrl: z.string().url(),
             size: z.number(),
             uploadedAt: z.string(),
             expiresAt: z.string(),
@@ -236,13 +237,21 @@ app.openapi(uploadRoute, async (c) => {
     await putShare(c.env.R2_BUCKET, meta, content);
 
     const frontendUrlObj = new URL(frontendOrigin);
-    frontendUrlObj.pathname = "/share";
-    frontendUrlObj.searchParams.set("id", id);
+    frontendUrlObj.pathname = `/share/${encodeURIComponent(id)}`;
+    frontendUrlObj.search = "";
+    frontendUrlObj.hash = "";
+
+    const apiContentUrl = new URL(c.req.url);
+    apiContentUrl.pathname = `/share/${encodeURIComponent(id)}`;
+    apiContentUrl.search = "";
+    apiContentUrl.hash = "";
 
     return c.json(
       {
         id,
         frontendShareUrl: frontendUrlObj.toString(),
+        /** Raw markdown on this Worker (`/share/:id`) */
+        contentUrl: apiContentUrl.toString(),
         size: contentSize,
         uploadedAt: createdAt,
         expiresAt,

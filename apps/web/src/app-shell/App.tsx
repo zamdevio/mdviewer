@@ -48,7 +48,6 @@ function AppShell() {
             <Route path="/files" element={<FilesPage />} />
             <Route path="/search" element={<SearchPage />} />
             <Route path="/shares" element={<SharesPage />} />
-            <Route path="/share" element={<SharePage />} />
             <Route path="/share/:id" element={<SharePage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />

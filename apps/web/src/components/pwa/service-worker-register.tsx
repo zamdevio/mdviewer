@@ -18,11 +18,7 @@ async function disableServiceWorkerInDev() {
     await Promise.all(regs.map((r) => r.unregister()));
     if ("caches" in window) {
       const keys = await caches.keys();
-      await Promise.all(
-        keys
-          .filter((k) => k.startsWith("mdviewer-") || k.startsWith("workbox-") || k.startsWith("next-"))
-          .map((k) => caches.delete(k))
-      );
+      await Promise.all(keys.map((k) => caches.delete(k)));
     }
     console.info("[SW] Dev mode: unregistered service workers and cleared app caches");
   } catch (error) {
