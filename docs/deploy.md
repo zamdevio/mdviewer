@@ -1,6 +1,6 @@
 # Deploy
 
-Primary path: **GitHub Actions → Cloudflare** on every `main` push (see [`.github/workflows/deploy-cloudflare.yml`](../.github/workflows/deploy-cloudflare.yml)).
+Primary path: **GitHub Actions → Cloudflare** on every `main` push (see [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)).
 
 The old **Fly.io** GitHub “production” deployment is legacy (Next-era). New production traffic is Cloudflare Pages (`markview`) + Worker (`mdviewer-api`). Mark Fly inactive in GitHub Deployments if it still shows as Active.
 

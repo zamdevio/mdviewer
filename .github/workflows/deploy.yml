@@ -19,7 +19,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Uses package.json "packageManager" (do not pin version: here)
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v4
@@ -47,7 +46,7 @@ jobs:
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-worker:
-    name: Worker (mdviewer-api)
+    name: Worker (api)
     runs-on: ubuntu-latest
     permissions:
       contents: read
