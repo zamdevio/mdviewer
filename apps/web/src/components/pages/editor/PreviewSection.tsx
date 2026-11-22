@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Eye } from "lucide-react";
 import { MarkdownViewer } from "@/components/markdown";
+import { previewDebounceMs } from "@/lib/performance/preview-debounce";
 import type { SoloMode } from "@/lib/scroll";
 
 export function PreviewSection({
@@ -14,15 +16,22 @@ export function PreviewSection({
     isPreview: boolean;
     previewRef: React.RefObject<HTMLDivElement | null>;
 }) {
+    // Typing updates shell immediately; heavy MarkdownViewer lags by size-aware debounce
+    const [previewMarkdown, setPreviewMarkdown] = useState(markdown);
+
+    useEffect(() => {
+        const ms = previewDebounceMs(markdown);
+        const t = window.setTimeout(() => setPreviewMarkdown(markdown), ms);
+        return () => window.clearTimeout(t);
+    }, [markdown]);
+
     return (
         <div
             data-preview-section
             className={`flex flex-col gap-2 ${effectiveMode === "both" ? "h-full" : ""
                 } ${
-                // Mobile (< md): show based on isPreview state
                 !isPreview ? "hidden md:flex" : "flex"
                 } ${
-                // Desktop (>= md): show based on effectiveMode state
                 effectiveMode === "editor" ? "md:hidden" : ""
                 }`}
         >
@@ -31,24 +40,13 @@ export function PreviewSection({
             </div>
             <Card className={`p-0 overflow-hidden border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm ${effectiveMode === "both" ? "flex-1 flex flex-col" : ""
                 }`}>
-                {/* Editor Status Bar For Preview Section - Optional To Add later if you decide to make it have it's own setitngs for easy on/off for user to follow their own preferences */}
-                {/* //{showEditorStatusBar && ( */}
-                {/* <EditorStatusBar
-                    markdown={markdown}
-                    saveStatus={saveStatus}
-                    lastSaved={lastSaved}
-                    timeSinceSave={timeSinceSave}
-                    isAutoSave={autoSaveEnabled}
-                /> */}
-                {/* )} */}
                 <div ref={effectiveMode === "both" ? previewRef : undefined} className={`overflow-y-auto ${effectiveMode === "both" ? "flex-1" : "p-6 min-h-[600px]"
                     }`}>
                     <div className={effectiveMode === "both" ? "p-6" : ""}>
-                        <MarkdownViewer content={markdown} />
+                        <MarkdownViewer content={previewMarkdown} />
                     </div>
                 </div>
             </Card>
         </div>
     );
 }
-

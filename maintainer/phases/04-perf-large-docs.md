@@ -2,7 +2,7 @@
 
 **Order:** 04  
 **Goal:** Smooth edit/preview for 5–10MB markdown.  
-**Status:** Queued (do not start until Focus frees a slot).  
+**Status:** In progress (Focus) — slice 1 shipped (size-aware preview + Mermaid debounce)  
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -34,7 +34,8 @@
 - [ ] LRU Mermaid cache (cap ~50)
 - [ ] WeakMap caches where possible
 - [ ] Memory monitor + warn — `apps/web/src/lib/performance/memory-monitor.ts`
-- [ ] Dynamic Mermaid debounce (larger files → 1–1.5s)
+- [x] Dynamic Mermaid debounce (larger files → 1–1.5s) — `mermaidDebounceMs`
+- [x] Size-aware preview debounce — `PreviewSection` + `previewDebounceMs`
 - [ ] Throttle scroll sync on large files — `scroll.ts`
 - [ ] Longer auto-save debounce for files &gt; 1MB — `auto-save.ts`
 

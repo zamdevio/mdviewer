@@ -1,6 +1,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, AlertCircle, Copy, Download, Check } from "lucide-react";
+import { mermaidDebounceMs } from "@/lib/performance/preview-debounce";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
@@ -139,11 +140,11 @@ export function MarkdownMermaid({ code }: { code: string }) {
         setIsLoadingSecondary(true);
     }, [code]);
 
-    // Debounce code updates
+    // Debounce code updates (longer for large diagrams)
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedCode(code);
-        }, 500); // 500ms debounce
+        }, mermaidDebounceMs(code));
         return () => clearTimeout(timer);
     }, [code]);
 
