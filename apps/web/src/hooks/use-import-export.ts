@@ -1,9 +1,10 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { setSettings as updateSettings, getSavedFiles, setSavedFiles, setFileContent, setContent, setEditingFile, setProjects, type SettingsData, SavedFile } from "@/lib/storage";
+import { setSettings as updateSettings, getSavedFiles, setSavedFiles, setFileContent, getFileContent, setContent, setEditingFile, getProjects, setProjects, type SettingsData, SavedFile } from "@/lib/storage";
 import { encodeBase64, decodeBase64, decryptData, isEncryptedFormat } from "@/lib/utils";
 import { truncateFilename } from "@/lib/editor";
+import { contentFingerprint } from "@/lib/project-pack";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
 export function useImportExport() {
@@ -34,13 +35,35 @@ export function useImportExport() {
                 updateSettings(settings);
 
                 if (data.projects && Array.isArray(data.projects)) {
-                    setProjects(
-                        data.projects.map((p) => ({
-                            id: p.id,
-                            name: p.name,
-                            createdAt: p.createdAt || new Date().toISOString(),
-                        }))
-                    );
+                    const existingProjects = getProjects();
+                    const merged = [...existingProjects];
+                    const idRemap = new Map<string, string>();
+                    for (const p of data.projects) {
+                        const byName = merged.find(
+                            (m) => m.name.toLowerCase() === p.name.toLowerCase()
+                        );
+                        if (byName) {
+                            idRemap.set(p.id, byName.id);
+                        } else {
+                            const id =
+                                p.id && !merged.some((m) => m.id === p.id)
+                                    ? p.id
+                                    : `proj_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+                            idRemap.set(p.id, id);
+                            merged.push({
+                                id,
+                                name: p.name,
+                                createdAt: p.createdAt || new Date().toISOString(),
+                            });
+                        }
+                    }
+                    setProjects(merged);
+                    // Remap projectIds on files being imported
+                    for (const file of data.files) {
+                        if (file.projectId && idRemap.has(file.projectId)) {
+                            file.projectId = idRemap.get(file.projectId);
+                        }
+                    }
                 }
                 // Call callback if provided
                 if (onSettingsUpdate) {
@@ -267,29 +290,68 @@ export function useImportExport() {
             return;
         }
 
-        // Check for conflicts
+        // Check for conflicts — identical content (same fingerprint) merges silently
         const existingFiles = getSavedFiles();
-        const conflictList: ConflictFile[] = validFiles
+        const toImport: ExportImportData['files'] = [];
+        let identicalCount = 0;
+
+        for (const importedFile of validFiles) {
+            const existing = existingFiles.find(
+                (f: SavedFile) =>
+                    f.filename === importedFile.filename ||
+                    (f.id && importedFile.id && f.id === importedFile.id)
+            );
+            if (existing) {
+                const existingContent = getFileContent(existing.filename) || "";
+                const incoming = importedFile.content || "";
+                if (contentFingerprint(existingContent) === contentFingerprint(incoming)) {
+                    identicalCount += 1;
+                    continue;
+                }
+            }
+            toImport.push(importedFile);
+        }
+
+        if (identicalCount > 0) {
+            toast.info(
+                `${identicalCount} identical file(s) already present — skipped (content match).`
+            );
+        }
+
+        const conflictList: ConflictFile[] = toImport
             .map((importedFile: ExportImportData['files'][number]) => {
-                const existing = existingFiles.find((f: SavedFile) => 
-                    f.filename === importedFile.filename || (f.id && importedFile.id && f.id === importedFile.id)
+                const existing = existingFiles.find(
+                    (f: SavedFile) =>
+                        f.filename === importedFile.filename ||
+                        (f.id && importedFile.id && f.id === importedFile.id)
                 );
-                return existing ? {
-                    imported: importedFile,
-                    existing,
-                    conflictType: existingFiles.some((f: SavedFile) => f.filename === importedFile.filename) ? 'filename' : 'id',
-                } : null;
+                return existing
+                    ? {
+                          imported: importedFile,
+                          existing,
+                          conflictType: existingFiles.some(
+                              (f: SavedFile) => f.filename === importedFile.filename
+                          )
+                              ? "filename"
+                              : "id",
+                      }
+                    : null;
             })
             .filter(Boolean) as ConflictFile[];
 
+        if (toImport.length === 0) {
+            toast.success("Nothing new to import — everything matched existing content.");
+            return;
+        }
+
         if (conflictList.length > 0) {
             setConflicts(conflictList);
-            setPendingImport({ ...data, files: validFiles });
+            setPendingImport({ ...data, files: toImport });
             setShowConflictDialog(true);
             return;
         }
 
-        await performImport({ ...data, files: validFiles });
+        await performImport({ ...data, files: toImport });
     };
 
     const handlePasswordSubmit = async (password: string) => {

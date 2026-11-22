@@ -6,9 +6,13 @@ import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Download, LayoutGrid, FolderTree } from "lucide-react";
 import { toast } from "sonner";
-import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, removeProject, type SavedFile, type Project } from "@/lib/storage";
+import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, removeProject, addSharedLink, type SavedFile, type Project } from "@/lib/storage";
 import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile } from "@/lib/editor";
 import { FilesTree } from "@/components/pages/files/FilesTree";
+import { ProjectPicker } from "@/components/pages/files/ProjectPicker";
+import { packProject } from "@/lib/project-pack";
+import { uploadMarkdown, isCorsFailure } from "@/lib/api";
+import { isApiConfigured, getEffectiveApiConfig } from "@/lib/config";
 
 export default function FilesPage(): React.JSX.Element {
     const [files, setFiles] = useState<SavedFile[]>([]);
@@ -27,6 +31,7 @@ export default function FilesPage(): React.JSX.Element {
     const [itemsPerPage, setItemsPerPage] = useState(12);
     const [currentPage, setCurrentPage] = useState(1);
     const [filesLayout, setFilesLayout] = useState<'grid' | 'tree'>('grid');
+    const [projectPickerFor, setProjectPickerFor] = useState<string | null>(null);
 
     // Load items per page setting
     useEffect(() => {
@@ -552,6 +557,14 @@ export default function FilesPage(): React.JSX.Element {
                         }
                     }}
                     onCreateProject={(name) => {
+                        if (
+                            projects.some(
+                                (p) => p.name.toLowerCase() === name.toLowerCase()
+                            )
+                        ) {
+                            toast.error("A project with that name already exists");
+                            return;
+                        }
                         const project: Project = {
                             id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
                             name,
@@ -564,6 +577,13 @@ export default function FilesPage(): React.JSX.Element {
                     onRenameProject={(id, name) => {
                         const existing = projects.find((p) => p.id === id);
                         if (!existing) return;
+                        const clash = projects.some(
+                            (p) => p.id !== id && p.name.toLowerCase() === name.toLowerCase()
+                        );
+                        if (clash) {
+                            toast.error("A project with that name already exists");
+                            return;
+                        }
                         upsertProject({ ...existing, name });
                         setProjectsState(getProjects());
                         toast.success("Project renamed");
@@ -585,6 +605,110 @@ export default function FilesPage(): React.JSX.Element {
                             editing: file.editing,
                         });
                         loadFiles();
+                    }}
+                    onRenameFile={(fileId, name) => {
+                        const file = files.find((f) => f.id === fileId);
+                        if (!file) return;
+                        const clean = sanitizeFileName(name.trim());
+                        const validation = validateFileName(clean);
+                        if (!validation.valid) {
+                            toast.error(validation.error || "Invalid filename");
+                            return;
+                        }
+                        const newName = truncateFilename(clean).replace(/\.md$/i, "");
+                        const result = renameFile(
+                            fileId,
+                            newName,
+                            getFileContent(file.filename) || file.content || ""
+                        );
+                        if (!result.success) {
+                            toast.error(result.error || "Rename failed");
+                            return;
+                        }
+                        toast.success("File renamed");
+                        loadFiles();
+                    }}
+                    onDeleteFile={(file) => {
+                        handleDelete(file.filename, file.id);
+                    }}
+                    onShareFile={async (file) => {
+                        if (!isApiConfigured()) {
+                            toast.error("Configure share API in Settings");
+                            return;
+                        }
+                        const content = getFileContent(file.filename) || file.content || "";
+                        if (!content.trim()) {
+                            toast.error("Nothing to share");
+                            return;
+                        }
+                        try {
+                            toast.loading("Sharing…", { id: "share-file" });
+                            const result = await uploadMarkdown(content);
+                            const { FRONTEND_URL } = getEffectiveApiConfig();
+                            const url =
+                                result.frontendShareUrl ||
+                                `${FRONTEND_URL}/share?id=${result.id}`;
+                            addSharedLink({
+                                id: `link_${Date.now()}`,
+                                shareId: result.id,
+                                url,
+                                preview: content.slice(0, 100),
+                                filename: file.filename,
+                                timestamp: new Date().toISOString(),
+                            });
+                            await navigator.clipboard.writeText(url);
+                            toast.success("Share link copied", { id: "share-file" });
+                        } catch (error) {
+                            toast.dismiss("share-file");
+                            if (isCorsFailure(error)) {
+                                toast.error("CORS blocked — check ALLOWED_ORIGINS");
+                            } else {
+                                toast.error(
+                                    error instanceof Error ? error.message : "Share failed"
+                                );
+                            }
+                        }
+                    }}
+                    onShareProject={async (project) => {
+                        if (!isApiConfigured()) {
+                            toast.error("Configure share API in Settings");
+                            return;
+                        }
+                        const kids = files.filter((f) => f.projectId === project.id);
+                        if (kids.length === 0) {
+                            toast.error("Project has no files to share");
+                            return;
+                        }
+                        const pack = packProject(
+                            project.name,
+                            kids.map((f) => ({
+                                filename: f.filename,
+                                content: getFileContent(f.filename) || f.content || "",
+                            }))
+                        );
+                        try {
+                            toast.loading("Sharing project…", { id: "share-proj" });
+                            const result = await uploadMarkdown(pack);
+                            const { FRONTEND_URL } = getEffectiveApiConfig();
+                            const url =
+                                result.frontendShareUrl ||
+                                `${FRONTEND_URL}/share?id=${result.id}`;
+                            addSharedLink({
+                                id: `link_${Date.now()}`,
+                                shareId: result.id,
+                                url,
+                                preview: `Project: ${project.name} (${kids.length} files)`,
+                                filename: `${project.name}.project`,
+                                timestamp: new Date().toISOString(),
+                            });
+                            await navigator.clipboard.writeText(url);
+                            toast.success("Project pack link copied", { id: "share-proj" });
+                        } catch (error) {
+                            toast.dismiss("share-proj");
+                            toast.error(
+                                error instanceof Error ? error.message : "Share failed"
+                            );
+                        }
                     }}
                 />
             ) : (
@@ -660,28 +784,45 @@ export default function FilesPage(): React.JSX.Element {
                                     <p className="text-xs text-muted-foreground mt-1 font-mono truncate" title={file.id}>
                                         ID: <span className="truncate inline-block max-w-full">{file.id}</span>
                                     </p>
-                                    <select
-                                        className="mt-2 w-full text-xs border border-input rounded-md px-2 py-1.5 bg-background"
-                                        value={file.projectId || ""}
-                                        onChange={(e) => {
-                                            upsertSavedFile({
-                                                id: file.id,
-                                                filename: file.filename,
-                                                timestamp: file.timestamp,
-                                                projectId: e.target.value || undefined,
-                                                editing: file.editing,
-                                            });
-                                            loadFiles();
-                                        }}
-                                        title="Project"
-                                    >
-                                        <option value="">Ungrouped</option>
-                                        {projects.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <div className="relative mt-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full justify-between text-xs h-8"
+                                            onClick={() =>
+                                                setProjectPickerFor(
+                                                    projectPickerFor === file.id ? null : file.id
+                                                )
+                                            }
+                                        >
+                                            <span className="truncate">
+                                                {projects.find((p) => p.id === file.projectId)?.name ||
+                                                    "Ungrouped"}
+                                            </span>
+                                            <span className="text-muted-foreground">▾</span>
+                                        </Button>
+                                        {projectPickerFor === file.id && (
+                                            <div className="absolute left-0 right-0 top-full mt-1 z-20">
+                                                <ProjectPicker
+                                                    projects={projects}
+                                                    currentProjectId={file.projectId}
+                                                    onSelect={(projectId) => {
+                                                        upsertSavedFile({
+                                                            id: file.id,
+                                                            filename: file.filename,
+                                                            timestamp: file.timestamp,
+                                                            projectId,
+                                                            editing: file.editing,
+                                                        });
+                                                        loadFiles();
+                                                    }}
+                                                    onClose={() => setProjectPickerFor(null)}
+                                                    className="w-full"
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
                                     {file.content && (
                                         <>
                                             <p className="text-xs text-muted-foreground mt-1">

@@ -1,29 +1,41 @@
-
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Copy, Check, ArrowLeft, GitFork } from "lucide-react";
+import { Loader2, Copy, Check, ArrowLeft, GitFork, FolderPlus } from "lucide-react";
 import { MarkdownViewer } from "@/components/markdown";
 import { fetchSharedMarkdown } from "@/lib/api";
+import { tryParseProjectPack, type ProjectPack } from "@/lib/project-pack";
+import {
+    getProjects,
+    getSavedFiles,
+    upsertProject,
+    upsertSavedFile,
+    setFileContent,
+} from "@/lib/storage";
+import { truncateFilename } from "@/lib/editor";
+import { toast } from "sonner";
+
 export default function ShareViewPage(): React.JSX.Element {
+    const navigate = useNavigate();
     const [content, setContent] = useState<string | null>(null);
+    const [projectPack, setProjectPack] = useState<ProjectPack | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [shareId, setShareId] = useState<string | null>(null);
+    const [importing, setImporting] = useState(false);
 
-    // Add rel="me" link for verifiable identity (used by Mastodon, etc.)
     useEffect(() => {
-        if (typeof window !== 'undefined' && shareId) {
-            const link = document.createElement('link');
-            link.rel = 'me';
+        if (typeof window !== "undefined" && shareId) {
+            const link = document.createElement("link");
+            link.rel = "me";
             link.href = window.location.href;
             document.head.appendChild(link);
-
             return () => {
-                // Cleanup on unmount
-                const existingLink = document.querySelector('link[rel="me"][href="' + window.location.href + '"]');
+                const existingLink = document.querySelector(
+                    'link[rel="me"][href="' + window.location.href + '"]'
+                );
                 if (existingLink) {
                     document.head.removeChild(existingLink);
                 }
@@ -31,29 +43,16 @@ export default function ShareViewPage(): React.JSX.Element {
         }
     }, [shareId]);
 
-    // Extract share ID from URL pathname
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            // Get the ID from the URL pathname
-            // URL format: /share/abc123 or /share?id=abc123
+        if (typeof window !== "undefined") {
             const pathname = window.location.pathname;
             const searchParams = new URLSearchParams(window.location.search);
-            
-            // Try to get ID from pathname first (e.g., /share/abc123)
-            // Handle both /share/abc123 and /share/abc123/ (with trailing slash)
-            const pathMatch = pathname.match(/^\/share\/([^\/]+)/);
+            const pathMatch = pathname.match(/^\/share\/([^/]+)/);
             let id = pathMatch ? pathMatch[1] : null;
-            
-            // If not in pathname, try query param (e.g., /share?id=abc123)
-            if (!id) {
-                id = searchParams.get('id');
-            }
-            
-            // If still no ID, try getting it from hash (e.g., /share#abc123)
+            if (!id) id = searchParams.get("id");
             if (!id && window.location.hash) {
-                id = window.location.hash.replace('#', '');
+                id = window.location.hash.replace("#", "");
             }
-            
             if (id) {
                 setShareId(id);
             } else {
@@ -64,24 +63,26 @@ export default function ShareViewPage(): React.JSX.Element {
     }, []);
 
     useEffect(() => {
-        if (!shareId) {
-            return; // Wait for shareId to be extracted
-        }
-
+        if (!shareId) return;
         setLoading(true);
         setError(null);
-
         const loadContent = async () => {
             try {
                 const markdown = await fetchSharedMarkdown(shareId);
-                setContent(markdown);
+                const pack = tryParseProjectPack(markdown);
+                if (pack) {
+                    setProjectPack(pack);
+                    setContent(null);
+                } else {
+                    setProjectPack(null);
+                    setContent(markdown);
+                }
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Failed to load shared content");
             } finally {
                 setLoading(false);
             }
         };
-
         loadContent();
     }, [shareId]);
 
@@ -90,7 +91,53 @@ export default function ShareViewPage(): React.JSX.Element {
             await navigator.clipboard.writeText(window.location.href);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        } catch {}
+        } catch {
+            /* ignore */
+        }
+    };
+
+    const handleImportProject = () => {
+        if (!projectPack) return;
+        setImporting(true);
+        try {
+            const existing = getProjects();
+            let name = projectPack.name;
+            let n = 1;
+            while (existing.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+                name = `${projectPack.name} (${++n})`;
+            }
+            const projectId = `proj_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            upsertProject({
+                id: projectId,
+                name,
+                createdAt: new Date().toISOString(),
+            });
+            const files = getSavedFiles();
+            for (const file of projectPack.files) {
+                const base = truncateFilename(file.filename.replace(/\.md$/i, ""));
+                let candidate = `${base}.md`;
+                let c = 1;
+                while (files.some((f) => f.filename === candidate)) {
+                    candidate = `${base}-${c}.md`;
+                    c += 1;
+                }
+                const fileId = `file_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+                setFileContent(candidate, file.content);
+                upsertSavedFile({
+                    id: fileId,
+                    filename: candidate,
+                    timestamp: new Date().toISOString(),
+                    projectId,
+                });
+                files.push({ id: fileId, filename: candidate });
+            }
+            toast.success(`Imported project “${name}” with ${projectPack.files.length} file(s)`);
+            navigate("/files");
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Import failed");
+        } finally {
+            setImporting(false);
+        }
     };
 
     if (loading) {
@@ -104,7 +151,7 @@ export default function ShareViewPage(): React.JSX.Element {
         );
     }
 
-    if (error || !content) {
+    if (error || (!content && !projectPack)) {
         return (
             <div className="container mx-auto p-4 h-[calc(100vh-100px)] flex items-center justify-center">
                 <Card className="p-8 max-w-md w-full text-center">
@@ -123,6 +170,56 @@ export default function ShareViewPage(): React.JSX.Element {
         );
     }
 
+    if (projectPack) {
+        return (
+            <div className="container mx-auto p-4 min-h-[calc(100vh-100px)] flex flex-col gap-4 animate-fade-in">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
+                        Shared Project
+                    </h1>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-2">
+                            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            <span className="hidden sm:inline">{copied ? "Copied!" : "Copy URL"}</span>
+                        </Button>
+                        <Link to="/files">
+                            <Button variant="ghost" size="sm" className="gap-2">
+                                <ArrowLeft className="w-4 h-4" />
+                                Files
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+                <Card className="p-6 max-w-lg">
+                    <h2 className="text-lg font-semibold mb-1">{projectPack.name}</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        {projectPack.files.length} file(s) in this pack. Import creates a local
+                        project (name conflicts get a suffix).
+                    </p>
+                    <ul className="text-sm mb-4 space-y-1 max-h-48 overflow-y-auto">
+                        {projectPack.files.map((f) => (
+                            <li key={f.filename} className="truncate font-mono text-xs">
+                                {f.filename}
+                            </li>
+                        ))}
+                    </ul>
+                    <Button
+                        className="w-full gap-2"
+                        disabled={importing}
+                        onClick={handleImportProject}
+                    >
+                        {importing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <FolderPlus className="w-4 h-4" />
+                        )}
+                        Import project to Files
+                    </Button>
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto p-4 min-h-[calc(100vh-100px)] flex flex-col gap-4 animate-fade-in">
             <div className="flex items-center justify-between">
@@ -130,12 +227,7 @@ export default function ShareViewPage(): React.JSX.Element {
                     Shared Markdown
                 </h1>
                 <div className="flex gap-2">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopyUrl}
-                        className="gap-2"
-                    >
+                    <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-2">
                         {copied ? (
                             <>
                                 <Check className="w-4 h-4" />
@@ -164,9 +256,8 @@ export default function ShareViewPage(): React.JSX.Element {
             </div>
 
             <Card className="flex-1 p-6 overflow-auto border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm">
-                <MarkdownViewer content={content || ''} />
+                <MarkdownViewer content={content || ""} />
             </Card>
         </div>
     );
 }
-

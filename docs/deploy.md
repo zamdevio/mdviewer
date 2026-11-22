@@ -13,14 +13,14 @@ Repository **Secrets**:
 | `CLOUDFLARE_API_TOKEN` | Token with Pages Edit + Workers Scripts Edit |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id |
 
-Repository **Variables** (you add these yourself — build-time for the SPA):
+Repository **Variables** (public, not Secrets — optional override):
 
 | Variable | Example |
 |----------|---------|
 | `VITE_API_URL` | `https://api.mdviewer.zamdev.dev` |
 | `VITE_FRONTEND_URL` | `https://mdviewer.zamdev.dev` |
 
-Without those Variables, Pages still deploys, but the built SPA has empty API/frontend URLs (share stays off until the user sets **Settings → Share**).
+These are **not** secrets (same values live in [`.env.example`](../.env.example) and as Vite build fallbacks in `apps/web/vite.config.ts`). Set GH Variables when you want CI to bake a different host; otherwise the public defaults apply. Users can still override in **Settings → Share**.
 
 ### Self-host share worker
 

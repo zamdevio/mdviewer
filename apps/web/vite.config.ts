@@ -60,11 +60,16 @@ export default defineConfig(({ mode }) => {
       port: 3000,
     },
     define: {
+      // Public defaults (not secrets) — match .env.example. Override via env / GH Actions Variables.
       "import.meta.env.VITE_API_URL": JSON.stringify(
-        env.VITE_API_URL || env.API_URL || "",
+        env.VITE_API_URL ||
+          env.API_URL ||
+          "https://api.mdviewer.zamdev.dev",
       ),
       "import.meta.env.VITE_FRONTEND_URL": JSON.stringify(
-        env.VITE_FRONTEND_URL || env.FRONTEND_URL || "",
+        env.VITE_FRONTEND_URL ||
+          env.FRONTEND_URL ||
+          "https://mdviewer.zamdev.dev",
       ),
       __APP_VERSION__: JSON.stringify(APP_VERSION),
       __CACHE_VERSION__: JSON.stringify(CACHE_VERSION),
