@@ -12,7 +12,7 @@ Active phase docs (implement order): `01` → `02` → `03` → `04`.
 
 | Priority | Vertical | Notes |
 |----------|----------|-------|
-| 1 | Phase E — MCP (+ optional worker llms) | [`03-agent-surfaces.md`](./03-agent-surfaces.md) |
+| 1 | Large-doc performance | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
 | 2 | — | Slot free |
 | 3 | — | Slot free |
 
@@ -20,11 +20,10 @@ Active phase docs (implement order): `01` → `02` → `03` → `04`.
 
 | # | Item | Doc |
 |---|------|-----|
-| 1 | Large-doc performance | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
-| 2 | Nested projects + other loose ends | [`../final.md`](../final.md) §7 |
+| 1 | Nested projects + other loose ends | [`../final.md`](../final.md) §7 |
 
 ## Next task
 
-1. Phases C–D shipped.
-2. Implement Phase E ([`03-agent-surfaces.md`](./03-agent-surfaces.md)).
-3. Then perf; track gaps in [`../final.md`](../final.md).
+1. Phases C–E shipped (share protocol, dialog, MCP/llms).
+2. Perf P1 when ready — [`04-perf-large-docs.md`](./04-perf-large-docs.md).
+3. Clear remaining [`../final.md`](../final.md) items before **v4.0.0**.

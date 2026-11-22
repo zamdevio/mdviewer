@@ -36,13 +36,18 @@ Upload headers: `X-Share-Password`, `X-Share-TTL-Seconds` (default 7d, max 30d),
 
 In-doc fragment links (`#heading`) work in editor preview and share viewer (first matching heading wins).
 
-## Not available yet (Phase D / E — pre-v4.0)
+## Shipped agent surfaces
 
-- Unified share dialog UI (password/TTL pickers) — maintainer/phases/02-share-dialog.md
-- MCP tools on the same worker (`get_share`, `upload_share`, …) — maintainer/phases/03-agent-surfaces.md
-- Worker-hosted `/llms.txt` routes (SPA hosts these files today)
+- Unified share dialog UI — Settings `#password`, TTL, protect-view
+- Worker MCP: `POST /mcp` tools `get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share`
+- Worker + SPA `/llms.txt` and `/llms-full.txt`
 
-Password / TTL / fair-use are live on the Worker (protocol 2). Do not invent MCP endpoints until `/compatibility` lists them. Track release readiness in maintainer/final.md.
+## Still open (pre-v4.0)
+
+- Large-doc performance P1 — maintainer/phases/04-perf-large-docs.md
+- Nested projects / CSP nonce / ModalShell leftovers — maintainer/final.md §7
+
+Track release readiness in maintainer/final.md.
 
 ## Security notes
 

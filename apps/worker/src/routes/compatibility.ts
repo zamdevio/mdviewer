@@ -24,6 +24,8 @@ const CompatibilitySchema = z.object({
     viewProtected: z.boolean(),
     fairUseFingerprint: z.boolean(),
     legacyFlatKeys: z.boolean(),
+    mcp: z.boolean(),
+    llmsTxt: z.boolean(),
   }),
   ttl: z.object({
     defaultSeconds: z.number(),
@@ -90,6 +92,9 @@ app.openapi(compatibilityRoute, (c) => {
           path: "/share/:id",
           description: "Wipe share prefix (X-Share-Password)",
         },
+        { method: "POST", path: "/mcp", description: "MCP JSON-RPC tools" },
+        { method: "GET", path: "/llms.txt", description: "Agent brief" },
+        { method: "GET", path: "/llms-full.txt", description: "Full agent brief" },
         { method: "GET", path: "/docs", description: "Swagger UI" },
         { method: "GET", path: "/openapi.json", description: "OpenAPI document" },
       ],
@@ -99,6 +104,8 @@ app.openapi(compatibilityRoute, (c) => {
         viewProtected: true,
         fairUseFingerprint: true,
         legacyFlatKeys: true,
+        mcp: true,
+        llmsTxt: true,
       },
       ttl: {
         defaultSeconds: 7 * 24 * 60 * 60,

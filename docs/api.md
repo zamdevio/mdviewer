@@ -19,8 +19,16 @@ Machine-readable: **`/openapi.json`**
 | `PUT` | `/share/:id` | Replace content; **requires** `X-Share-Password`; keeps `expiresAt` |
 | `PATCH` | `/share/:id` | `{ viewProtected }`; **requires** password |
 | `DELETE` | `/share/:id` | Wipe prefix; **requires** password |
+| `POST` | `/mcp` | MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) |
+| `GET` | `/mcp` | Discovery JSON (tool names) |
+| `GET` | `/llms.txt` | Agent brief |
+| `GET` | `/llms-full.txt` | Full agent brief |
 
 CORS / share URLs use `ALLOWED_ORIGINS` on the Worker.
+
+### MCP tools
+
+`get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share` — same semantics as REST; mutating tools take a `password` argument. Fair-use is stricter for MCP (`X-MDViewer-Client: mcp`).
 
 ### Upload headers (optional)
 

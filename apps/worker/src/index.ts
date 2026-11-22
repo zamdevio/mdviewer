@@ -7,6 +7,8 @@ import health from "./routes/health";
 import compatibility from "./routes/compatibility";
 import upload from "./routes/upload";
 import share from "./routes/share";
+import llms from "./routes/llms";
+import mcp from "./routes/mcp";
 
 export { RateLimiter } from "./rate-limiter";
 
@@ -65,6 +67,8 @@ app.route("/", health);
 app.route("/", compatibility);
 app.route("/", upload);
 app.route("/", share);
+app.route("/", llms);
+app.route("/", mcp);
 
 app.doc("/openapi.json", {
   openapi: "3.1.0",

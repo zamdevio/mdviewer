@@ -32,7 +32,8 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 | **Pages** | [markview.pages.dev](https://markview.pages.dev) | Cloudflare Pages deploy |
 | **Worker API** | [api.mdviewer.zamdev.dev](https://api.mdviewer.zamdev.dev) | Upload / share / health / compatibility |
 | **API docs** | [api.mdviewer.zamdev.dev/docs](https://api.mdviewer.zamdev.dev/docs) | Swagger UI (OpenAPI) |
-| **llms.txt** | [mdviewer.zamdev.dev/llms.txt](https://mdviewer.zamdev.dev/llms.txt) | Agent/SEO brief ([llms-full.txt](https://mdviewer.zamdev.dev/llms-full.txt)) |
+| **llms.txt** | [mdviewer.zamdev.dev/llms.txt](https://mdviewer.zamdev.dev/llms.txt) | Agent/SEO brief ([full](https://mdviewer.zamdev.dev/llms-full.txt) · [API copy](https://api.mdviewer.zamdev.dev/llms-full.txt)) |
+| **MCP** | [api.mdviewer.zamdev.dev/mcp](https://api.mdviewer.zamdev.dev/mcp) | JSON-RPC tools on the share Worker |
 | **GitHub** | [github.com/zamdevio/mdviewer](https://github.com/zamdevio/mdviewer) | Source and issues |
 
 ## Why MDViewer
@@ -63,8 +64,8 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 
 ### Edge share
 - Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, optional share password, OpenAPI `/docs`
-- SPA ships [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) + [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt); MCP waits on Phase E
-- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`03-agent-surfaces`](./maintainer/phases/03-agent-surfaces.md) → perf
+- SPA + Worker ship [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) / [`/llms-full.txt`](https://api.mdviewer.zamdev.dev/llms-full.txt); MCP at [`POST /mcp`](https://api.mdviewer.zamdev.dev/mcp)
+- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`04-perf-large-docs`](./maintainer/phases/04-perf-large-docs.md)
 
 ### Security
 - Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode

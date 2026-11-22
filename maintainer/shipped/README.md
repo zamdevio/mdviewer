@@ -4,6 +4,7 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Phase E MCP + worker llms | `POST /mcp` tools; worker `/llms.txt` + `/llms-full.txt`; compatibility `features.mcp` |
 | 2026-11 | Phase D unified share dialog | ShareComposeDialog; Settings `#password`; shareId bind; replace vs new; Shares remote DELETE; view-password unlock |
 | 2026-11 | Phase C share protocol | R2 `shares/{id}/`; password PBKDF2; fixed TTL + cron; fair-use IP+UA; PUT/PATCH/DELETE/meta; compatibility **protocol 2** |
 | 2026-11 | Repo hygiene + phase fold | LICENSE/SECURITY/CONTRIBUTING/CoC; `final.md` pre-v4.0; fold A/B/UI/platform; phases `01`–`04`; web+root **3.5.0** |

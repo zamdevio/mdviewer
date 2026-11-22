@@ -42,6 +42,8 @@ export interface CompatibilityResponse {
     viewProtected: boolean;
     fairUseFingerprint: boolean;
     legacyFlatKeys: boolean;
+    mcp?: boolean;
+    llmsTxt?: boolean;
   };
   ttl?: {
     defaultSeconds: number;

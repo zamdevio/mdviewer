@@ -1,7 +1,7 @@
 # Phase E — Agent surfaces
 
 **Order:** 03  
-**Status:** Queued  
+**Status:** Shipped  
 **Depends on:** Phase C ([`01-share-protocol.md`](./01-share-protocol.md)); preferably after D ([`02-share-dialog.md`](./02-share-dialog.md))
 
 ## Goals
@@ -18,7 +18,7 @@ Discoverable API for agents without accounts.
 ## Checklist
 
 - [x] `llms.txt` + `llms-full.txt` on SPA (`apps/web/public/`) — agent discoverability / SEO
-- [ ] Worker-hosted `/llms.txt` routes (optional; SPA copy is live)
-- [ ] MCP tools + docs (needs Phase C auth/TTL/fair-use first)
-- [ ] Compatibility + `docs/api.md` when MCP ships
-- [x] README note for agents (points at llms files; MCP still queued)
+- [x] Worker-hosted `/llms.txt` + `/llms-full.txt` routes
+- [x] MCP tools + docs (`POST /mcp` JSON-RPC)
+- [x] Compatibility + `docs/api.md` when MCP ships
+- [x] README note for agents

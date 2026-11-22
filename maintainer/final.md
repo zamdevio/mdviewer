@@ -48,9 +48,10 @@ See [`phases/02-share-dialog.md`](./phases/02-share-dialog.md).
 See [`phases/03-agent-surfaces.md`](./phases/03-agent-surfaces.md).
 
 - [x] SPA `/llms.txt` + `/llms-full.txt` (done in 3.x)
-- [ ] Worker MCP tools on same service (`get_share`, `upload_share`, …)
-- [ ] Optional worker-hosted `/llms*` routes
-- [ ] Compatibility + `docs/api.md` when MCP ships
+- [x] Worker MCP tools on same service (`get_share`, `upload_share`, …)
+- [x] Worker-hosted `/llms*` routes
+- [x] Compatibility + `docs/api.md` when MCP ships
+- [ ] Redeploy Worker so `/mcp` + `/llms*` are live on prod
 
 ## 6. Perf (large docs)
 
