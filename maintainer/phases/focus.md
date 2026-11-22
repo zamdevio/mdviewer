@@ -10,7 +10,7 @@ All plans live under `maintainer/phases/`.
 
 | Priority | Vertical | Notes |
 |----------|----------|-------|
-| 1 | Phase B — Lean trash | [`lean-trash.md`](./lean-trash.md) |
+| 1 | Phase C — Worker password + fixed TTL + fair-use | [`share-password-protocol.md`](./share-password-protocol.md) |
 | 2 | — | Slot free |
 | 3 | — | Slot free |
 
@@ -18,14 +18,13 @@ All plans live under `maintainer/phases/`.
 
 | # | Item | Doc |
 |---|------|-----|
-| 1 | Phase C — Worker password + fixed TTL + fair-use | [`share-password-protocol.md`](./share-password-protocol.md) |
-| 2 | Phase D — Unified share dialog | [`share-dialog-unify.md`](./share-dialog-unify.md) |
-| 3 | Phase E — llms.txt + MCP | [`agent-surfaces.md`](./agent-surfaces.md) |
-| 4 | Large-doc performance | [`perf-large-docs.md`](./perf-large-docs.md) |
-| 5 | Nested projects | [`files-share-selfhost.md`](./files-share-selfhost.md) follow-ups |
+| 1 | Phase D — Unified share dialog | [`share-dialog-unify.md`](./share-dialog-unify.md) |
+| 2 | Phase E — llms.txt + MCP | [`agent-surfaces.md`](./agent-surfaces.md) |
+| 3 | Large-doc performance | [`perf-large-docs.md`](./perf-large-docs.md) |
+| 4 | Nested projects | [`files-share-selfhost.md`](./files-share-selfhost.md) follow-ups |
 
 ## Next task
 
-1. Phase A shipped — see [`ux-polish-sw-home-dialogs.md`](./ux-polish-sw-home-dialogs.md).
-2. Implement Phase B (lean trash) when ready.
-3. Promote Phase C only after B (or explicitly parallelize).
+1. Phases A–B shipped.
+2. Implement Phase C (worker protocol) when ready — D depends on it.
+3. Promote D/E after C.

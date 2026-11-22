@@ -9,7 +9,7 @@ import {
     setFileContent,
     removeFileContent,
     upsertSavedFile,
-    removeSavedFile,
+    trashOrDeleteFile,
     setFileAsEditing,
     clearAllEditingFlags,
     findSavedFileById,
@@ -158,17 +158,18 @@ export function loadFileToEditor(fileId: string): { success: boolean; state: Edi
 /**
  * Delete a file
  */
-export function deleteFile(fileId: string, filename: string): { success: boolean; error?: string } {
+export function deleteFile(fileId: string, _filename?: string): { success: boolean; error?: string } {
     try {
-        removeFileContent(filename);
-        removeSavedFile(fileId);
+        const result = trashOrDeleteFile(fileId);
+        if (!result.success) {
+            return { success: false, error: result.error || 'Failed to delete file' };
+        }
         clearAllEditingFlags();
-        
-        // Dispatch storage event for files page sync
+
         if (typeof window !== 'undefined') {
             window.dispatchEvent(new Event('storage'));
         }
-        
+
         return { success: true };
     } catch (error) {
         return {

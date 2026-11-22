@@ -24,11 +24,28 @@ import {
     List,
     Share2,
     Loader2,
+    Trash2,
+    RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
 import { useImportExport } from "@/hooks/use-import-export";
-import { getSettings, updateSetting, getContent, getEditingFile, getSavedFiles, getFileContent, clearAllData, getProjects } from "@/lib/storage";
+import {
+    getSettings,
+    updateSetting,
+    getContent,
+    getEditingFile,
+    getSavedFiles,
+    getFileContent,
+    clearAllData,
+    getProjects,
+    getTrash,
+    restoreTrashEntry,
+    purgeTrashEntry,
+    emptyTrash,
+    onStorageChange,
+    type TrashEntry,
+} from "@/lib/storage";
 import { encryptData } from "@/lib/utils";
 import { truncateFilenameForDisplay } from "@/lib/editor";
 import { getAppVersion, getCacheVersion, checkForUpdate, triggerUpdate } from "@/lib/pwa-version";
@@ -81,6 +98,15 @@ export default function SettingsPage(): React.JSX.Element {
         const settings = getSettings();
         return settings?.showSpellChecker ?? true;
     });
+    const [trashEnabled, setTrashEnabled] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        const settings = getSettings();
+        return settings?.trashEnabled ?? true;
+    });
+    const [trashItems, setTrashItems] = useState<TrashEntry[]>(() => {
+        if (typeof window === 'undefined') return [];
+        return getTrash();
+    });
     const [exportPassword, setExportPassword] = useState("");
     const [importPassword, setImportPassword] = useState("");
     const [showExportPassword, setShowExportPassword] = useState(false);
@@ -126,6 +152,19 @@ export default function SettingsPage(): React.JSX.Element {
         if (window.location.hash !== "#share") return;
         const el = document.getElementById("share");
         el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, [isMounted]);
+
+    useEffect(() => {
+        if (!isMounted) return;
+        const refreshTrash = () => setTrashItems(getTrash());
+        refreshTrash();
+        return onStorageChange((key) => {
+            if (key === "mdviewer_trash" || key === "mdviewer_settings" || key === null) {
+                refreshTrash();
+                const settings = getSettings();
+                if (settings) setTrashEnabled(settings.trashEnabled ?? true);
+            }
+        });
     }, [isMounted]);
     
     // Load cache version and update status
@@ -257,6 +296,7 @@ export default function SettingsPage(): React.JSX.Element {
                 settings: {
                     showDefaultContent,
                     theme: theme as 'light' | 'dark' | 'system',
+                    trashEnabled,
                 },
                 files: [],
                 currentContent: getContent(),
@@ -906,6 +946,108 @@ export default function SettingsPage(): React.JSX.Element {
                                 Import
                             </Button>
                         </div>
+                    </div>
+
+                    <div className="border-t pt-4" id="trash">
+                        <div className="flex items-start justify-between gap-4 mb-3">
+                            <div>
+                                <p className="text-sm font-medium mb-1 flex items-center gap-2">
+                                    <Trash2 className="w-4 h-4" />
+                                    Trash
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    When on, deleted files and projects move here so you can restore them.
+                                    When off, delete is permanent after confirm. Trash is local-only and
+                                    not included in export.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={trashEnabled ? "default" : "outline"}
+                                onClick={() => {
+                                    const next = !trashEnabled;
+                                    persistPreference(() => {
+                                        setTrashEnabled(next);
+                                        updateSetting("trashEnabled", next);
+                                    });
+                                }}
+                            >
+                                {trashEnabled ? "On" : "Off"}
+                            </Button>
+                        </div>
+
+                        {trashItems.length === 0 ? (
+                            <p className="text-xs text-muted-foreground py-2">Trash is empty.</p>
+                        ) : (
+                            <div className="space-y-2">
+                                <div className="max-h-56 overflow-y-auto space-y-2 rounded-md border border-border p-2">
+                                    {trashItems.map((entry) => (
+                                        <div
+                                            key={entry.id}
+                                            className="flex items-center gap-2 text-sm"
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <p className="truncate font-medium">
+                                                    {entry.kind === "file"
+                                                        ? entry.file.filename
+                                                        : entry.project.name}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    {entry.kind === "file" ? "File" : "Project"} ·{" "}
+                                                    {new Date(entry.trashedAt).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-7 gap-1 shrink-0"
+                                                onClick={() => {
+                                                    const result = restoreTrashEntry(entry.id);
+                                                    if (!result.success) {
+                                                        toast.error(result.error || "Restore failed");
+                                                        return;
+                                                    }
+                                                    setTrashItems(getTrash());
+                                                    toast.success("Restored");
+                                                }}
+                                            >
+                                                <RotateCcw className="w-3 h-3" />
+                                                Restore
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 w-7 p-0 shrink-0 text-destructive"
+                                                title="Delete forever"
+                                                onClick={() => {
+                                                    purgeTrashEntry(entry.id);
+                                                    setTrashItems(getTrash());
+                                                    toast.success("Deleted forever");
+                                                }}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="gap-2"
+                                    onClick={() => {
+                                        emptyTrash();
+                                        setTrashItems([]);
+                                        toast.success("Trash emptied");
+                                    }}
+                                >
+                                    Empty trash
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
                     <div className="border-t pt-4">

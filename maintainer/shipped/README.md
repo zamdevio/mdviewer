@@ -4,6 +4,7 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Phase B lean trash | Soft-delete files/projects; Settings toggle + restore/purge; export excludes trash |
 | 2026-11 | Phase A UX polish | SW network-first assets + auto-activate; ModalShell backdrop/X; ConfirmDeleteDialog; home hero; README/docs showcase; web 3.3.0 |
 | 2026-11 | Tree DnD + project pack + Vite defaults | DnD/context menus/ProjectPicker; MDVIEWER_PROJECT_V1; import fingerprint merge; public URL fallbacks |
 | 2026-11 | Files tree + BYO share + badge dialogs | Virtual projects; grid/tree; Settings `#share`; `/compatibility`; connection ModalShells; README/docs |

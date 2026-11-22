@@ -1,6 +1,6 @@
 # Phase B — Lean trash
 
-**Status:** Queued  
+**Status:** Shipped  
 **Depends on:** Phase A
 
 ## Goals
@@ -9,15 +9,14 @@ Local soft-delete for files and projects with a Settings toggle and restore list
 
 ## Model
 
-- Soft-delete stores `trashedAt` (or moves into `mdviewer_trash`)
+- Soft-delete stores entries in `mdviewer_trash` (cap 50)
 - Settings: Trash on/off (default on). Off = permanent delete after confirm
 - Settings UI: list files + projects, Restore / Delete forever / Empty trash
-- Cap list; warn on quota
-- Import/export: exclude trash by default
+- Import/export: trash excluded (local-only)
 
 ## Checklist
 
-- [ ] Storage shape + migrate helpers
-- [ ] Wire file/project delete paths through trash when enabled
-- [ ] Settings section + restore/purge
-- [ ] Confirm dialogs still used for permanent delete
+- [x] Storage shape + migrate helpers (`trashOrDeleteFile` / `trashOrDeleteProject`)
+- [x] Wire file/project delete paths (Files page + editor `deleteFile`)
+- [x] Settings Trash section + restore/purge
+- [x] Confirm dialogs note soft vs hard delete

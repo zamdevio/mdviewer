@@ -31,6 +31,7 @@ export function useImportExport() {
                     showEditorStatusBar: data.settings.showEditorStatusBar ?? true,
                     showSpellChecker: data.settings.showSpellChecker ?? true,
                     filesLayout: data.settings.filesLayout === 'tree' ? 'tree' : 'grid',
+                    trashEnabled: data.settings.trashEnabled ?? true,
                 };
                 updateSettings(settings);
 

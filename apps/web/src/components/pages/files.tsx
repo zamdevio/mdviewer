@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, LayoutGrid, FolderTree } from "lucide-react";
 import { toast } from "sonner";
-import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, removeProject, addSharedLink, type SavedFile, type Project } from "@/lib/storage";
+import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, trashOrDeleteFile, trashOrDeleteProject, isTrashEnabled, addSharedLink, type SavedFile, type Project } from "@/lib/storage";
 import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile } from "@/lib/editor";
 import { FilesTree } from "@/components/pages/files/FilesTree";
 import { ProjectPicker } from "@/components/pages/files/ProjectPicker";
@@ -169,16 +169,19 @@ export default function FilesPage(): React.JSX.Element {
         setShowDeleteWarning(null);
         
         try {
-            removeFileContent(filename);
-            // Delete by ID if provided (more accurate), otherwise by filename
-            if (fileId) {
-                removeSavedFile(fileId);
-            } else {
-                const savedFiles = getSavedFiles();
-                const updated = savedFiles.filter((f: SavedFile) => f.filename !== filename);
-                setSavedFiles(updated);
+            const id =
+                fileId ||
+                getSavedFiles().find((f: SavedFile) => f.filename === filename)?.id;
+            if (!id) {
+                toast.error("File not found");
+                return;
             }
-            toast.success("File deleted");
+            const result = trashOrDeleteFile(id);
+            if (!result.success) {
+                toast.error(result.error || "Failed to delete file");
+                return;
+            }
+            toast.success(result.soft ? "Moved to Trash" : "File deleted");
             loadFiles();
         } catch (error) {
             toast.error("Failed to delete file: " + (error instanceof Error ? error.message : "Unknown error"));
@@ -973,6 +976,11 @@ export default function FilesPage(): React.JSX.Element {
                 open={!!showDeleteWarning}
                 title="Delete file"
                 name={showDeleteWarning?.filename ?? null}
+                description={
+                    isTrashEnabled()
+                        ? "It will move to Trash in Settings (you can restore later)."
+                        : "This action cannot be undone!"
+                }
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setShowDeleteWarning(null)}
             />
@@ -981,15 +989,23 @@ export default function FilesPage(): React.JSX.Element {
                 open={!!showDeleteProject}
                 title="Delete project"
                 name={showDeleteProject?.name ?? null}
-                description="Files in this project become ungrouped — they are not deleted."
+                description={
+                    isTrashEnabled()
+                        ? "Project moves to Trash. Files become ungrouped until you restore."
+                        : "Files in this project become ungrouped — they are not deleted."
+                }
                 confirmLabel="Delete project"
                 onConfirm={() => {
                     if (!showDeleteProject) return;
-                    removeProject(showDeleteProject.id);
-                    setProjectsState(getProjects());
+                    const result = trashOrDeleteProject(showDeleteProject.id);
                     setShowDeleteProject(null);
+                    if (!result.success) {
+                        toast.error(result.error || "Failed to delete project");
+                        return;
+                    }
+                    setProjectsState(getProjects());
                     loadFiles();
-                    toast.success("Project deleted");
+                    toast.success(result.soft ? "Project moved to Trash" : "Project deleted");
                 }}
                 onCancel={() => setShowDeleteProject(null)}
             />

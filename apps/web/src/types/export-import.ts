@@ -33,6 +33,7 @@ export interface ExportSettings {
     showEditorStatusBar?: boolean;
     showSpellChecker?: boolean;
     filesLayout?: 'grid' | 'tree';
+    trashEnabled?: boolean;
 }
 
 /**

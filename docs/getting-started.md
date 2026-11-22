@@ -57,6 +57,9 @@ On **Files**, toggle **Grid** / **Tree**. Preference is saved in settings (`file
 **Import / export**
 - Projects merge by name; files with identical content fingerprints are skipped as duplicates
 
+**Trash**
+- Settings → Trash (default on): deleted files/projects soft-delete and can be restored. Turn off for permanent delete after confirm.
+
 ## Local CORS
 
 For share from `http://localhost:3000`, ensure that origin is listed in `ALLOWED_ORIGINS` in [`apps/worker/wrangler.toml`](../apps/worker/wrangler.toml) and redeploy the worker.

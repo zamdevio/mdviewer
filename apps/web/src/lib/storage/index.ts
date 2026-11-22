@@ -15,6 +15,8 @@ export interface SettingsData {
     showEditorStatusBar: boolean;
     showSpellChecker: boolean;
     filesLayout: 'grid' | 'tree';
+    /** Soft-delete files/projects into Trash (default on). */
+    trashEnabled: boolean;
 }
 
 export interface Project {
@@ -31,6 +33,25 @@ export interface SavedFile {
     editing?: boolean; // Mark file as currently being edited
     projectId?: string; // Virtual project / folder (optional)
 }
+
+export type TrashEntry =
+    | {
+          id: string;
+          kind: 'file';
+          trashedAt: string;
+          file: SavedFile;
+          content: string;
+      }
+    | {
+          id: string;
+          kind: 'project';
+          trashedAt: string;
+          project: Project;
+          /** File ids that belonged to the project at delete time. */
+          fileIds: string[];
+      };
+
+const TRASH_MAX = 50;
 
 export interface SharedLink {
     id: string;
@@ -55,6 +76,7 @@ class StorageManager {
         SHARED_LINKS: 'mdviewer_shared_links',
         TEMP_FILE: 'mdviewer_temp_file', // Temporary unsaved content
         PROJECTS: 'mdviewer_projects',
+        TRASH: 'mdviewer_trash',
     } as const;
 
     private constructor() {
@@ -95,6 +117,7 @@ class StorageManager {
                 showEditorStatusBar: parsed.showEditorStatusBar ?? true,
                 showSpellChecker: parsed.showSpellChecker ?? true,
                 filesLayout: parsed.filesLayout === 'tree' ? 'tree' : 'grid',
+                trashEnabled: parsed.trashEnabled ?? true,
             };
         } catch {
             return null;
@@ -118,6 +141,7 @@ class StorageManager {
                 showEditorStatusBar: true,
                 showSpellChecker: true,
                 filesLayout: 'grid',
+                trashEnabled: true,
             };
             return defaults[key];
         }
@@ -142,6 +166,7 @@ class StorageManager {
                 showEditorStatusBar: settings.showEditorStatusBar ?? current?.showEditorStatusBar ?? true,
                 showSpellChecker: settings.showSpellChecker ?? current?.showSpellChecker ?? true,
                 filesLayout: settings.filesLayout ?? current?.filesLayout ?? 'grid',
+                trashEnabled: settings.trashEnabled ?? current?.trashEnabled ?? true,
             };
             
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(updated));
@@ -436,6 +461,161 @@ class StorageManager {
         this.setSavedFiles(files);
     }
 
+    // ============================================
+    // Trash (soft-delete)
+    // ============================================
+
+    isTrashEnabled(): boolean {
+        return this.getSetting('trashEnabled') ?? true;
+    }
+
+    getTrash(): TrashEntry[] {
+        if (typeof window === 'undefined') return [];
+        try {
+            const data = localStorage.getItem(this.KEYS.TRASH);
+            if (!data) return [];
+            const parsed = JSON.parse(data) as TrashEntry[];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    setTrash(entries: TrashEntry[]): void {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.setItem(this.KEYS.TRASH, JSON.stringify(entries.slice(0, TRASH_MAX)));
+            window.dispatchEvent(new Event('storage'));
+        } catch (error) {
+            console.error('Error saving trash:', error);
+            throw error;
+        }
+    }
+
+    /** Soft-delete a file into trash (or hard-delete if trash disabled). */
+    trashOrDeleteFile(fileId: string): { success: boolean; soft: boolean; error?: string } {
+        const file = this.findSavedFileById(fileId);
+        if (!file) return { success: false, soft: false, error: 'File not found' };
+
+        if (!this.isTrashEnabled()) {
+            this.removeFileContent(file.filename);
+            this.removeSavedFile(fileId);
+            return { success: true, soft: false };
+        }
+
+        const content = this.getFileContent(file.filename) || '';
+        const entry: TrashEntry = {
+            id: `trash_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            kind: 'file',
+            trashedAt: new Date().toISOString(),
+            file: {
+                id: file.id,
+                filename: file.filename,
+                timestamp: file.timestamp,
+                projectId: file.projectId,
+            },
+            content,
+        };
+        const trash = [entry, ...this.getTrash()].slice(0, TRASH_MAX);
+        this.setTrash(trash);
+        this.removeFileContent(file.filename);
+        this.removeSavedFile(fileId);
+        return { success: true, soft: true };
+    }
+
+    /** Soft-delete a project into trash (or hard-delete if trash disabled). */
+    trashOrDeleteProject(projectId: string): { success: boolean; soft: boolean; error?: string } {
+        const project = this.getProjects().find((p) => p.id === projectId);
+        if (!project) return { success: false, soft: false, error: 'Project not found' };
+
+        const fileIds = this.getSavedFiles()
+            .filter((f) => f.projectId === projectId)
+            .map((f) => f.id);
+
+        if (!this.isTrashEnabled()) {
+            this.removeProject(projectId);
+            return { success: true, soft: false };
+        }
+
+        const entry: TrashEntry = {
+            id: `trash_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            kind: 'project',
+            trashedAt: new Date().toISOString(),
+            project,
+            fileIds,
+        };
+        const trash = [entry, ...this.getTrash()].slice(0, TRASH_MAX);
+        this.setTrash(trash);
+        this.removeProject(projectId);
+        return { success: true, soft: true };
+    }
+
+    restoreTrashEntry(entryId: string): { success: boolean; error?: string } {
+        const trash = this.getTrash();
+        const entry = trash.find((e) => e.id === entryId);
+        if (!entry) return { success: false, error: 'Not found in trash' };
+
+        if (entry.kind === 'file') {
+            let filename = entry.file.filename;
+            const existing = this.getSavedFiles();
+            if (existing.some((f) => f.filename === filename)) {
+                const base = filename.replace(/\.md$/i, '');
+                let n = 1;
+                while (existing.some((f) => f.filename === `${base}-restored-${n}.md`)) n += 1;
+                filename = `${base}-restored-${n}.md`;
+            }
+            const id =
+                entry.file.id && !existing.some((f) => f.id === entry.file.id)
+                    ? entry.file.id
+                    : `file_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            this.setFileContent(filename, entry.content);
+            this.upsertSavedFile({
+                id,
+                filename,
+                timestamp: new Date().toISOString(),
+                projectId: entry.file.projectId,
+            });
+        } else {
+            let name = entry.project.name;
+            const projects = this.getProjects();
+            if (projects.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+                let n = 1;
+                while (
+                    projects.some(
+                        (p) => p.name.toLowerCase() === `${entry.project.name} (${n})`.toLowerCase()
+                    )
+                ) {
+                    n += 1;
+                }
+                name = `${entry.project.name} (${n})`;
+            }
+            const id =
+                entry.project.id && !projects.some((p) => p.id === entry.project.id)
+                    ? entry.project.id
+                    : `proj_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+            this.upsertProject({
+                id,
+                name,
+                createdAt: entry.project.createdAt || new Date().toISOString(),
+            });
+            const files = this.getSavedFiles().map((f) =>
+                entry.fileIds.includes(f.id) ? { ...f, projectId: id } : f
+            );
+            this.setSavedFiles(files);
+        }
+
+        this.setTrash(trash.filter((e) => e.id !== entryId));
+        return { success: true };
+    }
+
+    purgeTrashEntry(entryId: string): void {
+        this.setTrash(this.getTrash().filter((e) => e.id !== entryId));
+    }
+
+    emptyTrash(): void {
+        this.setTrash([]);
+    }
+
     getSharedLinks(): SharedLink[] {
         if (typeof window === 'undefined') return [];
         
@@ -568,6 +748,7 @@ class StorageManager {
             localStorage.removeItem(this.KEYS.ACTIVATE_DISMISSED);
             localStorage.removeItem('mdviewer_api_override');
             localStorage.removeItem('mdviewer_projects');
+            localStorage.removeItem(this.KEYS.TRASH);
             
             // Clear all editing flags from saved files
             this.clearAllEditingFlags();
@@ -583,6 +764,7 @@ class StorageManager {
                 showEditorStatusBar: true,
                 showSpellChecker: true,
                 filesLayout: 'grid',
+                trashEnabled: true,
             };
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(defaultSettings));
             
@@ -661,4 +843,12 @@ export const getProjects = () => storage.getProjects();
 export const setProjects = (projects: Project[]) => storage.setProjects(projects);
 export const upsertProject = (project: Project) => storage.upsertProject(project);
 export const removeProject = (projectId: string) => storage.removeProject(projectId);
+
+export const isTrashEnabled = () => storage.isTrashEnabled();
+export const getTrash = () => storage.getTrash();
+export const trashOrDeleteFile = (fileId: string) => storage.trashOrDeleteFile(fileId);
+export const trashOrDeleteProject = (projectId: string) => storage.trashOrDeleteProject(projectId);
+export const restoreTrashEntry = (entryId: string) => storage.restoreTrashEntry(entryId);
+export const purgeTrashEntry = (entryId: string) => storage.purgeTrashEntry(entryId);
+export const emptyTrash = () => storage.emptyTrash();
 
