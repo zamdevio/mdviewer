@@ -33,6 +33,8 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | [`phases/02-share-dialog.md`](phases/02-share-dialog.md) | Phase D — unified share dialog |
 | [`phases/03-agent-surfaces.md`](phases/03-agent-surfaces.md) | Phase E — MCP / agent surfaces |
 | [`phases/04-perf-large-docs.md`](phases/04-perf-large-docs.md) | Large markdown perf roadmap |
+| [`phases/05-showcase.md`](phases/05-showcase.md) | README / home / docs / agent-parity honesty |
+| [`phases/06-appflare.md`](phases/06-appflare.md) | Appflare catalog readiness + submit gates |
 | [`systems/web.md`](systems/web.md) | Web app map |
 | [`systems/worker.md`](systems/worker.md) | Worker API map |
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
