@@ -7,6 +7,7 @@ import health from "./routes/health";
 import compatibility from "./routes/compatibility";
 import upload from "./routes/upload";
 import share from "./routes/share";
+import brand from "./routes/brand";
 import llms from "./routes/llms";
 import mcp from "./routes/mcp";
 
@@ -65,6 +66,7 @@ app.use("*", async (c, next) => {
 
 app.route("/", health);
 app.route("/", compatibility);
+app.route("/", brand);
 app.route("/", upload);
 app.route("/", share);
 app.route("/", llms);

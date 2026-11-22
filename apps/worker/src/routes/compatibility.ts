@@ -93,6 +93,7 @@ app.openapi(compatibilityRoute, (c) => {
           description: "Wipe share prefix (X-Share-Password)",
         },
         { method: "POST", path: "/mcp", description: "MCP JSON-RPC tools" },
+        { method: "GET", path: "/favicon.svg", description: "Brand icon (MCP serverInfo.icons)" },
         { method: "GET", path: "/llms.txt", description: "Agent brief" },
         { method: "GET", path: "/llms-full.txt", description: "Full agent brief" },
         { method: "GET", path: "/docs", description: "Swagger UI" },

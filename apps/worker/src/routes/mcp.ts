@@ -18,6 +18,7 @@ import {
   isExpired,
   TTL_DEFAULT_SECONDS,
 } from "../lib/ttl";
+import { mcpIcons } from "../lib/brand";
 import { generateId, MAX_FILE_SIZE } from "../lib/content";
 
 const app = new OpenAPIHono<{
@@ -308,11 +309,18 @@ app.post("/mcp", async (c) => {
     )
       ? requested
       : "2025-03-26";
+    const apiOrigin = new URL(c.req.url).origin;
     return c.json(
       rpcResult(id, {
         protocolVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: "mdviewer-api", version: "2.0.0" },
+        serverInfo: {
+          name: "mdviewer-api",
+          title: "MDViewer",
+          version: "2.0.0",
+          // SEP-973 — clients that brand MCP UIs (Cursor may still fall back to generic)
+          icons: mcpIcons(apiOrigin),
+        },
       }),
     );
   }
@@ -352,14 +360,18 @@ app.post("/mcp", async (c) => {
   return c.json(rpcError(id, -32601, `Method not found: ${method}`), 404);
 });
 
-app.get("/mcp", (c) =>
-  c.json({
+app.get("/mcp", (c) => {
+  const apiOrigin = new URL(c.req.url).origin;
+  return c.json({
     name: "mdviewer-api",
+    title: "MDViewer",
     transport: "streamable-http-jsonrpc",
     endpoint: "POST /mcp",
     tools: TOOLS.map((t) => t.name),
+    icons: mcpIcons(apiOrigin),
+    favicon: `${apiOrigin}/favicon.svg`,
     docs: "/llms-full.txt",
-  }),
-);
+  });
+});
 
 export default app;
