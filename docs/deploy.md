@@ -1,42 +1,45 @@
 # Deploy
 
-Primary path: **GitHub Actions → Cloudflare** on every `main` push (see [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)).
+**GitHub Actions → Cloudflare** on every `main` push ([`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)):
 
-The old **Fly.io** GitHub “production” deployment is legacy (Next-era). New production traffic is Cloudflare Pages (`markview`) + Worker (`mdviewer-api`). Mark Fly inactive in GitHub Deployments if it still shows as Active.
+1. Pages project `markview` (`apps/web` → Vite dist)
+2. Worker `mdviewer-api` (`apps/worker`)
 
-## One-time GitHub setup
+## GitHub setup
 
-Repository **Secrets**:
+**Secrets**
 
 | Secret | Purpose |
 |--------|---------|
-| `CLOUDFLARE_API_TOKEN` | Token with Pages Edit + Workers Scripts Edit |
+| `CLOUDFLARE_API_TOKEN` | Pages Edit + Workers Scripts Edit |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id |
 
-Repository **Variables** (public, not Secrets — optional override):
+**Variables** (optional; public defaults already baked in Vite)
 
 | Variable | Example |
 |----------|---------|
 | `VITE_API_URL` | `https://api.mdviewer.zamdev.dev` |
 | `VITE_FRONTEND_URL` | `https://mdviewer.zamdev.dev` |
 
-These are **not** secrets (same values live in [`.env.example`](../.env.example) and as Vite build fallbacks in `apps/web/vite.config.ts`). Set GH Variables when you want CI to bake a different host; otherwise the public defaults apply. Users can still override in **Settings → Share**.
+Users can still override hosts in **Settings → Share**. Self-host: point the SPA at your worker; see [`api.md`](./api.md) `/compatibility`.
 
-### Self-host share worker
-
-Users can point any deployed SPA at a custom worker via Settings → Share. Document `/compatibility` for integrators — see [`api.md`](./api.md).
-
-## Manual deploy
+## Manual
 
 ```bash
 pnpm web:deploy
 pnpm worker:deploy
 ```
 
-SPA fallback: `apps/web/public/_redirects` → `/* /index.html 200`.
+Configure `ALLOWED_ORIGINS` in [`apps/worker/wrangler.jsonc`](../apps/worker/wrangler.jsonc) (include `http://localhost:3000` for local share). R2 + Durable Object bindings required.
 
-Configure `ALLOWED_ORIGINS` in [`apps/worker/wrangler.jsonc`](../apps/worker/wrangler.jsonc) (include `http://localhost:3000` for local share). Ensure R2 bucket + Durable Object migration exist.
+## SPA routing (Pages)
 
-## PWA / cache
+| Piece | Role |
+|-------|------|
+| Build: `settings.html`, `editor.html`, … | Pretty URLs **without** trailing slash (`/settings` not `/settings/`) |
+| `_redirects` | Strip `/settings/` → `/settings` (301); catch-all `/* → /index.html 200` for `/share/:id` etc. |
+| `_headers` | HTML shells `CDN-Cache-Control: no-store` so custom domains don’t keep stale shells |
 
-Service worker cache migration rules: [`maintainer/systems/pwa-cache.md`](../maintainer/systems/pwa-cache.md).
+## PWA
+
+SW rules: [`maintainer/systems/pwa-cache.md`](../maintainer/systems/pwa-cache.md).

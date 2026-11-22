@@ -1,1 +1,9 @@
+# Strip trailing slashes so pretty URLs stay /settings not /settings/
+/settings/  /settings  301
+/editor/    /editor    301
+/files/     /files     301
+/search/    /search    301
+/shares/    /shares    301
+
+# SPA fallback for dynamic routes (e.g. /share/:id)
 /*    /index.html   200

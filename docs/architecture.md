@@ -28,6 +28,8 @@ No Next.js. No server-rendered pages. Worker is the only backend.
 - UI: grid cards or tree explorer (`filesLayout` setting) — DnD, context menus, project share packs
 - Project packs: text payload `MDVIEWER_PROJECT_V1` + JSON over `POST /upload` (no multipart)
 
-## PWA updates
+## SPA routes + PWA
 
-Service worker uses network-first for HTML and hashed `/assets/*` so a normal reload picks up new deploys. See [`maintainer/systems/pwa-cache.md`](../maintainer/systems/pwa-cache.md).
+- Pretty shells: build emits `settings.html` / `editor.html` / … so Pages serves `/settings` **without** a trailing slash (directory `index.html` would 302 → `/settings/`).
+- Dynamic paths (`/share/:id`) use `_redirects` SPA fallback.
+- SW: network-first HTML + hashed `/assets/*`. Details: [`maintainer/systems/pwa-cache.md`](../maintainer/systems/pwa-cache.md).

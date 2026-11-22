@@ -45,7 +45,9 @@ Upload headers: `X-Share-Password`, `X-Share-TTL-Seconds` (default 7d, max 30d),
 | Worker raw | `https://api.mdviewer.zamdev.dev/share/<id>` | Plain markdown (`text/plain`) |
 | Worker meta | `https://api.mdviewer.zamdev.dev/share/<id>/meta` | JSON metadata |
 
-MCP `upload_share` returns `frontendShareUrl` (SPA) and `contentUrl` (Worker raw). Both are `/share/<id>`.
+MCP `upload_share` returns `frontendShareUrl` (SPA) and `contentUrl` (Worker raw). Both are `/share/<id>` (no trailing slash). App routes (`/editor`, `/settings`, …) also use no trailing slash.
+
+Share viewer exposes metadata via `GET /share/:id/meta` (Details control in the SPA).
 
 In-doc fragment links (`#heading`) work in editor preview and share viewer (first matching heading wins).
 

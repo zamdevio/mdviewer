@@ -45,8 +45,8 @@ function serviceWorkerPlugin(): Plugin {
 }
 
 /**
- * Emit real HTML shells for SPA routes so Pages serves Vite at `/settings` etc.
- * (Old Next left per-path CDN ghosts when those routes were only `_redirects` fallbacks.)
+ * Emit pretty-URL HTML shells (`settings.html` → `/settings`, no trailing slash).
+ * Directory `settings/index.html` forces CF Pages to 302 → `/settings/` — avoid that.
  */
 const SPA_HTML_ROUTES = [
   "settings",
@@ -65,9 +65,12 @@ function spaHtmlShellsPlugin(): Plugin {
       if (!fs.existsSync(indexPath)) return;
       const html = fs.readFileSync(indexPath, "utf8");
       for (const route of SPA_HTML_ROUTES) {
-        const dir = path.join(outDir, route);
-        fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(path.join(dir, "index.html"), html, "utf8");
+        // Drop any prior directory shell from older builds in this outDir
+        const dirShell = path.join(outDir, route);
+        if (fs.existsSync(path.join(dirShell, "index.html"))) {
+          fs.rmSync(dirShell, { recursive: true, force: true });
+        }
+        fs.writeFileSync(path.join(outDir, `${route}.html`), html, "utf8");
       }
     },
   };

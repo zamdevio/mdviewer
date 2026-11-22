@@ -6,7 +6,7 @@
   Permissions-Policy: geolocation=(), microphone=(), camera=()
   Cross-Origin-Opener-Policy: same-origin
 
-# SPA shell must never sit in CDN for a week (stale Next HTML was served on /settings)
+# SPA shells — never CDN-cache HTML (Next left week-long ghosts on custom domains)
 /
   Cache-Control: public, max-age=0, must-revalidate
   CDN-Cache-Control: no-store
@@ -15,11 +15,11 @@
   Cache-Control: public, max-age=0, must-revalidate
   CDN-Cache-Control: no-store
 
-/settings
+/*.html
   Cache-Control: public, max-age=0, must-revalidate
   CDN-Cache-Control: no-store
 
-/settings/
+/settings
   Cache-Control: public, max-age=0, must-revalidate
   CDN-Cache-Control: no-store
 
@@ -40,27 +40,6 @@
   CDN-Cache-Control: no-store
 
 /share/*
-  Cache-Control: public, max-age=0, must-revalidate
-  CDN-Cache-Control: no-store
-
-# Physical SPA shells (copied index.html per route at build)
-/settings/index.html
-  Cache-Control: public, max-age=0, must-revalidate
-  CDN-Cache-Control: no-store
-
-/editor/index.html
-  Cache-Control: public, max-age=0, must-revalidate
-  CDN-Cache-Control: no-store
-
-/files/index.html
-  Cache-Control: public, max-age=0, must-revalidate
-  CDN-Cache-Control: no-store
-
-/search/index.html
-  Cache-Control: public, max-age=0, must-revalidate
-  CDN-Cache-Control: no-store
-
-/shares/index.html
   Cache-Control: public, max-age=0, must-revalidate
   CDN-Cache-Control: no-store
 
