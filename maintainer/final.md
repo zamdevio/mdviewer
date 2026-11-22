@@ -38,10 +38,10 @@ See [`phases/01-share-protocol.md`](./phases/01-share-protocol.md).
 
 See [`phases/02-share-dialog.md`](./phases/02-share-dialog.md).
 
-- [ ] One Share dialog (editor + file + project)
-- [ ] Local `shareId` binding; new link vs replace
-- [ ] TTL picker + wipe time; protect-view toggle → Settings `#password`
-- [ ] Shares page remote DELETE with password
+- [x] One Share dialog (editor + file + project)
+- [x] Local `shareId` binding; new link vs replace
+- [x] TTL picker + wipe time; protect-view toggle → Settings `#password`
+- [x] Shares page remote DELETE with password
 
 ## 5. Phase E — agent surfaces
 

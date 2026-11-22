@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Copy, Check, ArrowLeft, GitFork, FolderPlus } from "lucide-react";
 import { MarkdownViewer } from "@/components/markdown";
-import { fetchSharedMarkdown } from "@/lib/api";
+import { fetchSharedMarkdown, ApiRequestError } from "@/lib/api";
 import { tryParseProjectPack, type ProjectPack } from "@/lib/project-pack";
 import {
     getProjects,
@@ -25,6 +25,9 @@ export default function ShareViewPage(): React.JSX.Element {
     const [copied, setCopied] = useState(false);
     const [shareId, setShareId] = useState<string | null>(null);
     const [importing, setImporting] = useState(false);
+    const [needsPassword, setNeedsPassword] = useState(false);
+    const [viewPassword, setViewPassword] = useState("");
+    const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
     useEffect(() => {
         if (typeof window !== "undefined" && shareId) {
@@ -62,29 +65,57 @@ export default function ShareViewPage(): React.JSX.Element {
         }
     }, []);
 
+    const applyMarkdown = (markdown: string) => {
+        const pack = tryParseProjectPack(markdown);
+        if (pack) {
+            setProjectPack(pack);
+            setContent(null);
+        } else {
+            setProjectPack(null);
+            setContent(markdown);
+        }
+        setNeedsPassword(false);
+        setError(null);
+    };
+
     useEffect(() => {
         if (!shareId) return;
         setLoading(true);
         setError(null);
+        setNeedsPassword(false);
         const loadContent = async () => {
             try {
                 const markdown = await fetchSharedMarkdown(shareId);
-                const pack = tryParseProjectPack(markdown);
-                if (pack) {
-                    setProjectPack(pack);
-                    setContent(null);
-                } else {
-                    setProjectPack(null);
-                    setContent(markdown);
-                }
+                applyMarkdown(markdown);
             } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load shared content");
+                if (err instanceof ApiRequestError && err.status === 401) {
+                    setNeedsPassword(true);
+                    setError(null);
+                } else {
+                    setError(err instanceof Error ? err.message : "Failed to load shared content");
+                }
             } finally {
                 setLoading(false);
             }
         };
         loadContent();
     }, [shareId]);
+
+    const handleViewPasswordSubmit = async () => {
+        if (!shareId || !viewPassword.trim()) {
+            toast.error("Enter the share password");
+            return;
+        }
+        setPasswordSubmitting(true);
+        try {
+            const markdown = await fetchSharedMarkdown(shareId, viewPassword.trim());
+            applyMarkdown(markdown);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Invalid password");
+        } finally {
+            setPasswordSubmitting(false);
+        }
+    };
 
     const handleCopyUrl = async () => {
         try {
@@ -147,6 +178,46 @@ export default function ShareViewPage(): React.JSX.Element {
                     <Loader2 className="w-8 h-8 animate-spin text-primary" />
                     <p className="text-muted-foreground">Loading shared content...</p>
                 </div>
+            </div>
+        );
+    }
+
+    if (needsPassword && !content && !projectPack) {
+        return (
+            <div className="container mx-auto p-4 h-[calc(100vh-100px)] flex items-center justify-center">
+                <Card className="p-8 max-w-md w-full">
+                    <h2 className="text-2xl font-bold mb-2 text-center">Protected share</h2>
+                    <p className="text-muted-foreground mb-6 text-center text-sm">
+                        This link requires the share password to view.
+                    </p>
+                    <input
+                        type="password"
+                        autoComplete="off"
+                        value={viewPassword}
+                        onChange={(e) => setViewPassword(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") void handleViewPasswordSubmit();
+                        }}
+                        placeholder="Share password"
+                        className="w-full mb-3 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                    />
+                    <Button
+                        className="w-full gap-2 mb-3"
+                        disabled={passwordSubmitting}
+                        onClick={() => void handleViewPasswordSubmit()}
+                    >
+                        {passwordSubmitting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : null}
+                        Unlock
+                    </Button>
+                    <Link to="/editor" className="block">
+                        <Button variant="outline" className="w-full gap-2">
+                            <ArrowLeft className="w-4 h-4" />
+                            Back to Editor
+                        </Button>
+                    </Link>
+                </Card>
             </div>
         );
     }

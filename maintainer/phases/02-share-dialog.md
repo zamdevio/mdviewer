@@ -1,7 +1,7 @@
 # Phase D — Unified share dialog
 
 **Order:** 02  
-**Status:** Queued  
+**Status:** Shipped  
 **Depends on:** Phase C ([`01-share-protocol.md`](./01-share-protocol.md))
 
 ## Goals
@@ -18,8 +18,8 @@ One Share dialog for editor, file, and project/folder. Local `shareId` binding. 
 
 ## Checklist
 
-- [ ] Persist `shareId` on SavedFile / Project
-- [ ] Shared dialog component wired from editor + files tree/grid
-- [ ] PUT replace vs POST new
-- [ ] Shares page DELETE with password
-- [ ] Settings `#password` section (auto-gen + copy)
+- [x] Persist `shareId` on SavedFile / Project
+- [x] Shared dialog component wired from editor + files tree/grid
+- [x] PUT replace vs POST new
+- [x] Shares page DELETE with password
+- [x] Settings `#password` section (auto-gen + copy)

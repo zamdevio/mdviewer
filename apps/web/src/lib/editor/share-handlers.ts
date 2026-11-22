@@ -1,118 +1,181 @@
 /**
  * Share Handlers
- * 
- * Business logic for sharing markdown content
+ *
+ * Business logic for sharing markdown content (protocol 2 options).
  */
 
-import { uploadMarkdown, isCorsFailure } from '@/lib/api';
+import {
+  uploadMarkdown,
+  replaceSharedMarkdown,
+  isCorsFailure,
+  type UploadShareOptions,
+} from '@/lib/api';
 import { isApiConfigured, getEffectiveApiConfig } from '@/lib/config';
-import { addSharedLink, type SharedLink } from '@/lib/storage';
+import {
+  addSharedLink,
+  getSavedFiles,
+  upsertSavedFile,
+  type SharedLink,
+} from '@/lib/storage';
 import type { EditorState } from '@/types';
 
 export interface ShareResult {
-    success: boolean;
-    shareUrl?: string;
-    sharedLink?: SharedLink;
-    error?: string;
-    requiresSave?: boolean;
-    shouldShowApiWarning?: boolean;
-    shouldShowCorsWarning?: boolean;
+  success: boolean;
+  shareUrl?: string;
+  shareId?: string;
+  expiresAt?: string;
+  sharedLink?: SharedLink;
+  error?: string;
+  requiresSave?: boolean;
+  shouldShowApiWarning?: boolean;
+  shouldShowCorsWarning?: boolean;
 }
 
+export type ShareActionOptions = UploadShareOptions & {
+  mode?: 'create' | 'replace';
+  existingShareId?: string | null;
+};
+
 /**
- * Share markdown content
+ * Share markdown content (create or replace).
  */
 export async function handleShare(
-    markdown: string,
-    editorState: EditorState
+  markdown: string,
+  editorState: EditorState,
+  options: ShareActionOptions = {},
 ): Promise<ShareResult> {
-    
-    if (!markdown.trim()) {
+  if (!markdown.trim()) {
+    return {
+      success: false,
+      error: 'Cannot share empty content',
+    };
+  }
 
-        return {
-            success: false,
-            error: "Cannot share empty content"
-        };
+  const { currentFileName } = editorState;
+
+  if (!currentFileName) {
+    return {
+      success: false,
+      requiresSave: true,
+      error: 'Please save this content with a filename before sharing',
+    };
+  }
+
+  if (!isApiConfigured()) {
+    return {
+      success: false,
+      shouldShowApiWarning: true,
+      error: 'API not configured. Please configure the API URL to use the share feature.',
+    };
+  }
+
+  const filename = `${currentFileName}.md`;
+  const uploadOpts: UploadShareOptions = {
+    password: options.password,
+    ttlSeconds: options.ttlSeconds,
+    viewProtected: options.viewProtected,
+    filename,
+    type: 'file',
+  };
+
+  try {
+    let resultId: string;
+    let frontendShareUrl: string | undefined;
+    let expiresAt: string | undefined;
+
+    if (options.mode === 'replace' && options.existingShareId && options.password) {
+      const updated = await replaceSharedMarkdown(
+        options.existingShareId,
+        markdown,
+        options.password,
+        { filename },
+      );
+      resultId = updated.id;
+      expiresAt = updated.expiresAt;
+      const { FRONTEND_URL } = getEffectiveApiConfig();
+      frontendShareUrl = `${FRONTEND_URL}/share?id=${resultId}`;
+    } else {
+      const result = await uploadMarkdown(markdown, uploadOpts);
+      resultId = result.id;
+      frontendShareUrl = result.frontendShareUrl;
+      expiresAt = result.expiresAt;
     }
 
-    const { currentFileName } = editorState;
+    const { FRONTEND_URL } = getEffectiveApiConfig();
+    const fullUrl =
+      frontendShareUrl || `${FRONTEND_URL}/share?id=${resultId}`;
 
-    // Enforce saving file before sharing - require filename
-    if (!currentFileName) {
-        return {
-            success: false,
-            requiresSave: true,
-            error: "Please save this content with a filename before sharing"
-        };
+    const sharedLink: SharedLink = {
+      id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+      shareId: resultId,
+      url: fullUrl,
+      preview: markdown.substring(0, 100) + (markdown.length > 100 ? '...' : ''),
+      filename,
+      timestamp: new Date().toISOString(),
+      password: options.password || undefined,
+      expiresAt,
+    };
+    addSharedLink(sharedLink);
+
+    // Bind share id + password on the saved file
+    const files = getSavedFiles();
+    const file = files.find(
+      (f) =>
+        f.filename === currentFileName ||
+        f.filename === filename ||
+        f.filename === currentFileName.replace(/\.md$/i, ''),
+    );
+    if (file) {
+      upsertSavedFile({
+        ...file,
+        shareId: resultId,
+        sharePassword: options.password || file.sharePassword,
+      });
     }
 
-    // Check if API is configured before attempting to share
-    if (!isApiConfigured()) {
-        return {
-            success: false,
-            shouldShowApiWarning: true,
-            error: "API not configured. Please configure the API URL to use the share feature."
-        };
+    return {
+      success: true,
+      shareUrl: fullUrl,
+      shareId: resultId,
+      expiresAt,
+      sharedLink,
+      shouldShowApiWarning: false,
+    };
+  } catch (error) {
+    if (isCorsFailure(error)) {
+      return {
+        success: false,
+        shouldShowCorsWarning: true,
+        error: error instanceof Error ? error.message : 'Share blocked by CORS',
+      };
     }
-
-    try {
-        const result = await uploadMarkdown(markdown);
-        
-        // Use frontendShareUrl from response directly (it's already a full URL)
-        // Only construct URL if frontendShareUrl is not provided
-        const { FRONTEND_URL } = getEffectiveApiConfig();
-        const fullUrl = result.frontendShareUrl || `${FRONTEND_URL}/share?id=${result.id}`;
-
-        // Store shared link
-        const sharedLink: SharedLink = {
-            id: `link_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-            shareId: result.id,
-            url: fullUrl,
-            preview: markdown.substring(0, 100) + (markdown.length > 100 ? '...' : ''),
-            filename: `${currentFileName}.md`,
-            timestamp: new Date().toISOString(),
-        };
-        addSharedLink(sharedLink);
-
-        return {
-            success: true,
-            shareUrl: fullUrl,
-            sharedLink,
-            shouldShowApiWarning: false
-        };
-    } catch (error) {
-        if (isCorsFailure(error)) {
-            return {
-                success: false,
-                shouldShowCorsWarning: true,
-                error: error instanceof Error ? error.message : "Share blocked by CORS",
-            };
-        }
-        if (error instanceof Error && /fetch|network|Failed to connect/i.test(error.message)) {
-            return {
-                success: false,
-                shouldShowApiWarning: true,
-                error: "Failed to connect to API. Please check your API configuration."
-            };
-        }
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Failed to share. Please try again."
-        };
+    if (error instanceof Error && /fetch|network|Failed to connect/i.test(error.message)) {
+      return {
+        success: false,
+        shouldShowApiWarning: true,
+        error: 'Failed to connect to API. Please check your API configuration.',
+      };
     }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to share. Please try again.',
+    };
+  }
 }
 
 /**
  * Copy share URL to clipboard
  */
-export async function copyShareUrl(shareUrl: string): Promise<{ success: boolean; error?: string }> {
-    try {
-        await navigator.clipboard.writeText(shareUrl);
-        return { success: true };
-    } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error"
-        };
-    }
+export async function copyShareUrl(
+  shareUrl: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
 }

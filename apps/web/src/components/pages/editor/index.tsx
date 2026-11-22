@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { isApiConfigured } from "@/lib/config";
 import { toast } from "sonner";
-import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing } from "@/lib/storage";
+import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, getSavedFiles } from "@/lib/storage";
+import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
 import { getShowDefaultContent, getTempFile, clearTempFile } from "@/lib/storage/helpers";
 import {
     getInitialEditorState,
@@ -19,6 +20,7 @@ import {
     cleanEditorUrl,
     // Handler functions
     handleShare as handleShareLogic,
+
     getSaveAction,
     handleSaveConfirm as handleSaveConfirmLogic,
     getNewFileAction,
@@ -83,6 +85,8 @@ export default function EditorPage() {
     const [mounted, setMounted] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
     const [shareUrl, setShareUrl] = useState<string | null>(null);
+    const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
+    const [showShareCompose, setShowShareCompose] = useState(false);
     const [showSharePanel, setShowSharePanel] = useState(false);
     const [lastSharedContent, setLastSharedContent] = useState<string | null>(null);
     const [lastSharedFileName, setLastSharedFileName] = useState<string | null>(null);
@@ -1038,8 +1042,22 @@ export default function EditorPage() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [mounted]);
 
-    const handleShare = async () => {
-        // Check if file needs to be saved first (before showing loading)
+    const boundShareFile = (() => {
+        if (!currentFileName) return null;
+        const files = getSavedFiles();
+        return (
+            files.find((f) => f.id === currentFileId) ||
+            files.find(
+                (f) =>
+                    f.filename === currentFileName ||
+                    f.filename === `${currentFileName}.md` ||
+                    f.filename.replace(/\.md$/i, "") === currentFileName.replace(/\.md$/i, ""),
+            ) ||
+            null
+        );
+    })();
+
+    const handleShare = () => {
         if (!currentFileName) {
             toast.info("Please save this content with a filename before sharing");
             setSaveDialogMode('save');
@@ -1049,65 +1067,87 @@ export default function EditorPage() {
             setShowSaveDialog(true);
             return;
         }
+        if (!markdown.trim()) {
+            setEmptyDialogKind('share');
+            setShowEmptySaveDialog(true);
+            return;
+        }
+        if (!isApiConfigured()) {
+            setShowApiWarning(true);
+            return;
+        }
+        setShowShareCompose(true);
+    };
 
+    const handleShareComposeConfirm = async (opts: ShareComposeConfirm) => {
         setIsSharing(true);
-        toast.loading("Sharing your markdown...", { id: "sharing" });
+        toast.loading(
+            opts.mode === "replace" ? "Updating share…" : "Sharing your markdown…",
+            { id: "sharing" },
+        );
 
         try {
-            const result = await handleShareLogic(markdown, editorState);
+            const result = await handleShareLogic(markdown, editorState, {
+                mode: opts.mode,
+                existingShareId: boundShareFile?.shareId,
+                password: opts.password || undefined,
+                ttlSeconds: opts.ttlSeconds,
+                viewProtected: opts.viewProtected,
+            });
 
             if (result.requiresSave) {
                 toast.dismiss("sharing");
                 toast.info(result.error || "Please save this content with a filename before sharing");
+                setShowShareCompose(false);
                 setSaveDialogMode('save');
                 setPendingNewFile(false);
                 setSaveFileName("");
                 setSaveDialogInitialValue("");
                 setShowSaveDialog(true);
-                setIsSharing(false);
                 return;
             }
 
             if (result.shouldShowCorsWarning) {
+                setShowShareCompose(false);
                 setCorsWarningDetail(result.error || null);
                 setShowCorsWarning(true);
                 toast.warning(result.error || "Share blocked by CORS", { id: "sharing" });
-                setIsSharing(false);
                 return;
             }
 
             if (result.shouldShowApiWarning) {
+                setShowShareCompose(false);
                 setShowApiWarning(true);
                 toast.warning(result.error || "API not configured", { id: "sharing" });
-                setIsSharing(false);
                 return;
             }
 
             if (!result.success) {
                 toast.dismiss("sharing");
                 if (result.error === "Cannot share empty content") {
+                    setShowShareCompose(false);
                     setEmptyDialogKind('share');
                     setShowEmptySaveDialog(true);
                 } else {
                     toast.error(result.error || "Failed to share");
                 }
-                setIsSharing(false);
                 return;
             }
 
             if (result.shareUrl) {
-                const url = result.shareUrl;
-                setShareUrl(url);
-                // Track what was shared so we can detect changes later
+                setShareUrl(result.shareUrl);
+                setShareExpiresAt(result.expiresAt ?? null);
                 setLastSharedContent(markdown);
                 setLastSharedFileName(currentFileName);
                 setShowApiWarning(false);
                 setShowCorsWarning(false);
                 setCorsWarningDetail(null);
+                setShowShareCompose(false);
                 setShowSharePanel(true);
-                toast.success("Share link created!", { id: "sharing" });
-            } else {
-                toast.success("Shared via Web Share!", { id: "sharing" });
+                toast.success(
+                    opts.mode === "replace" ? "Share updated!" : "Share link created!",
+                    { id: "sharing" },
+                );
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to share", { id: "sharing" });
@@ -1602,10 +1642,20 @@ export default function EditorPage() {
                 onConfirm={handleDeleteConfirm}
                 onCancel={() => setShowDeleteWarning(false)}
             />
+            <ShareComposeDialog
+                open={showShareCompose}
+                filename={currentFileName}
+                existingShareId={boundShareFile?.shareId}
+                existingPassword={boundShareFile?.sharePassword}
+                submitting={isSharing}
+                onClose={() => !isSharing && setShowShareCompose(false)}
+                onConfirm={handleShareComposeConfirm}
+            />
             <SharePanel
                 show={showSharePanel}
                 shareUrl={shareUrl ?? ''}
                 fileName={currentFileName}
+                expiresAt={shareExpiresAt}
                 onClose={() => setShowSharePanel(false)}
                 onCopy={() => {
                     // Copy handled in SharePanel component

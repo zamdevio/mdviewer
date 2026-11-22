@@ -34,6 +34,7 @@ export interface ExportSettings {
     showSpellChecker?: boolean;
     filesLayout?: 'grid' | 'tree';
     trashEnabled?: boolean;
+    defaultSharePassword?: string;
 }
 
 /**

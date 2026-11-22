@@ -8,6 +8,7 @@ export interface SharePanelProps {
     show: boolean;
     shareUrl: string;
     fileName?: string | null;
+    expiresAt?: string | null;
     onClose: () => void;
     onCopy?: () => void;
     onWebShare?: () => void;
@@ -17,6 +18,7 @@ export function SharePanel({
     show,
     shareUrl,
     fileName,
+    expiresAt,
     onClose,
     onCopy,
     onWebShare,
@@ -161,9 +163,14 @@ export function SharePanel({
                 </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t">
+            <div className="mt-4 pt-4 border-t space-y-1">
+                {expiresAt && (
+                    <p className="text-xs text-muted-foreground text-center">
+                        Wipes: {new Date(expiresAt).toLocaleString()}
+                    </p>
+                )}
                 <p className="text-xs text-muted-foreground text-center">
-                    Anyone with this link can view the document
+                    Link access depends on view-protection settings for this share
                 </p>
             </div>
         </ModalShell>

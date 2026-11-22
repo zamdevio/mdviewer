@@ -3,17 +3,22 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Share2, ExternalLink, Copy, X, Trash2, Loader2 } from "lucide-react";
+import { Share2, ExternalLink, Copy, X, Trash2, Loader2, CloudOff } from "lucide-react";
 import { toast } from "sonner";
 import { getSharedLinks, removeSharedLink, clearSharedLinks, onStorageChange, type SharedLink } from "@/lib/storage";
 import { truncateFilenameForDisplay } from "@/lib/editor";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { deleteRemoteShare, isCorsFailure } from "@/lib/api";
+import { isApiConfigured } from "@/lib/config";
 
 export default function SharesPage(): React.JSX.Element {
     const [sharedLinks, setSharedLinks] = useState<SharedLink[]>([]);
     const [loading, setLoading] = useState(true);
     const [showClearWarning, setShowClearWarning] = useState(false);
     const [deleteLinkId, setDeleteLinkId] = useState<string | null>(null);
+    const [deleteRemote, setDeleteRemote] = useState(true);
+    const [deletePassword, setDeletePassword] = useState("");
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         const loadSharedLinks = async () => {
@@ -24,7 +29,6 @@ export default function SharesPage(): React.JSX.Element {
         loadSharedLinks();
     }, []);
 
-    // Listen for shared links changes
     useEffect(() => {
         const unsubscribe = onStorageChange((key) => {
             if (key === 'mdviewer_shared_links' || key === null) {
@@ -44,15 +48,36 @@ export default function SharesPage(): React.JSX.Element {
     };
 
     const handleDeleteLink = (shareId: string) => {
+        const link = getSharedLinks().find((l) => l.shareId === shareId);
         setDeleteLinkId(shareId);
+        setDeletePassword(link?.password ?? "");
+        setDeleteRemote(Boolean(link?.password) && isApiConfigured());
     };
 
-    const handleDeleteConfirm = () => {
-        if (deleteLinkId) {
+    const handleDeleteConfirm = async () => {
+        if (!deleteLinkId) return;
+        setDeleting(true);
+        try {
+            if (deleteRemote && deletePassword.trim()) {
+                await deleteRemoteShare(deleteLinkId, deletePassword.trim());
+                toast.success("Remote share wiped");
+            } else if (deleteRemote && !deletePassword.trim()) {
+                toast.error("Password required for remote delete");
+                setDeleting(false);
+                return;
+            }
             removeSharedLink(deleteLinkId);
             setSharedLinks(getSharedLinks());
             setDeleteLinkId(null);
-            toast.success("Link removed");
+            if (!deleteRemote) toast.success("Link removed locally");
+        } catch (error) {
+            if (isCorsFailure(error)) {
+                toast.error("CORS blocked remote delete");
+            } else {
+                toast.error(error instanceof Error ? error.message : "Remote delete failed");
+            }
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -60,7 +85,7 @@ export default function SharesPage(): React.JSX.Element {
         clearSharedLinks();
         setSharedLinks([]);
         setShowClearWarning(false);
-        toast.success("All links cleared");
+        toast.success("All local links cleared");
     };
 
     if (loading) {
@@ -97,7 +122,7 @@ export default function SharesPage(): React.JSX.Element {
                     <Share2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
                     <h2 className="text-xl font-semibold mb-2">No shared links yet</h2>
                     <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                        When you share from the editor, links are stored here so you can reopen or copy them later.
+                        When you share from the editor or Files, links are stored here so you can reopen, copy, or remotely delete them.
                     </p>
                     <Button asChild className="gap-2">
                         <Link to="/editor">
@@ -127,6 +152,11 @@ export default function SharesPage(): React.JSX.Element {
                                         >
                                             {new Date(link.timestamp).toLocaleString()}
                                         </p>
+                                        {link.expiresAt && (
+                                            <p className="text-xs text-muted-foreground mt-1">
+                                                Wipes: {new Date(link.expiresAt).toLocaleString()}
+                                            </p>
+                                        )}
                                         <p
                                             className="text-xs text-muted-foreground mt-1 font-mono truncate"
                                             title={link.shareId}
@@ -176,7 +206,7 @@ export default function SharesPage(): React.JSX.Element {
 
             <ModalShell
                 open={!!deleteLinkId}
-                onClose={() => setDeleteLinkId(null)}
+                onClose={() => !deleting && setDeleteLinkId(null)}
                 title="Delete shared link"
             >
                 <div className="flex items-start gap-3 mb-4 pr-8">
@@ -186,25 +216,58 @@ export default function SharesPage(): React.JSX.Element {
                             Delete Shared Link
                         </h3>
                         <p className="text-sm text-muted-foreground mb-2">
-                            Are you sure you want to delete this shared link?
-                        </p>
-                        <p className="text-sm font-medium text-destructive">
-                            This action cannot be undone!
+                            Remove this link from your local list
+                            {deleteRemote ? " and optionally wipe it on the Worker." : "."}
                         </p>
                     </div>
                 </div>
+                {isApiConfigured() && (
+                    <label className="flex items-start gap-2 text-sm mb-3">
+                        <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={deleteRemote}
+                            disabled={deleting}
+                            onChange={(e) => setDeleteRemote(e.target.checked)}
+                        />
+                        <span>Also delete on Worker (requires share password)</span>
+                    </label>
+                )}
+                {deleteRemote && (
+                    <input
+                        type="password"
+                        autoComplete="off"
+                        value={deletePassword}
+                        onChange={(e) => setDeletePassword(e.target.value)}
+                        disabled={deleting}
+                        placeholder="X-Share-Password"
+                        className="w-full mb-3 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                    />
+                )}
+                {!deleteRemote && (
+                    <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                        <CloudOff className="w-3 h-3" />
+                        Local only — remote content stays until TTL wipe
+                    </p>
+                )}
                 <div className="flex flex-col gap-2">
                     <Button
                         variant="destructive"
                         onClick={handleDeleteConfirm}
+                        disabled={deleting}
                         className="gap-2 w-full"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        {deleting ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Trash2 className="w-4 h-4" />
+                        )}
                         Delete
                     </Button>
                     <Button
                         variant="outline"
                         onClick={() => setDeleteLinkId(null)}
+                        disabled={deleting}
                         className="w-full"
                     >
                         Cancel
@@ -224,10 +287,7 @@ export default function SharesPage(): React.JSX.Element {
                             Clear All Shared Links
                         </h3>
                         <p className="text-sm text-muted-foreground mb-2">
-                            Are you sure you want to delete all {sharedLinks.length} shared links?
-                        </p>
-                        <p className="text-sm font-medium text-destructive">
-                            This action cannot be undone!
+                            Remove all {sharedLinks.length} links from this browser only (does not wipe Worker objects).
                         </p>
                     </div>
                 </div>
@@ -252,4 +312,3 @@ export default function SharesPage(): React.JSX.Element {
         </div>
     );
 }
-

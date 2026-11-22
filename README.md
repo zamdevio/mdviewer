@@ -64,7 +64,7 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 ### Edge share
 - Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, optional share password, OpenAPI `/docs`
 - SPA ships [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) + [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt); MCP waits on Phase E
-- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`02-share-dialog`](./maintainer/phases/02-share-dialog.md) → MCP → perf
+- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`03-agent-surfaces`](./maintainer/phases/03-agent-surfaces.md) → perf
 
 ### Security
 - Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode

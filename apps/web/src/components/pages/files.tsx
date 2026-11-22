@@ -11,8 +11,10 @@ import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitiz
 import { FilesTree } from "@/components/pages/files/FilesTree";
 import { ProjectPicker } from "@/components/pages/files/ProjectPicker";
 import { packProject } from "@/lib/project-pack";
-import { uploadMarkdown, isCorsFailure } from "@/lib/api";
+import { uploadMarkdown, replaceSharedMarkdown, isCorsFailure } from "@/lib/api";
 import { isApiConfigured, getEffectiveApiConfig } from "@/lib/config";
+import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
+import { SharePanel } from "@/components/pages/editor/dialogs/Share";
 
 export default function FilesPage(): React.JSX.Element {
     const [files, setFiles] = useState<SavedFile[]>([]);
@@ -33,6 +35,15 @@ export default function FilesPage(): React.JSX.Element {
     const [currentPage, setCurrentPage] = useState(1);
     const [filesLayout, setFilesLayout] = useState<'grid' | 'tree'>('grid');
     const [projectPickerFor, setProjectPickerFor] = useState<string | null>(null);
+    const [shareTarget, setShareTarget] = useState<
+        | { kind: "file"; file: SavedFile }
+        | { kind: "project"; project: Project }
+        | null
+    >(null);
+    const [shareSubmitting, setShareSubmitting] = useState(false);
+    const [shareSuccessUrl, setShareSuccessUrl] = useState<string | null>(null);
+    const [shareSuccessExpires, setShareSuccessExpires] = useState<string | null>(null);
+    const [shareSuccessName, setShareSuccessName] = useState<string | null>(null);
 
     // Load items per page setting
     useEffect(() => {
@@ -674,7 +685,7 @@ export default function FilesPage(): React.JSX.Element {
                     onDeleteFile={(file) => {
                         handleDelete(file.filename, file.id);
                     }}
-                    onShareFile={async (file) => {
+                    onShareFile={(file) => {
                         if (!isApiConfigured()) {
                             toast.error("Configure share API in Settings");
                             return;
@@ -684,35 +695,9 @@ export default function FilesPage(): React.JSX.Element {
                             toast.error("Nothing to share");
                             return;
                         }
-                        try {
-                            toast.loading("Sharing…", { id: "share-file" });
-                            const result = await uploadMarkdown(content);
-                            const { FRONTEND_URL } = getEffectiveApiConfig();
-                            const url =
-                                result.frontendShareUrl ||
-                                `${FRONTEND_URL}/share?id=${result.id}`;
-                            addSharedLink({
-                                id: `link_${Date.now()}`,
-                                shareId: result.id,
-                                url,
-                                preview: content.slice(0, 100),
-                                filename: file.filename,
-                                timestamp: new Date().toISOString(),
-                            });
-                            await navigator.clipboard.writeText(url);
-                            toast.success("Share link copied", { id: "share-file" });
-                        } catch (error) {
-                            toast.dismiss("share-file");
-                            if (isCorsFailure(error)) {
-                                toast.error("CORS blocked — check ALLOWED_ORIGINS");
-                            } else {
-                                toast.error(
-                                    error instanceof Error ? error.message : "Share failed"
-                                );
-                            }
-                        }
+                        setShareTarget({ kind: "file", file });
                     }}
-                    onShareProject={async (project) => {
+                    onShareProject={(project) => {
                         if (!isApiConfigured()) {
                             toast.error("Configure share API in Settings");
                             return;
@@ -722,36 +707,7 @@ export default function FilesPage(): React.JSX.Element {
                             toast.error("Project has no files to share");
                             return;
                         }
-                        const pack = packProject(
-                            project.name,
-                            kids.map((f) => ({
-                                filename: f.filename,
-                                content: getFileContent(f.filename) || f.content || "",
-                            }))
-                        );
-                        try {
-                            toast.loading("Sharing project…", { id: "share-proj" });
-                            const result = await uploadMarkdown(pack);
-                            const { FRONTEND_URL } = getEffectiveApiConfig();
-                            const url =
-                                result.frontendShareUrl ||
-                                `${FRONTEND_URL}/share?id=${result.id}`;
-                            addSharedLink({
-                                id: `link_${Date.now()}`,
-                                shareId: result.id,
-                                url,
-                                preview: `Project: ${project.name} (${kids.length} files)`,
-                                filename: `${project.name}.project`,
-                                timestamp: new Date().toISOString(),
-                            });
-                            await navigator.clipboard.writeText(url);
-                            toast.success("Project pack link copied", { id: "share-proj" });
-                        } catch (error) {
-                            toast.dismiss("share-proj");
-                            toast.error(
-                                error instanceof Error ? error.message : "Share failed"
-                            );
-                        }
+                        setShareTarget({ kind: "project", project });
                     }}
                 />
             ) : (
@@ -1049,6 +1005,181 @@ export default function FilesPage(): React.JSX.Element {
                     toast.success(result.soft ? "Project moved to Trash" : "Project deleted");
                 }}
                 onCancel={() => setShowDeleteProject(null)}
+            />
+
+            <ShareComposeDialog
+                open={!!shareTarget}
+                title={shareTarget?.kind === "project" ? "Share project" : "Share file"}
+                filename={
+                    shareTarget?.kind === "file"
+                        ? shareTarget.file.filename
+                        : shareTarget?.kind === "project"
+                          ? shareTarget.project.name
+                          : null
+                }
+                existingShareId={
+                    shareTarget?.kind === "file"
+                        ? shareTarget.file.shareId
+                        : shareTarget?.kind === "project"
+                          ? shareTarget.project.shareId
+                          : null
+                }
+                existingPassword={
+                    shareTarget?.kind === "file"
+                        ? shareTarget.file.sharePassword
+                        : shareTarget?.kind === "project"
+                          ? shareTarget.project.sharePassword
+                          : null
+                }
+                submitting={shareSubmitting}
+                onClose={() => !shareSubmitting && setShareTarget(null)}
+                onConfirm={async (opts: ShareComposeConfirm) => {
+                    if (!shareTarget) return;
+                    setShareSubmitting(true);
+                    try {
+                        const { FRONTEND_URL } = getEffectiveApiConfig();
+                        if (shareTarget.kind === "file") {
+                            const file = shareTarget.file;
+                            const content =
+                                getFileContent(file.filename) || file.content || "";
+                            let id: string;
+                            let url: string;
+                            let expiresAt: string | undefined;
+                            if (
+                                opts.mode === "replace" &&
+                                file.shareId &&
+                                opts.password
+                            ) {
+                                const updated = await replaceSharedMarkdown(
+                                    file.shareId,
+                                    content,
+                                    opts.password,
+                                    { filename: file.filename },
+                                );
+                                id = updated.id;
+                                expiresAt = updated.expiresAt;
+                                url = `${FRONTEND_URL}/share?id=${id}`;
+                            } else {
+                                const result = await uploadMarkdown(content, {
+                                    password: opts.password || undefined,
+                                    ttlSeconds: opts.ttlSeconds,
+                                    viewProtected: opts.viewProtected,
+                                    filename: file.filename,
+                                    type: "file",
+                                });
+                                id = result.id;
+                                expiresAt = result.expiresAt;
+                                url =
+                                    result.frontendShareUrl ||
+                                    `${FRONTEND_URL}/share?id=${id}`;
+                            }
+                            upsertSavedFile({
+                                ...file,
+                                shareId: id,
+                                sharePassword: opts.password || file.sharePassword,
+                            });
+                            addSharedLink({
+                                id: `link_${Date.now()}`,
+                                shareId: id,
+                                url,
+                                preview: content.slice(0, 100),
+                                filename: file.filename,
+                                timestamp: new Date().toISOString(),
+                                password: opts.password || undefined,
+                                expiresAt,
+                            });
+                            setShareSuccessUrl(url);
+                            setShareSuccessExpires(expiresAt ?? null);
+                            setShareSuccessName(file.filename);
+                        } else {
+                            const project = shareTarget.project;
+                            const kids = files.filter((f) => f.projectId === project.id);
+                            const pack = packProject(
+                                project.name,
+                                kids.map((f) => ({
+                                    filename: f.filename,
+                                    content:
+                                        getFileContent(f.filename) || f.content || "",
+                                })),
+                            );
+                            let id: string;
+                            let url: string;
+                            let expiresAt: string | undefined;
+                            if (
+                                opts.mode === "replace" &&
+                                project.shareId &&
+                                opts.password
+                            ) {
+                                const updated = await replaceSharedMarkdown(
+                                    project.shareId,
+                                    pack,
+                                    opts.password,
+                                    { filename: `${project.name}.project.md` },
+                                );
+                                id = updated.id;
+                                expiresAt = updated.expiresAt;
+                                url = `${FRONTEND_URL}/share?id=${id}`;
+                            } else {
+                                const result = await uploadMarkdown(pack, {
+                                    password: opts.password || undefined,
+                                    ttlSeconds: opts.ttlSeconds,
+                                    viewProtected: opts.viewProtected,
+                                    filename: `${project.name}.project.md`,
+                                    type: "project",
+                                });
+                                id = result.id;
+                                expiresAt = result.expiresAt;
+                                url =
+                                    result.frontendShareUrl ||
+                                    `${FRONTEND_URL}/share?id=${id}`;
+                            }
+                            upsertProject({
+                                ...project,
+                                shareId: id,
+                                sharePassword: opts.password || project.sharePassword,
+                            });
+                            addSharedLink({
+                                id: `link_${Date.now()}`,
+                                shareId: id,
+                                url,
+                                preview: `Project: ${project.name} (${kids.length} files)`,
+                                filename: `${project.name}.project`,
+                                timestamp: new Date().toISOString(),
+                                password: opts.password || undefined,
+                                expiresAt,
+                            });
+                            setShareSuccessUrl(url);
+                            setShareSuccessExpires(expiresAt ?? null);
+                            setShareSuccessName(project.name);
+                            setProjectsState(getProjects());
+                        }
+                        loadFiles();
+                        setShareTarget(null);
+                        toast.success("Share ready");
+                    } catch (error) {
+                        if (isCorsFailure(error)) {
+                            toast.error("CORS blocked — check ALLOWED_ORIGINS");
+                        } else {
+                            toast.error(
+                                error instanceof Error ? error.message : "Share failed",
+                            );
+                        }
+                    } finally {
+                        setShareSubmitting(false);
+                    }
+                }}
+            />
+
+            <SharePanel
+                show={!!shareSuccessUrl}
+                shareUrl={shareSuccessUrl ?? ""}
+                fileName={shareSuccessName}
+                expiresAt={shareSuccessExpires}
+                onClose={() => {
+                    setShareSuccessUrl(null);
+                    setShareSuccessExpires(null);
+                    setShareSuccessName(null);
+                }}
             />
         </div>
     );

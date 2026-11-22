@@ -4,6 +4,7 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Phase D unified share dialog | ShareComposeDialog; Settings `#password`; shareId bind; replace vs new; Shares remote DELETE; view-password unlock |
 | 2026-11 | Phase C share protocol | R2 `shares/{id}/`; password PBKDF2; fixed TTL + cron; fair-use IP+UA; PUT/PATCH/DELETE/meta; compatibility **protocol 2** |
 | 2026-11 | Repo hygiene + phase fold | LICENSE/SECURITY/CONTRIBUTING/CoC; `final.md` pre-v4.0; fold A/B/UI/platform; phases `01`–`04`; web+root **3.5.0** |
 | 2026-11 | wrangler.jsonc + llms/SEO + #heading anchors | Worker config → jsonc; llms.txt / llms-full.txt / robots / sitemap; OG meta; fragment links in editor+share preview |

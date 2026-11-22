@@ -60,6 +60,7 @@ import {
 import { isCorsFailure, testShareConnection } from "@/lib/api";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { generateSharePassword } from "@/lib/share/ttl";
 import type { SavedFile } from "@/lib/storage";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
@@ -131,6 +132,11 @@ export default function SettingsPage(): React.JSX.Element {
         return getEffectiveApiConfig().FRONTEND_URL;
     });
     const [testingShare, setTestingShare] = useState(false);
+    const [defaultSharePassword, setDefaultSharePassword] = useState(() => {
+        if (typeof window === "undefined") return "";
+        return getSettings()?.defaultSharePassword ?? "";
+    });
+    const [showSharePassword, setShowSharePassword] = useState(false);
     const [clearDataConfirmText, setClearDataConfirmText] = useState("");
     const [cacheVersion, setCacheVersion] = useState<string | null>(null);
     const [updateStatus, setUpdateStatus] = useState<{ hasUpdate: boolean; waiting: boolean; installing: boolean } | null>(null);
@@ -530,6 +536,87 @@ export default function SettingsPage(): React.JSX.Element {
                             </code>
                         </p>
                     )}
+                </div>
+            </Card>
+
+            {/* Share password — deep link /settings#password */}
+            <Card id="password" className="p-6 scroll-mt-24">
+                <div className="flex items-center gap-3 mb-1">
+                    <Lock className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Share password</h2>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">
+                    Default password offered when you create a share. Stored only in this browser.
+                    Required on the Worker for update/delete; optional protect-view for GET.
+                </p>
+                <div className="space-y-3">
+                    <div className="flex gap-2">
+                        <input
+                            type={showSharePassword ? "text" : "password"}
+                            autoComplete="new-password"
+                            value={defaultSharePassword}
+                            onChange={(e) => setDefaultSharePassword(e.target.value)}
+                            disabled={!isMounted}
+                            placeholder="Leave empty for public create (no remote mutate)"
+                            className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                        />
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!isMounted}
+                            onClick={() => setShowSharePassword((v) => !v)}
+                            aria-label={showSharePassword ? "Hide password" : "Show password"}
+                        >
+                            {showSharePassword ? (
+                                <EyeOff className="w-4 h-4" />
+                            ) : (
+                                <Eye className="w-4 h-4" />
+                            )}
+                        </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            size="sm"
+                            className="gap-2"
+                            disabled={!isMounted}
+                            onClick={() => {
+                                updateSetting("defaultSharePassword", defaultSharePassword);
+                                toast.success("Share password saved", { id: "settings-saved" });
+                            }}
+                        >
+                            <Check className="w-4 h-4" />
+                            Save
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={!isMounted}
+                            onClick={() => {
+                                const next = generateSharePassword();
+                                setDefaultSharePassword(next);
+                                updateSetting("defaultSharePassword", next);
+                                toast.success("Generated and saved");
+                            }}
+                        >
+                            Auto-generate
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={!isMounted || !defaultSharePassword}
+                            onClick={async () => {
+                                try {
+                                    await navigator.clipboard.writeText(defaultSharePassword);
+                                    toast.success("Copied");
+                                } catch {
+                                    toast.error("Copy failed");
+                                }
+                            }}
+                        >
+                            Copy
+                        </Button>
+                    </div>
                 </div>
             </Card>
 

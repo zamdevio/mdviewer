@@ -12,7 +12,7 @@ Active phase docs (implement order): `01` → `02` → `03` → `04`.
 
 | Priority | Vertical | Notes |
 |----------|----------|-------|
-| 1 | Phase D — Unified share dialog | [`02-share-dialog.md`](./02-share-dialog.md) |
+| 1 | Phase E — MCP (+ optional worker llms) | [`03-agent-surfaces.md`](./03-agent-surfaces.md) |
 | 2 | — | Slot free |
 | 3 | — | Slot free |
 
@@ -20,12 +20,11 @@ Active phase docs (implement order): `01` → `02` → `03` → `04`.
 
 | # | Item | Doc |
 |---|------|-----|
-| 1 | Phase E — MCP (+ optional worker llms) | [`03-agent-surfaces.md`](./03-agent-surfaces.md) |
-| 2 | Large-doc performance | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
-| 3 | Nested projects + other loose ends | [`../final.md`](../final.md) §7 |
+| 1 | Large-doc performance | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
+| 2 | Nested projects + other loose ends | [`../final.md`](../final.md) §7 |
 
 ## Next task
 
-1. Phase C shipped — [`01-share-protocol.md`](./01-share-protocol.md) (protocol 2).
-2. Implement Phase D ([`02-share-dialog.md`](./02-share-dialog.md)).
-3. Then E → perf; track gaps in [`../final.md`](../final.md).
+1. Phases C–D shipped.
+2. Implement Phase E ([`03-agent-surfaces.md`](./03-agent-surfaces.md)).
+3. Then perf; track gaps in [`../final.md`](../final.md).

@@ -17,12 +17,18 @@ export interface SettingsData {
     filesLayout: 'grid' | 'tree';
     /** Soft-delete files/projects into Trash (default on). */
     trashEnabled: boolean;
+    /** Default password offered in Share compose (also Settings #password). */
+    defaultSharePassword: string;
 }
 
 export interface Project {
     id: string;
     name: string;
     createdAt: string;
+    /** Bound remote share id (Phase D) */
+    shareId?: string;
+    /** Local-only password for mutate/delete of that share */
+    sharePassword?: string;
 }
 
 export interface SavedFile {
@@ -32,6 +38,10 @@ export interface SavedFile {
     timestamp?: string;
     editing?: boolean; // Mark file as currently being edited
     projectId?: string; // Virtual project / folder (optional)
+    /** Bound remote share id (Phase D) */
+    shareId?: string;
+    /** Local-only password for mutate/delete of that share */
+    sharePassword?: string;
 }
 
 export type TrashEntry =
@@ -60,6 +70,9 @@ export interface SharedLink {
     preview?: string; // First 100 chars of content
     filename?: string;
     timestamp: string;
+    /** Local-only — enables remote DELETE from Shares page */
+    password?: string;
+    expiresAt?: string;
 }
 
 class StorageManager {
@@ -118,6 +131,7 @@ class StorageManager {
                 showSpellChecker: parsed.showSpellChecker ?? true,
                 filesLayout: parsed.filesLayout === 'tree' ? 'tree' : 'grid',
                 trashEnabled: parsed.trashEnabled ?? true,
+                defaultSharePassword: parsed.defaultSharePassword ?? '',
             };
         } catch {
             return null;
@@ -142,6 +156,7 @@ class StorageManager {
                 showSpellChecker: true,
                 filesLayout: 'grid',
                 trashEnabled: true,
+                defaultSharePassword: '',
             };
             return defaults[key];
         }
@@ -167,6 +182,8 @@ class StorageManager {
                 showSpellChecker: settings.showSpellChecker ?? current?.showSpellChecker ?? true,
                 filesLayout: settings.filesLayout ?? current?.filesLayout ?? 'grid',
                 trashEnabled: settings.trashEnabled ?? current?.trashEnabled ?? true,
+                defaultSharePassword:
+                    settings.defaultSharePassword ?? current?.defaultSharePassword ?? '',
             };
             
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(updated));
@@ -775,6 +792,7 @@ class StorageManager {
                 itemsPerPage: 12,
                 defaultEditorMode: 'both',
                 showEditorStatusBar: true,
+                defaultSharePassword: '',
                 showSpellChecker: true,
                 filesLayout: 'grid',
                 trashEnabled: true,

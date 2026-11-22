@@ -78,15 +78,38 @@ async function toApiRequestError(
   );
 }
 
-export async function uploadMarkdown(content: string): Promise<UploadResponse> {
+export type UploadShareOptions = {
+  password?: string;
+  ttlSeconds?: number;
+  viewProtected?: boolean;
+  filename?: string;
+  type?: "file" | "project";
+};
+
+function shareMutationHeaders(opts?: UploadShareOptions): HeadersInit {
+  const headers: Record<string, string> = {
+    "Content-Type": "text/plain",
+  };
+  if (opts?.password) headers["X-Share-Password"] = opts.password;
+  if (opts?.ttlSeconds != null) {
+    headers["X-Share-TTL-Seconds"] = String(opts.ttlSeconds);
+  }
+  if (opts?.viewProtected) headers["X-Share-View-Protected"] = "true";
+  if (opts?.filename) headers["X-Share-Filename"] = opts.filename;
+  if (opts?.type) headers["X-Share-Type"] = opts.type;
+  return headers;
+}
+
+export async function uploadMarkdown(
+  content: string,
+  opts?: UploadShareOptions,
+): Promise<UploadResponse> {
   const base = apiBase();
   const uploadUrl = `${base}/upload`;
   try {
     const response = await fetch(uploadUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "text/plain",
-      },
+      headers: shareMutationHeaders(opts),
       body: content,
     });
 
@@ -108,17 +131,93 @@ export async function uploadMarkdown(content: string): Promise<UploadResponse> {
   }
 }
 
-export async function fetchSharedMarkdown(id: string): Promise<string> {
+export async function replaceSharedMarkdown(
+  id: string,
+  content: string,
+  password: string,
+  opts?: Pick<UploadShareOptions, "filename">,
+): Promise<{ id: string; size: number; expiresAt: string; updatedAt: string }> {
+  const base = apiBase();
+  const url = `${base}/share/${encodeURIComponent(id)}`;
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "text/plain",
+      "X-Share-Password": password,
+    };
+    if (opts?.filename) headers["X-Share-Filename"] = opts.filename;
+    const response = await fetch(url, {
+      method: "PUT",
+      headers,
+      body: content,
+    });
+    if (!response.ok) {
+      let message = "Failed to update share";
+      try {
+        const error: ApiError = await response.json();
+        message = error.message || message;
+      } catch {
+        /* ignore */
+      }
+      throw new ApiRequestError("http", message, response.status);
+    }
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${base}/health`, "Failed to update share");
+  }
+}
+
+export async function deleteRemoteShare(
+  id: string,
+  password: string,
+): Promise<void> {
+  const base = apiBase();
+  const url = `${base}/share/${encodeURIComponent(id)}`;
+  try {
+    const response = await fetch(url, {
+      method: "DELETE",
+      headers: { "X-Share-Password": password },
+    });
+    if (!response.ok) {
+      let message = "Failed to delete remote share";
+      try {
+        const error: ApiError = await response.json();
+        message = error.message || message;
+      } catch {
+        /* ignore */
+      }
+      throw new ApiRequestError("http", message, response.status);
+    }
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${base}/health`, "Failed to delete remote share");
+  }
+}
+
+export async function fetchSharedMarkdown(
+  id: string,
+  password?: string,
+): Promise<string> {
   const base = apiBase();
   const shareUrl = `${base}/share/${id}`;
   try {
+    const headers: Record<string, string> = {};
+    if (password) headers["X-Share-Password"] = password;
     const response = await fetch(shareUrl, {
       method: "GET",
+      headers,
     });
 
     if (!response.ok) {
       if (response.status === 404) {
         throw new ApiRequestError("http", "Shared content not found", 404);
+      }
+      if (response.status === 401) {
+        throw new ApiRequestError(
+          "http",
+          "This share is view-protected — password required",
+          401,
+        );
       }
       throw new ApiRequestError("http", "Failed to fetch shared content", response.status);
     }
