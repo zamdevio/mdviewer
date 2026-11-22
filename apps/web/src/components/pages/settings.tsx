@@ -20,7 +20,8 @@ import {
     Check,
     AlertCircle,
     RefreshCw,
-    Package
+    Package,
+    List
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
@@ -87,6 +88,11 @@ export default function SettingsPage(): React.JSX.Element {
     
     // Properly handle mounting to prevent hydration errors
     const [isMounted, setIsMounted] = useState(false);
+
+    const persistPreference = (apply: () => void) => {
+        apply();
+        toast.success("Preference saved", { id: "settings-saved", duration: 1600 });
+    };
     
     useEffect(() => {
         requestAnimationFrame(() => {
@@ -324,16 +330,17 @@ export default function SettingsPage(): React.JSX.Element {
 
             {/* Editor Settings */}
             <Card className="p-6">
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-1">
                     <FileText className="w-5 h-5 text-primary" />
                     <h2 className="text-xl font-semibold">Editor</h2>
                 </div>
+                <p className="text-xs text-muted-foreground mb-4">Writing surface defaults — applied when you open the editor.</p>
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Show Default Content</p>
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium mb-1">Show default content</p>
                             <p className="text-xs text-muted-foreground">
-                                Show example markdown content when creating new files or when editor is empty
+                                Example markdown when the editor is empty or a new file is created
                             </p>
                         </div>
                         <Button
@@ -341,19 +348,21 @@ export default function SettingsPage(): React.JSX.Element {
                             size="sm"
                             onClick={() => {
                                 const newValue = !showDefaultContent;
-                                setShowDefaultContent(newValue);
-                                updateSetting('showDefaultContent', newValue);
+                                persistPreference(() => {
+                                    setShowDefaultContent(newValue);
+                                    updateSetting('showDefaultContent', newValue);
+                                });
                             }}
                             disabled={!isMounted}
                         >
                             {isMounted ? (showDefaultContent ? "On" : "Off") : "..."}
                         </Button>
                     </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Auto Save</p>
+                    <div className="flex items-center justify-between gap-4 border-t pt-4">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium mb-1">Auto save</p>
                             <p className="text-xs text-muted-foreground">
-                                Automatically save files every 2 seconds when editing. Temp content is cleared if editor is empty for 2 seconds.
+                                Save about every 2s while editing; empty draft clears after 2s idle
                             </p>
                         </div>
                         <Button
@@ -361,65 +370,45 @@ export default function SettingsPage(): React.JSX.Element {
                             size="sm"
                             onClick={() => {
                                 const newValue = !autoSave;
-                                setAutoSave(newValue);
-                                updateSetting('autoSave', newValue);
+                                persistPreference(() => {
+                                    setAutoSave(newValue);
+                                    updateSetting('autoSave', newValue);
+                                });
                             }}
                             disabled={!isMounted}
                         >
                             {isMounted ? (autoSave ? "On" : "Off") : "..."}
                         </Button>
                     </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Default Editor Mode</p>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t pt-4">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium mb-1">Default editor mode</p>
                             <p className="text-xs text-muted-foreground">
-                                Choose the default view mode when the editor page loads. This setting only applies on page load. You can change the view mode anytime using the buttons in the editor (changes are session-only and won&apos;t be saved). Split view will automatically fallback to editor-only on mobile/small screens.
+                                Initial layout on load only. Toolbar changes stay session-local. Split falls back to editor-only on small screens.
                             </p>
                         </div>
                         <select
                             value={isMounted ? defaultEditorMode : 'both'}
                             onChange={(e) => {
                                 const newValue = e.target.value as 'both' | 'editor' | 'preview';
-                                setDefaultEditorMode(newValue);
-                                updateSetting('defaultEditorMode', newValue);
+                                persistPreference(() => {
+                                    setDefaultEditorMode(newValue);
+                                    updateSetting('defaultEditorMode', newValue);
+                                });
                             }}
                             disabled={!isMounted}
-                            className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                            className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0"
                         >
-                            <option value="both">Split View</option>
-                            <option value="editor">Editor Only</option>
-                            <option value="preview">Preview Only</option>
+                            <option value="both">Split view</option>
+                            <option value="editor">Editor only</option>
+                            <option value="preview">Preview only</option>
                         </select>
                     </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Items Per Page</p>
+                    <div className="flex items-center justify-between gap-4 border-t pt-4">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium mb-1">Status bar</p>
                             <p className="text-xs text-muted-foreground">
-                                Number of files to show per page in the Files page
-                            </p>
-                        </div>
-                        <select
-                            value={isMounted ? itemsPerPage : 12}
-                            onChange={(e) => {
-                                const newValue = Number(e.target.value);
-                                setItemsPerPage(newValue);
-                                updateSetting('itemsPerPage', newValue);
-                            }}
-                            disabled={!isMounted}
-                            className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                        >
-                            <option value={6}>6</option>
-                            <option value={12}>12</option>
-                            <option value={24}>24</option>
-                            <option value={48}>48</option>
-                            <option value={96}>96</option>
-                        </select>
-                    </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Show Editor Status Bar</p>
-                            <p className="text-xs text-muted-foreground">
-                                Show the status bar with word count, character count, and save status in the editor
+                                Word/character counts and save status under the editor
                             </p>
                         </div>
                         <Button
@@ -427,19 +416,21 @@ export default function SettingsPage(): React.JSX.Element {
                             size="sm"
                             onClick={() => {
                                 const newValue = !showEditorStatusBar;
-                                setShowEditorStatusBar(newValue);
-                                updateSetting('showEditorStatusBar', newValue);
+                                persistPreference(() => {
+                                    setShowEditorStatusBar(newValue);
+                                    updateSetting('showEditorStatusBar', newValue);
+                                });
                             }}
                             disabled={!isMounted}
                         >
                             {isMounted ? (showEditorStatusBar ? "On" : "Off") : "..."}
                         </Button>
                     </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Show Spell Checker</p>
+                    <div className="flex items-center justify-between gap-4 border-t pt-4">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium mb-1">Spell checker</p>
                             <p className="text-xs text-muted-foreground">
-                                Show the spell checker toggle button in the editor toolbar and enable browser spell checking
+                                Toolbar toggle and browser spellcheck in the textarea
                             </p>
                         </div>
                         <Button
@@ -447,19 +438,21 @@ export default function SettingsPage(): React.JSX.Element {
                             size="sm"
                             onClick={() => {
                                 const newValue = !showSpellChecker;
-                                setShowSpellChecker(newValue);
-                                updateSetting('showSpellChecker', newValue);
+                                persistPreference(() => {
+                                    setShowSpellChecker(newValue);
+                                    updateSetting('showSpellChecker', newValue);
+                                });
                             }}
                             disabled={!isMounted}
                         >
                             {isMounted ? (showSpellChecker ? "On" : "Off") : "..."}
                         </Button>
                     </div>
-                    <div className="flex items-center justify-between border-t pt-4">
-                        <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Keyboard Shortcuts</p>
+                    <div className="flex items-center justify-between gap-4 border-t pt-4">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium mb-1">Keyboard shortcuts</p>
                             <p className="text-xs text-muted-foreground">
-                                Enable keyboard shortcuts for quick actions
+                                Enable quick actions (save, new, import, preview, …)
                             </p>
                         </div>
                         <Button
@@ -467,8 +460,10 @@ export default function SettingsPage(): React.JSX.Element {
                             size="sm"
                             onClick={() => {
                                 const newValue = !keyboardShortcuts;
-                                setKeyboardShortcuts(newValue);
-                                updateSetting('keyboardShortcuts', newValue);
+                                persistPreference(() => {
+                                    setKeyboardShortcuts(newValue);
+                                    updateSetting('keyboardShortcuts', newValue);
+                                });
                             }}
                             disabled={!isMounted}
                         >
@@ -531,6 +526,41 @@ export default function SettingsPage(): React.JSX.Element {
                             </div>
                         </div>
                     )}
+                </div>
+            </Card>
+
+            {/* Files & lists */}
+            <Card className="p-6">
+                <div className="flex items-center gap-3 mb-1">
+                    <List className="w-5 h-5 text-primary" />
+                    <h2 className="text-xl font-semibold">Files & lists</h2>
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">Pagination for the saved-files list.</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium mb-1">Items per page</p>
+                        <p className="text-xs text-muted-foreground">
+                            How many files show per page on Files
+                        </p>
+                    </div>
+                    <select
+                        value={isMounted ? itemsPerPage : 12}
+                        onChange={(e) => {
+                            const newValue = Number(e.target.value);
+                            persistPreference(() => {
+                                setItemsPerPage(newValue);
+                                updateSetting('itemsPerPage', newValue);
+                            });
+                        }}
+                        disabled={!isMounted}
+                        className="px-3 py-1.5 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0"
+                    >
+                        <option value={6}>6</option>
+                        <option value={12}>12</option>
+                        <option value={24}>24</option>
+                        <option value={48}>48</option>
+                        <option value={96}>96</option>
+                    </select>
                 </div>
             </Card>
 

@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Search, ExternalLink, FileText } from "lucide-react";
+import { Loader2, Search, ExternalLink, FileText, Settings } from "lucide-react";
 import { fetchSharedMarkdown } from "@/lib/api";
 import { toast } from "sonner";
-import { config } from "@/lib/config";
+import { config, isApiConfigured } from "@/lib/config";
 
 export default function SearchPage(): React.JSX.Element {
     const [shareId, setShareId] = useState("");
@@ -56,7 +56,13 @@ export default function SearchPage(): React.JSX.Element {
         return null;
     };
 
+    const apiReady = isApiConfigured();
+
     const handleSearch = async () => {
+        if (!apiReady) {
+            toast.error("Share API is not configured. Set it in Settings.");
+            return;
+        }
         if (!shareId.trim()) {
             toast.error("Please enter a share ID or URL");
             return;
@@ -74,10 +80,8 @@ export default function SearchPage(): React.JSX.Element {
 
         try {
             const content = await fetchSharedMarkdown(extractedId);
-            // Get first 200 characters as preview
             const previewText = content.substring(0, 200);
             setPreview(previewText + (content.length > 200 ? "..." : ""));
-            // Update shareId to show the extracted ID
             setShareId(extractedId);
         } catch (err) {
             setError(err instanceof Error ? err.message : "Failed to load shared content");
@@ -104,26 +108,47 @@ export default function SearchPage(): React.JSX.Element {
                 </p>
             </div>
 
+            {!apiReady && (
+                <Card className="p-6 max-w-2xl mx-auto w-full border-dashed text-center">
+                    <Settings className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                    <h2 className="text-lg font-semibold mb-2">Share API not configured</h2>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Set <code className="text-xs">VITE_API_URL</code> / frontend URL so search can reach the worker.
+                    </p>
+                    <Button asChild variant="outline" className="gap-2">
+                        <Link to="/settings">
+                            <Settings className="w-4 h-4" />
+                            Open settings
+                        </Link>
+                    </Button>
+                </Card>
+            )}
+
             <Card className="p-6 max-w-2xl mx-auto w-full">
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                     <input
                         ref={searchInputRef}
                         type="text"
-                        placeholder={`Enter share ID or URL (e.g., abc123 or ${config.FRONTEND_URL}/share?id=abc123)`}
+                        placeholder={
+                            config.FRONTEND_URL
+                                ? `Share ID or URL (e.g. abc123 or ${config.FRONTEND_URL}/share?id=…)`
+                                : "Share ID or full share URL"
+                        }
                         value={shareId}
                         onChange={(e) => setShareId(e.target.value)}
                         onKeyPress={handleKeyPress}
-                        className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={!apiReady}
+                        className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     />
                     <Button
                         onClick={handleSearch}
-                        disabled={loading || !shareId.trim()}
-                        className="gap-2"
+                        disabled={!apiReady || loading || !shareId.trim()}
+                        className="gap-2 shrink-0"
                     >
                         {loading ? (
                             <>
                                 <Loader2 className="w-4 h-4 animate-spin" />
-                                Searching...
+                                Searching…
                             </>
                         ) : (
                             <>
@@ -136,13 +161,14 @@ export default function SearchPage(): React.JSX.Element {
             </Card>
 
             {error && (
-                <Card className="p-6 max-w-2xl mx-auto w-full border-destructive/50 bg-destructive/10">
+                <Card className="p-6 max-w-2xl mx-auto w-full border-destructive/40 bg-destructive/5">
                     <div className="flex items-center gap-2 text-destructive">
                         <FileText className="w-5 h-5" />
-                        <h3 className="font-semibold">Content Not Found</h3>
+                        <h3 className="font-semibold">Nothing found</h3>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                        {error}
+                    <p className="text-sm text-muted-foreground mt-2">{error}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                        Check the ID, or open the share link directly if you have it.
                     </p>
                 </Card>
             )}

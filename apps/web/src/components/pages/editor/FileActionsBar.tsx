@@ -30,12 +30,12 @@ export function FileActionsBar({
     onActivate: () => void;
 }) {
     return (
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             {currentFileName && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground min-w-0">
                     <FileText className="w-4 h-4 flex-shrink-0" />
                     <span className="hidden sm:inline flex-shrink-0">Editing: </span>
-                    <span className="font-medium truncate max-w-[200px] sm:max-w-[300px] md:max-w-none" title={`${currentFileName}.md`}>
+                    <span className="font-medium truncate max-w-[160px] sm:max-w-[280px] md:max-w-none" title={`${currentFileName}.md`}>
                         {truncateFilenameForDisplay(`${currentFileName}.md`)}
                     </span>
                     <Button
@@ -58,7 +58,7 @@ export function FileActionsBar({
                     </Button>
                 </div>
             )}
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto overflow-x-auto pb-0.5 max-w-full">
                 {/* Activate Live Editor Button - Show when closed and not dismissed, next to New button */}
                 {isClosed && !isActivateButtonDismissed && (
                     <Button

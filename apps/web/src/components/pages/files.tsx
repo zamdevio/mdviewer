@@ -471,25 +471,28 @@ export default function FilesPage(): React.JSX.Element {
             )}
 
             {files.length === 0 ? (
-                <Card className="p-8 text-center">
+                <Card className="p-8 text-center border-dashed">
                     <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <h2 className="text-xl font-semibold mb-2">No Saved Files</h2>
-                    <p className="text-muted-foreground mb-4">
-                        Files saved when forking shared content will appear here.
+                    <h2 className="text-xl font-semibold mb-2">No saved files yet</h2>
+                    <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                        Save from the editor, or fork a shared link — files show up here for quick reopen.
                     </p>
-                    <Link to="/editor">
-                        <Button variant="outline">Go to Editor</Button>
-                    </Link>
+                    <Button asChild>
+                        <Link to="/editor?new" onClick={() => clearAllEditingFlags()}>
+                            <Edit3 className="w-4 h-4 mr-2" />
+                            Create a file
+                        </Link>
+                    </Button>
                 </Card>
             ) : filteredFiles.length === 0 ? (
-                <Card className="p-8 text-center">
+                <Card className="p-8 text-center border-dashed">
                     <Search className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <h2 className="text-xl font-semibold mb-2">No Files Found</h2>
-                    <p className="text-muted-foreground mb-4">
-                        No files match your search query.
+                    <h2 className="text-xl font-semibold mb-2">No matches</h2>
+                    <p className="text-muted-foreground mb-6">
+                        Nothing matched “{searchQuery}”. Try another name or clear the filter.
                     </p>
                     <Button variant="outline" onClick={() => setSearchQuery("")}>
-                        Clear Search
+                        Clear search
                     </Button>
                 </Card>
             ) : (

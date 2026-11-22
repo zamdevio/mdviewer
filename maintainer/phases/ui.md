@@ -1,7 +1,7 @@
 # UI polish
 
 **Goal:** Fix product UI imperfections (home and shell first), without a full redesign.  
-**Status:** Slice 1 in Focus (home + shell).  
+**Status:** Slices 1–4 shipped (home/shell, editor chrome, empty states, settings).  
 **Related:** Instinct “five polish ideas” (paste when available) may merge here.
 
 ## Principles
@@ -29,22 +29,22 @@
 
 ## Editor / preview
 
-- [ ] Status bar / controls crowding on mobile
+- [x] Status bar / controls crowding on mobile
 - [ ] Dialog stacking and focus trap polish
 - [ ] Empty / error states for load-share and save
 
 ## Shares / files / search / settings
 
-- [ ] Empty states with one obvious next action
+- [x] Empty states with one obvious next action
 - [ ] List density and truncation consistency
-- [ ] Settings sections: grouping and save feedback
+- [x] Settings sections: grouping and save feedback
 
 ## Slice order
 
-1. Home + shell spacing/CTA  
-2. Mobile nav + connection clarity  
-3. Editor chrome on small screens  
-4. Empty/error states across list pages  
+1. Home + shell spacing/CTA — done  
+2. Mobile nav + connection clarity — done  
+3. Editor chrome on small screens — done  
+4. Empty/error states across list pages + settings feedback — done  
 
 ## Intake
 

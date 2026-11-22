@@ -12,51 +12,47 @@ export function EditorStatusBar({ markdown, saveStatus, lastSaved, timeSinceSave
 
     return (
         <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 px-2 sm:px-4 py-1.5 sm:py-2 bg-muted/30 border-t text-[10px] sm:text-xs text-muted-foreground select-none rounded-t-lg">
-            {/* Stats Section - Left Side */}
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 min-w-0">
-                {/* Words Count */}
-                <div className="flex items-center gap-0.5 sm:gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1" title="Words">
                     <span className="font-medium text-foreground">{stats.words}</span>
-                    <span>words</span>
+                    <span className="hidden sm:inline">words</span>
+                    <span className="sm:hidden">w</span>
                 </div>
-                
-                {/* Characters Count */}
-                <div className="flex items-center gap-0.5 sm:gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1" title="Characters">
                     <span className="font-medium text-foreground">{stats.characters}</span>
-                    <span>chars</span>
+                    <span className="hidden sm:inline">chars</span>
+                    <span className="sm:hidden">c</span>
                 </div>
-                
-                {/* Reading Time - Hidden on very small screens, abbreviated on small screens */}
-                <div className="items-center gap-0.5 sm:gap-1">
+                <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
                     <span className="font-medium text-foreground">{stats.readingTime}</span>
                     <span>min read</span>
                 </div>
             </div>
 
-            {/* Save Status Section - Right Side */}
             <div className="flex items-center gap-1.5 sm:gap-3 ml-auto flex-shrink-0 min-w-0">
                 <div className="flex items-center gap-1 sm:gap-2">
                     {saveStatus === 'saving' ? (
                         <div className="flex items-center gap-1 sm:gap-1.5 text-primary animate-pulse">
                             <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />
-                            <span>Saving...</span>
+                            <span className="hidden sm:inline">Saving...</span>
                         </div>
                     ) : saveStatus === 'saved' ? (
-                        <div className="flex items-center gap-1 sm:gap-1.5 text-green-500 transition-all duration-500">
+                        <div className="flex items-center gap-1 sm:gap-1.5 text-green-600 dark:text-green-500 transition-all duration-500">
                             <Check className="w-3 h-3 flex-shrink-0" />
-                            <span>Saved to local</span>
+                            <span className="hidden sm:inline">Saved</span>
                         </div>
                     ) : saveStatus === 'unsaved' ? (
                         <div className="flex items-center gap-1 sm:gap-1.5 opacity-70">
                             <Save className="w-3 h-3 flex-shrink-0" />
-                            <span>
-                                Last saved {timeSinceSave}s ago • <span className="text-yellow-500">Unsaved</span>
+                            <span className="hidden sm:inline">
+                                {timeSinceSave}s ago · <span className="text-amber-600 dark:text-amber-400">Unsaved</span>
                             </span>
+                            <span className="sm:hidden text-amber-600 dark:text-amber-400">Unsaved</span>
                         </div>
                     ) : lastSaved ? (
                         <div className="flex items-center gap-1 sm:gap-1.5 opacity-70">
                             <Save className="w-3 h-3 flex-shrink-0" />
-                            <span>Last saved {timeSinceSave}s ago</span>
+                            <span className="hidden sm:inline">Saved {timeSinceSave}s ago</span>
                         </div>
                     ) : (
                         <div className="flex items-center gap-1 sm:gap-1.5 opacity-70">

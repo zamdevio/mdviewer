@@ -92,18 +92,18 @@ export default function SharesPage(): React.JSX.Element {
             </div>
 
             {sharedLinks.length === 0 ? (
-                <Card className="p-6 sm:p-8 text-center">
-                    <Share2 className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-muted-foreground" />
-                    <h2 className="text-lg sm:text-xl font-semibold mb-2">No Shared Links</h2>
-                    <p className="text-sm sm:text-base text-muted-foreground mb-4">
-                        Shared links will appear here when you share content from the editor.
+                <Card className="p-6 sm:p-8 text-center border-dashed">
+                    <Share2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <h2 className="text-lg sm:text-xl font-semibold mb-2">No shared links yet</h2>
+                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                        When you share from the editor, links are stored here so you can reopen or copy them later.
                     </p>
-                    <Link to="/editor" className="inline-block">
-                        <Button variant="default" className="gap-2">
+                    <Button asChild className="gap-2">
+                        <Link to="/editor">
                             <Share2 className="w-4 h-4" />
-                            Go to Editor
-                        </Button>
-                    </Link>
+                            Open editor to share
+                        </Link>
+                    </Button>
                 </Card>
             ) : (
                 <>

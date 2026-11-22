@@ -51,16 +51,16 @@ export function EditorControls({
     if (isClosed) return null;
 
     return (
-        <div className={`sticky top-4 z-40 flex items-center bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg ring-1 ring-black/5 dark:ring-white/10 transition-all overflow-hidden ${isCollapsed ? 'px-2 py-2 w-auto ml-auto' : `${isMobile ? 'px-2 py-2 gap-1.5' : 'px-2 sm:px-4 py-2 sm:py-3 gap-2'}`
+        <div className={`sticky top-4 z-40 flex items-center bg-background/95 backdrop-blur-xl border border-border/50 rounded-xl shadow-sm ring-1 ring-black/5 dark:ring-white/10 transition-all overflow-hidden ${isCollapsed ? 'px-2 py-2 w-auto ml-auto' : `${isMobile ? 'px-1.5 py-1.5 gap-1' : 'px-2 sm:px-4 py-2 sm:py-3 gap-2'}`
             }`}>
             {!isCollapsed && (
                 <>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <h1 className="text-lg sm:text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600 whitespace-nowrap">
-                            Live Editor
+                    <div className="hidden items-center gap-2 flex-shrink-0 sm:flex">
+                        <h1 className="text-lg sm:text-xl font-semibold text-foreground whitespace-nowrap">
+                            Editor
                         </h1>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto sm:justify-end">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-none sm:justify-end">
                         {/* Theme Toggle - Only show when navbar is scrolled out of view */}
                         {showThemeToggle && (
                             <div className="flex items-center flex-shrink-0">
