@@ -1,46 +1,52 @@
 # Appflare catalog readiness
 
 **Order:** 06  
-**Goal:** Make MDViewer installable via [Appflare](https://appflare.dev/) and submit to [appflare/catalog](https://github.com/appflare/catalog) when gates pass.  
-**Status:** Queued — **blocked on stars + packaging shape**  
+**Goal:** Make MDViewer installable via [Appflare](https://appflare.dev/) and submit to [appflare/catalog](https://github.com/appflare/catalog) when packaging is green.  
+**Status:** Queued — **docs only for now** (no packaging code until we start the submit pass)  
 **Agent submit guide:** https://appflare.dev/agent/submit.md
 
 ## How submission works
 
-- Catalog entry lives in **appflare/catalog**, not in this repo: `apps/<slug>/appflare.jsonc` + PR.
-- Upstream repo stays as-is (optional Install badge later).
-- CI on their side: validate manifest → pack pinned commit → install/health check.
+- Catalog entry lives in **appflare/catalog**, not here: `apps/<slug>/appflare.jsonc` + PR.
+- Upstream keeps normal deploy paths; Appflare uses **dedicated** packaging under `scripts/appflare/` (planned) — never rewrite production `wrangler.jsonc` / Pages flow.
+- CI on their side: validate → pack pinned commit → install/health check.
 
-## Qualification gates (honest)
+## Stars (not a hard wall)
+
+Public docs still say ≥50★ and under-bar PRs may auto-close — but **live catalog apps often sit under 50** (e.g. Cut ~24, others down to single digits / 0 on Appflare instances). Treat 50 as a **soft / negotiable** bar: submit when the pack is solid and the repo is legit; talk to maintainers if CI nags on stars.
 
 | Gate | Status | Notes |
 |------|--------|-------|
 | Public GitHub repo | ✅ | `zamdevio/mdviewer` |
-| ≥ **50 stars** | ❌ | Currently **0** — PRs under the bar are auto-closed |
-| Deploys with wrangler | ⚠️ | Worker: `apps/worker/wrangler.jsonc`. SPA today: **Pages** (`pages deploy`), not a Worker `assets` app |
-| Self-contained DO/Workflows | ✅ | `RateLimiter` defined in worker |
+| Stars | Soft | Grow when we can; not a reason to stall packaging design |
+| Deploys with wrangler | ⚠️ | Worker yes; SPA is Pages today |
+| Self-contained DO | ✅ | `RateLimiter` in worker |
 | License | ✅ | MIT |
-| Plan | **`paid`** | Cron TTL sweep (`triggers.crons`) needs Workers Paid |
+| Plan | **`paid`** | Cron TTL sweep → declare paid (honest for Appflare) |
 | `requires` | `["r2"]` | Share storage |
 
-## Packaging shapes (pick before writing manifest)
+## Packaging shape (agreed direction)
 
-### A — Worker-only (share API) — recommended first
+### Dedicated Appflare surface (no touch to normal configs)
 
-- Catalog installs `apps/worker` only (`wranglerConfig`: `apps/worker/wrangler.jsonc`).
-- Health: `GET /health`.
-- SPA stays on Pages / self-host; README documents pairing `ALLOWED_ORIGINS` + frontend URL.
-- Pros: fits Appflare model now. Cons: not a one-click full product.
+- Keep `apps/worker/wrangler.jsonc` + Pages deploy as the day-to-day path.
+- Add later (when implementing, not now):
+  - `scripts/appflare/` — build/unify helper
+  - Appflare-only wrangler / entry (e.g. `.appflare.wrangler.jsonc` or generated under `scripts/appflare/out/`) that can serve SPA assets at `/` and API under `/api/*` **if** we choose full-product install
+- Catalog `install.buildCommand` points at that script; `wranglerConfig` points at the **Appflare-only** config.
 
-### B — Full product (SPA + API)
+### Recommended first catalog entry
 
-- Need SPA as **Worker static assets** (or second Worker in “several Workers” entry), not Cloudflare Pages project name.
-- Larger change: `apps/web` wrangler assets binding + CORS vars for installer’s origins.
-- Pros: true one-click. Cons: non-trivial migrate off Pages deploy path.
+**Worker-only (share API)** still the smallest honest first PR:
 
-**Do not submit until A or B is chosen and pack-app succeeds locally.**
+- `plan: "paid"`, `requires: ["r2"]`, health `GET /health`
+- Neutralize installer-hostile bits (custom domain routes, personal `ALLOWED_ORIGINS`) via Appflare-only config / `configPatch` / vars — **not** by editing prod wrangler for everyone
 
-## Manifest sketch (shape A)
+### Optional later: full product
+
+Custom builder under `scripts/appflare/` that builds Vite + emits Worker assets + `/api` shim. Only after Worker-only packs clean.
+
+## Manifest sketch (worker-only, paid)
 
 ```jsonc
 {
@@ -74,19 +80,16 @@
 }
 ```
 
-Hardcoded `routes` / `zone_name` / prod `ALLOWED_ORIGINS` in our wrangler must be neutralized for installers via upstream PR + `configPatch` (or a `wrangler.appflare.jsonc` template) — track as a readiness task.
+When `scripts/appflare/` exists, flip `wranglerConfig` / `buildCommand` to those paths.
 
 ## Checklist
 
-- [ ] Hit 50★ (or document delay)
-- [ ] Choose shape A vs B
-- [ ] Strip/patch installer-hostile wrangler bits (custom domain routes, personal ALLOWED_ORIGINS)
-- [ ] Confirm `predeploy` / `generate:llms` works under pack-app (no CF credentials)
-- [ ] Draft `appflare.jsonc` in a catalog fork; `pnpm validate` + `pnpm pack-app`
-- [ ] User confirms manifest → PR to `appflare/catalog`
-- [ ] After merge: optional Install badge on README ([badge docs](https://appflare.dev/catalog/install-badge/))
+- [ ] (Later) Scaffold `scripts/appflare/` + Appflare-only wrangler — leave prod configs alone
+- [ ] `pnpm validate` + `pnpm pack-app` against a catalog fork
+- [ ] User confirms manifest → PR to `appflare/catalog` (push back on stars if needed)
+- [ ] After merge: optional Install badge on README
 
-## Out of scope until gates clear
+## Out of scope right now
 
-- Opening the catalog PR with 0 stars
+- Implementing `scripts/appflare/` (docs-only until Focus says go)
 - Claiming Appflare one-click for the Vite SPA while it remains Pages-only

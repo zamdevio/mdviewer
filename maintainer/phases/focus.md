@@ -14,14 +14,14 @@ Active phase docs (implement order): `01` → `02` → `03` → `04` → `05` �
 |----------|----------|-------|
 | 1 | Large-doc performance | [`04-perf-large-docs.md`](./04-perf-large-docs.md) — cleanup → virtual scroll |
 | 2 | Showcase honesty | [`05-showcase.md`](./05-showcase.md) — README / home / docs / llms / agent parity |
-| 3 | Appflare readiness | [`06-appflare.md`](./06-appflare.md) — plan only until ≥50★ + packaging shape |
+| 3 | Appflare readiness | [`06-appflare.md`](./06-appflare.md) — docs only; paid + `scripts/appflare/` later; stars soft |
 
 ## Queued — do not start
 
 | # | Item | Doc |
 |---|------|-----|
 | 1 | Nested projects + other loose ends | [`../final.md`](../final.md) §7 |
-| 2 | Appflare catalog PR | Blocked: stars + A/B packaging ([`06-appflare.md`](./06-appflare.md)) |
+| 2 | Appflare catalog PR | After `scripts/appflare/` packs clean ([`06-appflare.md`](./06-appflare.md)) |
 
 ## Next task
 

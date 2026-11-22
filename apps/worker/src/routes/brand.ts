@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Env } from "../env";
-import { FAVICON_SVG } from "../lib/brand";
+import { FAVICON_SVG, faviconPng128Bytes } from "../lib/brand";
 
 const app = new OpenAPIHono<{ Bindings: Env }>();
 
@@ -11,6 +11,13 @@ app.get("/favicon.svg", (c) =>
   }),
 );
 
-app.get("/favicon.ico", (c) => c.redirect("/favicon.svg", 302));
+app.get("/favicon.png", (c) =>
+  c.body(faviconPng128Bytes(), 200, {
+    "Content-Type": "image/png",
+    "Cache-Control": "public, max-age=86400",
+  }),
+);
+
+app.get("/favicon.ico", (c) => c.redirect("/favicon.png", 302));
 
 export default app;
