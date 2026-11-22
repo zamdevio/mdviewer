@@ -46,7 +46,16 @@ Build-time `VITE_*` values remain the fallback when no override is stored.
 
 ## Files: grid vs tree
 
-On **Files**, toggle **Grid** / **Tree**. Tree mode uses virtual **projects** to group files. Preference is saved in settings (`filesLayout`).
+On **Files**, toggle **Grid** / **Tree**. Preference is saved in settings (`filesLayout`).
+
+**Tree mode**
+- Virtual **projects** group files (drag onto a project / Ungrouped)
+- Right-click or ⋮ for rename, share, details, move, delete
+- Move-to-project uses a searchable picker
+- Share a project as a pack (`MDVIEWER_PROJECT_V1`) via the same `/upload` API — open the share link to import
+
+**Import / export**
+- Projects merge by name; files with identical content fingerprints are skipped as duplicates
 
 ## Local CORS
 

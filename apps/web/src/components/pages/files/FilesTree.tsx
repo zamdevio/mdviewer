@@ -438,6 +438,8 @@ export function FilesTree({
         open={!!detailsFile}
         onClose={() => setDetailsFile(null)}
         title="File details"
+        showTitle
+        showCloseButton
       >
         {detailsFile && (
           <div className="space-y-2 text-sm">

@@ -4,6 +4,8 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Phase A UX polish | SW network-first assets + auto-activate; ModalShell backdrop/X; ConfirmDeleteDialog; home hero; README/docs showcase; web 3.3.0 |
+| 2026-11 | Tree DnD + project pack + Vite defaults | DnD/context menus/ProjectPicker; MDVIEWER_PROJECT_V1; import fingerprint merge; public URL fallbacks |
 | 2026-11 | Files tree + BYO share + badge dialogs | Virtual projects; grid/tree; Settings `#share`; `/compatibility`; connection ModalShells; README/docs |
 | 2026-11 | CORS UX + CF Actions | CORS vs API-down detection; share CORS dialog; localhost allowlist; GH→CF deploy; PWA cache migration rule |
 | 2026-11 | UI polish slice 5 | Shared `ModalShell` (focus trap/restore); shares list density; API-gated share load + quieter API warning |

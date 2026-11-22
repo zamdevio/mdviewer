@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ModalShell } from "@/components/ui/modal-shell";
-import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, AlertTriangle, Download, LayoutGrid, FolderTree } from "lucide-react";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Loader2, FileText, Trash2, Edit3, Pencil, Check, X, Database, Clock, HardDrive, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, LayoutGrid, FolderTree } from "lucide-react";
 import { toast } from "sonner";
 import { getSettings, updateSetting, getSavedFiles, setSavedFiles, getFileContent, setFileContent, removeFileContent, removeSavedFile, upsertSavedFile, onStorageChange, clearAllEditingFlags, getEditingFileFromSavedFiles, getProjects, upsertProject, removeProject, addSharedLink, type SavedFile, type Project } from "@/lib/storage";
 import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitizeFileName, MAX_FILENAME_LENGTH, renameFile } from "@/lib/editor";
@@ -22,6 +22,7 @@ export default function FilesPage(): React.JSX.Element {
     const [renamingFile, setRenamingFile] = useState<string | null>(null);
     const [renameValue, setRenameValue] = useState("");
     const [showDeleteWarning, setShowDeleteWarning] = useState<{ filename: string; fileId?: string } | null>(null);
+    const [showDeleteProject, setShowDeleteProject] = useState<Project | null>(null);
     const navigate = useNavigate();
     
     // Search and filter states
@@ -589,10 +590,8 @@ export default function FilesPage(): React.JSX.Element {
                         toast.success("Project renamed");
                     }}
                     onDeleteProject={(id) => {
-                        removeProject(id);
-                        setProjectsState(getProjects());
-                        loadFiles();
-                        toast.success("Project deleted");
+                        const project = projects.find((p) => p.id === id);
+                        if (project) setShowDeleteProject(project);
                     }}
                     onAssignProject={(fileId, projectId) => {
                         const file = files.find((f) => f.id === fileId);
@@ -970,56 +969,30 @@ export default function FilesPage(): React.JSX.Element {
                 </>
             )}
 
-            <ModalShell
+            <ConfirmDeleteDialog
                 open={!!showDeleteWarning}
-                onClose={() => setShowDeleteWarning(null)}
                 title="Delete file"
-            >
-                <div className="flex items-start gap-3 mb-4">
-                    <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1 text-destructive">Delete File</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                            Are you sure you want to delete{" "}
-                            <span
-                                className="font-medium text-foreground truncate block"
-                                title={showDeleteWarning?.filename}
-                            >
-                                {showDeleteWarning?.filename}
-                            </span>
-                            ?
-                        </p>
-                        <p className="text-sm font-medium text-destructive">
-                            This action cannot be undone!
-                        </p>
-                    </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowDeleteWarning(null)}
-                        className="h-6 w-6 p-0 flex-shrink-0"
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <Button
-                        variant="destructive"
-                        onClick={handleDeleteConfirm}
-                        className="gap-2 w-full"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() => setShowDeleteWarning(null)}
-                        className="w-full"
-                    >
-                        Cancel
-                    </Button>
-                </div>
-            </ModalShell>
+                name={showDeleteWarning?.filename ?? null}
+                onConfirm={handleDeleteConfirm}
+                onCancel={() => setShowDeleteWarning(null)}
+            />
+
+            <ConfirmDeleteDialog
+                open={!!showDeleteProject}
+                title="Delete project"
+                name={showDeleteProject?.name ?? null}
+                description="Files in this project become ungrouped — they are not deleted."
+                confirmLabel="Delete project"
+                onConfirm={() => {
+                    if (!showDeleteProject) return;
+                    removeProject(showDeleteProject.id);
+                    setProjectsState(getProjects());
+                    setShowDeleteProject(null);
+                    loadFiles();
+                    toast.success("Project deleted");
+                }}
+                onCancel={() => setShowDeleteProject(null)}
+            />
         </div>
     );
 }

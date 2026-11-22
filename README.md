@@ -36,29 +36,33 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 
 ## Why MDViewer
 
-### ✨ Local-first writing
+### Local-first writing
 - Files stay in the browser — no account required for core use
 - Auto-save, status bar, keyboard shortcuts, PWA install shell
+- Updates apply on a normal reload (Ctrl+R) — no hard refresh required
 
-### 🗂️ Projects & layouts
+### Projects & tree layout
 - **Grid** or **tree/explorer** on Files — switch anytime
-- Group notes into virtual **projects** (folders) without renaming files
-- Import/export backups include projects
+- Virtual **projects** (folders), drag-and-drop, right-click / ⋮ menus
+- Searchable move-to-project picker; inline file and project rename
+- Import/export merges projects by name; identical content fingerprints skip duplicates
+- **Project share pack** (`MDVIEWER_PROJECT_V1`) — share a whole folder over the same upload API
 
-### 🔗 Bring your own share API
+### Bring your own share API
 - Point the SPA at **your** worker from **Settings → Share** (`#share`)
-- Build-time defaults + browser override with **Default** reset (confirm)
-- Header badge explains every state (connected, offline, API down, CORS, share off) via dialog — not hover-only
+- Public Vite defaults in repo (not secrets) + browser override with **Default** reset
+- Header badge explains every state (connected, offline, API down, CORS, share off) via dialog
 
-### 🤝 Compatibility handshake
+### Compatibility handshake
 - Worker `GET /compatibility` — versioned contract for custom frontends/backends
 - **Test connection** in Settings hits `/health` + `/compatibility`
 
-### 🎨 Rich preview
+### Rich preview
 - GFM, Mermaid, KaTeX, syntax highlighting, image lightbox
 
-### ⚡ Edge share
+### Edge share
 - Workers + R2, CORS allowlist, upload rate limiting, OpenAPI `/docs`
+- Roadmap (see `maintainer/phases/`): fixed TTL, password-gated mutate, fair-use fingerprints, MCP / `llms.txt`
 
 ## Quick start
 

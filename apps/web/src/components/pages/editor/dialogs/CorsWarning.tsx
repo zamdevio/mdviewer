@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ShieldAlert, X } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { getEffectiveApiConfig } from "@/lib/config";
 
@@ -18,7 +18,7 @@ export function CorsWarningDialog({
 
   return (
     <ModalShell open={show} onClose={onClose} title="Share blocked by CORS">
-      <div className="flex items-start gap-3 mb-4">
+      <div className="flex items-start gap-3 mb-4 pr-8">
         <ShieldAlert className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg text-orange-600 dark:text-orange-400 mb-1">
@@ -56,14 +56,6 @@ export function CorsWarningDialog({
             Got it
           </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClose}
-          className="h-6 w-6 p-0 flex-shrink-0"
-        >
-          <X className="w-4 h-4" />
-        </Button>
       </div>
     </ModalShell>
   );

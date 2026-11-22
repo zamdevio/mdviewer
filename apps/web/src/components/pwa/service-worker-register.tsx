@@ -1,18 +1,17 @@
-
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
+const RELOAD_GUARD_KEY = "mdviewer-sw-reloading";
+
+function activateWaiting(worker: ServiceWorker) {
+  worker.postMessage({ type: "SKIP_WAITING" });
+}
+
 /**
- * Service Worker Registration Component
- * 
- * Registers the service worker for offline functionality and handles updates.
- * Detects when new versions are available and notifies the user.
+ * Registers the service worker and activates updates so a normal reload
+ * (Ctrl+R) is enough — no hard refresh required.
  */
 export function ServiceWorkerRegister() {
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-
-  // Check for updates and handle service worker lifecycle
   const checkForUpdates = useCallback(async (reg: ServiceWorkerRegistration) => {
     try {
       await reg.update();
@@ -21,87 +20,63 @@ export function ServiceWorkerRegister() {
     }
   }, []);
 
-  // Handle service worker updates
-  const handleUpdate = useCallback((reg: ServiceWorkerRegistration) => {
-    // Check if there's a waiting service worker (new version ready)
-    if (reg.waiting) {
-      setUpdateAvailable(true);
-      return;
-    }
-
-    // Listen for new service worker installing
-    reg.addEventListener("updatefound", () => {
-      const newWorker = reg.installing;
-      if (newWorker) {
-        newWorker.addEventListener("statechange", () => {
-          if (newWorker.state === "installed") {
-            // New service worker installed and waiting
-            if (navigator.serviceWorker.controller) {
-              // There's an active service worker, so this is an update
-              setUpdateAvailable(true);
-              toast.info("New version available! Click to update.", {
-                action: {
-                  label: "Update",
-                  onClick: () => {
-                    // Send message to skip waiting
-                    newWorker.postMessage({ type: "SKIP_WAITING" });
-                    window.location.reload();
-                  },
-                },
-                duration: 10000,
-              });
-            } else {
-              // First install, no update needed
-              console.log("[SW] Service worker installed for the first time");
-            }
-          }
-        });
-      }
-    });
-  }, []);
-
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
       return;
     }
 
-    // Register service worker
+    let cancelled = false;
+
+    const onControllerChange = () => {
+      // Avoid reload loops when multiple tabs claim
+      if (sessionStorage.getItem(RELOAD_GUARD_KEY)) {
+        sessionStorage.removeItem(RELOAD_GUARD_KEY);
+        return;
+      }
+      sessionStorage.setItem(RELOAD_GUARD_KEY, "1");
+      window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+
     const registerSW = async () => {
       try {
         const reg = await navigator.serviceWorker.register("/sw.js", {
           scope: "/",
-          updateViaCache: "none", // Always check for updates
+          updateViaCache: "none",
         });
 
-        setRegistration(reg);
-        handleUpdate(reg);
+        if (cancelled) return;
 
-        // Check for updates on page load
+        // Waiting worker from a previous visit — activate immediately
+        if (reg.waiting) {
+          activateWaiting(reg.waiting);
+        }
+
+        reg.addEventListener("updatefound", () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state !== "installed") return;
+            if (navigator.serviceWorker.controller) {
+              toast.info("Update ready — applying…", { duration: 2500 });
+              activateWaiting(newWorker);
+            }
+          });
+        });
+
         await checkForUpdates(reg);
 
-        // Check for updates when page becomes visible (user returns to tab)
         const handleVisibilityChange = () => {
-          if (document.visibilityState === "visible" && reg) {
+          if (document.visibilityState === "visible") {
             checkForUpdates(reg);
           }
         };
-
         document.addEventListener("visibilitychange", handleVisibilityChange);
 
-        // Periodic update check (every 5 minutes)
-        const updateInterval = setInterval(() => {
-          if (reg) {
-            checkForUpdates(reg);
-          }
-        }, 5 * 60 * 1000);
+        const updateInterval = setInterval(() => checkForUpdates(reg), 5 * 60 * 1000);
 
-        // Check for updates when online (in case we were offline)
-        const handleOnline = () => {
-          if (reg) {
-            checkForUpdates(reg);
-          }
-        };
-
+        const handleOnline = () => checkForUpdates(reg);
         window.addEventListener("online", handleOnline);
 
         return () => {
@@ -114,16 +89,14 @@ export function ServiceWorkerRegister() {
       }
     };
 
-    registerSW();
-  }, [checkForUpdates, handleUpdate]);
+    const cleanupPromise = registerSW();
 
-  // Expose update function globally for manual refresh
-  useEffect(() => {
-    if (registration && updateAvailable) {
-      // Store registration for update component
-      (window as Window & { __swRegistration?: ServiceWorkerRegistration }).__swRegistration = registration;
-    }
-  }, [registration, updateAvailable]);
+    return () => {
+      cancelled = true;
+      navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+      void cleanupPromise.then((cleanup) => cleanup?.());
+    };
+  }, [checkForUpdates]);
 
   return null;
 }

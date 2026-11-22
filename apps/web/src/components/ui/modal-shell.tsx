@@ -1,6 +1,8 @@
 import { createPortal } from "react-dom";
 import { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const FOCUSABLE =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -13,15 +15,21 @@ export function ModalShell({
     className = "max-w-md",
     closeOnEscape = true,
     closeOnBackdrop = true,
+    showCloseButton = true,
+    showTitle = false,
 }: {
     open: boolean;
     onClose: () => void;
-    /** Accessible name for the dialog (visible heading can still live in children). */
+    /** Accessible name for the dialog (and optional visible heading). */
     title: string;
     children: React.ReactNode;
     className?: string;
     closeOnEscape?: boolean;
     closeOnBackdrop?: boolean;
+    /** Top-right X control (Esc still works when closeOnEscape). */
+    showCloseButton?: boolean;
+    /** Render visible title in the shell header (off by default — many dialogs bring their own). */
+    showTitle?: boolean;
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const previousFocusRef = useRef<HTMLElement | null>(null);
@@ -38,7 +46,6 @@ export function ModalShell({
             focusables.find((el) => el.tagName === "INPUT" || el.tagName === "TEXTAREA") ??
             focusables.find((el) => !el.hasAttribute("disabled")) ??
             panel;
-        // Defer so autofocus / paint settle
         requestAnimationFrame(() => initial?.focus());
 
         const onKeyDown = (e: KeyboardEvent) => {
@@ -87,23 +94,52 @@ export function ModalShell({
     if (!open || typeof document === "undefined") return null;
 
     return createPortal(
-        <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-            onClick={(e) => {
-                if (closeOnBackdrop && e.target === e.currentTarget) {
-                    onClose();
-                }
-            }}
-        >
-            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                aria-hidden="true"
+                onClick={() => {
+                    if (closeOnBackdrop) onClose();
+                }}
+            />
             <Card
                 ref={panelRef}
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
                 tabIndex={-1}
-                className={`relative bg-background border border-border rounded-xl shadow-2xl w-full max-h-[90vh] flex flex-col p-6 overflow-y-auto outline-none hover:shadow-2xl hover:border-border ${className}`}
+                className={`relative z-10 bg-background border border-border rounded-xl shadow-2xl w-full max-h-[90vh] flex flex-col p-6 overflow-y-auto outline-none hover:shadow-2xl hover:border-border ${className}`}
+                onClick={(e) => e.stopPropagation()}
             >
+                {showTitle && (
+                    <div className="flex items-start justify-between gap-3 mb-4 shrink-0">
+                        <h2 className="text-lg font-semibold leading-tight pr-2">{title}</h2>
+                        {showCloseButton && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={onClose}
+                                className="h-8 w-8 p-0 shrink-0"
+                                aria-label="Close"
+                            >
+                                <X className="w-4 h-4" />
+                            </Button>
+                        )}
+                    </div>
+                )}
+                {!showTitle && showCloseButton && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClose}
+                        className="absolute top-3 right-3 h-8 w-8 p-0 z-10"
+                        aria-label="Close"
+                    >
+                        <X className="w-4 h-4" />
+                    </Button>
+                )}
                 {children}
             </Card>
         </div>,

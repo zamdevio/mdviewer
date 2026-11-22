@@ -1,6 +1,6 @@
 # Phase A — SW, home, dialogs
 
-**Status:** Focus / in progress  
+**Status:** Shipped (implementation complete)  
 **Depends on:** prior files tree + project pack slice committed
 
 ## Goals
@@ -12,11 +12,11 @@
 
 ## Checklist
 
-- [ ] SW: network-friendly asset strategy; auto-activate waiting worker; reload-loop guard; note in `maintainer/systems/pwa-cache.md`
-- [ ] ModalShell backdrop click fix + optional header with X
-- [ ] Delete confirm shared component for files + projects (tree)
-- [ ] Home: brand-first hero, below-fold features, 2–3 motions, mobile-safe
-- [ ] README + `docs/*` showcase (tree/DnD, project share pack, BYO API, PWA; mark password/TTL/MCP as coming soon only if mentioned)
+- [x] SW: network-friendly asset strategy; auto-activate waiting worker; reload-loop guard; note in `maintainer/systems/pwa-cache.md`
+- [x] ModalShell backdrop click fix + optional header with X
+- [x] Delete confirm shared component for files + projects (tree)
+- [x] Home: brand-first hero, below-fold features, 2–3 motions, mobile-safe
+- [x] README + `docs/*` showcase (tree/DnD, project share pack, BYO API, PWA; mark password/TTL/MCP as coming soon only if mentioned)
 
 ## Out of scope
 

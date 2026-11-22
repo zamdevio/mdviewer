@@ -25,4 +25,9 @@ No Next.js. No server-rendered pages. Worker is the only backend.
 
 - Flat `SavedFile` records with optional `projectId`
 - `mdviewer_projects` list for virtual folders
-- UI: grid cards or tree explorer (`filesLayout` setting)
+- UI: grid cards or tree explorer (`filesLayout` setting) — DnD, context menus, project share packs
+- Project packs: text payload `MDVIEWER_PROJECT_V1` + JSON over `POST /upload` (no multipart)
+
+## PWA updates
+
+Service worker uses network-first for HTML and hashed `/assets/*` so a normal reload picks up new deploys. See [`maintainer/systems/pwa-cache.md`](../maintainer/systems/pwa-cache.md).
