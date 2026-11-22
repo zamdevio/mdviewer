@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Env } from "../env";
-import { LLMS_FULL_TXT, LLMS_TXT } from "../lib/llms-content";
+import { LLMS_FULL_TXT, LLMS_TXT } from "../lib/llms-content.generated";
 
 const app = new OpenAPIHono<{ Bindings: Env }>();
 

@@ -8,18 +8,20 @@ MDViewer is a client-side Markdown app (Vite + React) with an optional edge shar
 
 - [Getting started](https://github.com/zamdevio/mdviewer/blob/main/docs/getting-started.md): install and run
 - [Architecture](https://github.com/zamdevio/mdviewer/blob/main/docs/architecture.md): SPA + worker layout
-- [API](https://github.com/zamdevio/mdviewer/blob/main/docs/api.md): Worker endpoints
+- [API](https://github.com/zamdevio/mdviewer/blob/main/docs/api.md): Worker endpoints (protocol 2)
 - [Security](https://github.com/zamdevio/mdviewer/blob/main/docs/security.md): threat model and mitigations
-- [Full agent brief](https://mdviewer.zamdev.dev/llms-full.txt): endpoints, CORS, share semantics (password/TTL/MCP not shipped yet)
+- [Full agent brief](https://mdviewer.zamdev.dev/llms-full.txt): endpoints, password/TTL, MCP
 
 ## App
 
 - [Home](https://mdviewer.zamdev.dev/): product entry
 - [Editor](https://mdviewer.zamdev.dev/editor): write + live preview
 - [API docs (Swagger)](https://api.mdviewer.zamdev.dev/docs): OpenAPI UI
+- [MCP](https://api.mdviewer.zamdev.dev/mcp): JSON-RPC tools (`POST`)
 - [Source](https://github.com/zamdevio/mdviewer): GitHub
 
 ## Optional
 
 - [Pages deploy](https://markview.pages.dev/): Cloudflare Pages mirror
 - [Compatibility](https://api.mdviewer.zamdev.dev/compatibility): versioned API handshake JSON
+- [Worker llms-full](https://api.mdviewer.zamdev.dev/llms-full.txt): same brief on the API host

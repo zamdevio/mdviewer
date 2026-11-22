@@ -5,10 +5,13 @@
   "type": "module",
   "description": "Cloudflare Workers API for markdown sharing (Hono + OpenAPI).",
   "scripts": {
+    "generate:llms": "node scripts/generate-llms-content.mjs",
+    "predev": "pnpm run generate:llms",
+    "predeploy": "pnpm run generate:llms",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm run generate:llms && tsc --noEmit"
   },
   "dependencies": {
     "@hono/swagger-ui": "^0.5.2",

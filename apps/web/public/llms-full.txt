@@ -1,11 +1,11 @@
 # MDViewer — full agent brief
 
-> Same product as /llms.txt with API details agents need. Share protocol upgrades (password, TTL, MCP) are planned — see maintainer/phases/01-share-protocol.md and maintainer/final.md (pre-v4.0).
+> Protocol 2 share API + MCP on the Worker. SPA and Worker both serve `/llms.txt` / `/llms-full.txt` (SPA files are the source of truth; Worker embeds a generated copy).
 
 ## Product
 
 - SPA: `apps/web` — local files/projects in browser storage, GFM + Mermaid + KaTeX preview
-- Worker: `apps/worker` — optional share upload/download on R2
+- Worker: `apps/worker` — share upload/download on R2, fair-use, TTL, optional password
 - Config: public Vite defaults (`VITE_API_URL`, `VITE_FRONTEND_URL`) or Settings → Share override (http/https only)
 
 ## Public Worker API (protocol 2)
@@ -22,12 +22,20 @@ Base: `https://api.mdviewer.zamdev.dev` (or self-hosted worker)
 | PUT | `/share/:id` | Replace content; requires `X-Share-Password`; keeps `expiresAt` |
 | PATCH | `/share/:id` | `{ viewProtected }`; requires password |
 | DELETE | `/share/:id` | Wipe prefix; requires password |
+| POST | `/mcp` | MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) |
+| GET | `/mcp` | Discovery JSON |
+| GET | `/llms.txt` | Agent brief |
+| GET | `/llms-full.txt` | This file |
 | GET | `/docs` | Swagger UI |
 | GET | `/openapi.json` | OpenAPI document |
 
 CORS / constructed frontend share URLs use worker `ALLOWED_ORIGINS` (see `apps/worker/wrangler.jsonc`).
 
 Upload headers: `X-Share-Password`, `X-Share-TTL-Seconds` (default 7d, max 30d), `X-Share-View-Protected`, `X-Share-Filename`, `X-Share-Type`.
+
+## MCP tools
+
+`get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share` — same semantics as REST; mutating tools take a `password` argument. Fair-use is stricter for MCP (`X-MDViewer-Client: mcp`).
 
 ## Share URLs (frontend)
 
@@ -36,18 +44,12 @@ Upload headers: `X-Share-Password`, `X-Share-TTL-Seconds` (default 7d, max 30d),
 
 In-doc fragment links (`#heading`) work in editor preview and share viewer (first matching heading wins).
 
-## Shipped agent surfaces
-
-- Unified share dialog UI — Settings `#password`, TTL, protect-view
-- Worker MCP: `POST /mcp` tools `get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share`
-- Worker + SPA `/llms.txt` and `/llms-full.txt`
-
 ## Still open (pre-v4.0)
 
-- Large-doc performance P1 — maintainer/phases/04-perf-large-docs.md
-- Nested projects / CSP nonce / ModalShell leftovers — maintainer/final.md §7
+- Large-doc performance (virtual scroll / lazy heavy blocks) — `maintainer/phases/04-perf-large-docs.md`
+- Nested projects / CSP nonce / ModalShell leftovers — `maintainer/final.md` §7
 
-Track release readiness in maintainer/final.md.
+Track release readiness in `maintainer/final.md`. Do **not** bump to v4.0 until that checklist is cleared and approved.
 
 ## Security notes
 
