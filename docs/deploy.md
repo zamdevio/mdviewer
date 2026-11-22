@@ -13,12 +13,14 @@ Repository **Secrets**:
 | `CLOUDFLARE_API_TOKEN` | Token with Pages Edit + Workers Scripts Edit |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id |
 
-Repository **Variables** (build-time for the SPA):
+Repository **Variables** (you add these yourself — build-time for the SPA):
 
 | Variable | Example |
 |----------|---------|
 | `VITE_API_URL` | `https://api.mdviewer.zamdev.dev` |
 | `VITE_FRONTEND_URL` | `https://mdviewer.zamdev.dev` |
+
+Without those Variables, Pages still deploys, but the built SPA has empty API/frontend URLs (share stays off / broken in prod).
 
 ## Manual deploy
 
