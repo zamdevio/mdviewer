@@ -58,6 +58,7 @@ import {
 } from "@/lib/config";
 import { isCorsFailure, testShareConnection } from "@/lib/api";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import type { SavedFile } from "@/lib/storage";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
@@ -107,6 +108,8 @@ export default function SettingsPage(): React.JSX.Element {
         if (typeof window === 'undefined') return [];
         return getTrash();
     });
+    const [confirmDisableTrash, setConfirmDisableTrash] = useState(false);
+    const [confirmEmptyTrash, setConfirmEmptyTrash] = useState(false);
     const [exportPassword, setExportPassword] = useState("");
     const [importPassword, setImportPassword] = useState("");
     const [showExportPassword, setShowExportPassword] = useState(false);
@@ -966,10 +969,21 @@ export default function SettingsPage(): React.JSX.Element {
                                 size="sm"
                                 variant={trashEnabled ? "default" : "outline"}
                                 onClick={() => {
-                                    const next = !trashEnabled;
+                                    if (trashEnabled) {
+                                        // Turning off — warn if trash has items (they get cleared)
+                                        if (trashItems.length > 0) {
+                                            setConfirmDisableTrash(true);
+                                            return;
+                                        }
+                                        persistPreference(() => {
+                                            setTrashEnabled(false);
+                                            updateSetting("trashEnabled", false);
+                                        });
+                                        return;
+                                    }
                                     persistPreference(() => {
-                                        setTrashEnabled(next);
-                                        updateSetting("trashEnabled", next);
+                                        setTrashEnabled(true);
+                                        updateSetting("trashEnabled", true);
                                     });
                                 }}
                             >
@@ -1038,11 +1052,7 @@ export default function SettingsPage(): React.JSX.Element {
                                     size="sm"
                                     variant="outline"
                                     className="gap-2"
-                                    onClick={() => {
-                                        emptyTrash();
-                                        setTrashItems([]);
-                                        toast.success("Trash emptied");
-                                    }}
+                                    onClick={() => setConfirmEmptyTrash(true)}
                                 >
                                     Empty trash
                                 </Button>
@@ -1576,12 +1586,46 @@ export default function SettingsPage(): React.JSX.Element {
                 document.body
             )}
 
+            <ConfirmDeleteDialog
+                open={confirmDisableTrash}
+                title="Turn off Trash"
+                name={`${trashItems.length} item(s) in Trash`}
+                description="Turning Trash off permanently deletes everything currently in Trash. New deletes will be permanent after confirm."
+                confirmLabel="Empty Trash & turn off"
+                onConfirm={() => {
+                    emptyTrash();
+                    setTrashItems([]);
+                    setConfirmDisableTrash(false);
+                    persistPreference(() => {
+                        setTrashEnabled(false);
+                        updateSetting("trashEnabled", false);
+                    });
+                    toast.success("Trash emptied and turned off");
+                }}
+                onCancel={() => setConfirmDisableTrash(false)}
+            />
+
+            <ConfirmDeleteDialog
+                open={confirmEmptyTrash}
+                title="Empty Trash"
+                name={`${trashItems.length} item(s)`}
+                description="Permanently delete everything in Trash. This cannot be undone."
+                confirmLabel="Empty Trash"
+                onConfirm={() => {
+                    emptyTrash();
+                    setTrashItems([]);
+                    setConfirmEmptyTrash(false);
+                    toast.success("Trash emptied");
+                }}
+                onCancel={() => setConfirmEmptyTrash(false)}
+            />
+
             <ModalShell
                 open={showResetShareWarning}
                 onClose={() => setShowResetShareWarning(false)}
                 title="Reset share API to defaults"
             >
-                <div className="flex items-start gap-3 mb-4">
+                <div className="flex items-start gap-3 mb-4 pr-8">
                     <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg mb-1">Reset to build defaults?</h3>
@@ -1620,14 +1664,6 @@ export default function SettingsPage(): React.JSX.Element {
                             </Button>
                         </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowResetShareWarning(false)}
-                        className="h-6 w-6 p-0"
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
                 </div>
             </ModalShell>
 

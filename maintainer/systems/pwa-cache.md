@@ -8,13 +8,13 @@
 |------|--------|
 | Source | `apps/web/src/pwa/sw.template.js` |
 | Emitted | `/sw.js` via Vite plugin (`CACHE_VERSION` from `apps/web/package.json` major.minor) |
-| Active cache name | `mdviewer-${CACHE_VERSION}` e.g. `mdviewer-v3.3` |
-| Install | `skipWaiting()` |
+| Active cache name | `mdviewer-${CACHE_VERSION}` e.g. `mdviewer-v3.4` |
+| Install | `skipWaiting()`; precache only offline shell assets (not SPA HTML routes) |
 | Activate | delete non-current caches matching legacy prefixes, then `clients.claim()` |
-| HTML | network-first |
+| HTML / navigations | network-only online (offline → `/offline.html`) — avoids stale shell |
 | Hashed `/assets/*` | network-first (cache on success) so Ctrl+R picks up deploys |
 | Other static | stale-while-revalidate |
-| Client | auto-activate waiting SW + single reload on `controllerchange` (session guard) |
+| Client | **no SW in Vite DEV** (unregister + clear caches); prod auto-activates waiting SW + reload on `controllerchange` |
 
 ## Migration rules (do not break)
 

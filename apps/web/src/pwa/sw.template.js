@@ -4,61 +4,28 @@
  * Source template — Vite emits /sw.js with CACHE_VERSION from package.json.
  * Do not serve this file directly.
  *
- * Update strategy: HTML network-first; static assets stale-while-revalidate
- * so a normal reload (Ctrl+R) picks up new hashed bundles without hard refresh.
+ * Strategy (standard update-friendly):
+ * - Navigations / HTML: network-only when online (never serve stale shell)
+ * - Hashed assets: network-first, cache on success (Ctrl+R gets new deploy)
+ * - Other GETs: stale-while-revalidate
+ * - install: skipWaiting; activate: clear old caches + clients.claim
  */
 
 const CACHE_VERSION = '__MDVIEWER_CACHE_VERSION__';
 const CACHE_NAME = `mdviewer-${CACHE_VERSION}`;
-const STATIC_ASSETS = [
-  '/',
-  '/editor',
-  '/files',
-  '/search',
-  '/settings',
-  '/favicon.svg',
-  '/manifest.json',
-  '/offline.html',
-];
 
-const isLocalhost =
-  self.location.hostname === 'localhost' ||
-  self.location.hostname === '127.0.0.1' ||
-  self.location.hostname.startsWith('192.168.') ||
-  self.location.hostname.startsWith('10.0.');
+// Only offline fallback — do NOT precache SPA routes (stale HTML traps updates)
+const PRECACHE = ['/offline.html', '/favicon.svg', '/manifest.json'];
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing service worker, cache version:', CACHE_VERSION);
-
-  if (isLocalhost) {
-    event.waitUntil(
-      caches
-        .keys()
-        .then((cacheNames) =>
-          Promise.all(
-            cacheNames
-              .filter((name) => name.startsWith('mdviewer-'))
-              .map((name) => caches.delete(name))
-          )
-        )
-        .then(() =>
-          caches.open(CACHE_NAME).then((cache) =>
-            cache.addAll(STATIC_ASSETS).catch((err) => {
-              console.warn('[SW] Some assets failed to cache', err);
-            })
-          )
-        )
-    );
-  } else {
-    event.waitUntil(
-      caches.open(CACHE_NAME).then((cache) =>
-        cache.addAll(STATIC_ASSETS).catch((err) => {
-          console.warn('[SW] Some assets failed to cache', err);
-        })
-      )
-    );
-  }
-
+  console.log('[SW] Installing', CACHE_VERSION);
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.addAll(PRECACHE).catch((err) => {
+        console.warn('[SW] Precache partial failure', err);
+      })
+    )
+  );
   self.skipWaiting();
 });
 
@@ -70,71 +37,21 @@ function shouldDeleteCache(name) {
 }
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating service worker, cleaning old caches');
-
+  console.log('[SW] Activating', CACHE_VERSION);
   event.waitUntil(
     caches
       .keys()
-      .then((cacheNames) =>
-        Promise.all(
-          cacheNames.filter((name) => shouldDeleteCache(name)).map((name) => caches.delete(name))
-        )
+      .then((names) =>
+        Promise.all(names.filter((n) => shouldDeleteCache(n)).map((n) => caches.delete(n)))
       )
       .then(() => self.clients.claim())
   );
 });
 
-function networkFirst(request) {
-  return fetch(request)
-    .then((response) => {
-      if (response && response.status === 200 && response.type === 'basic') {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-      }
-      return response;
-    })
-    .catch(() =>
-      caches.match(request).then((cached) => {
-        if (cached) return cached;
-        return caches.match('/offline.html').then(
-          (offline) =>
-            offline ||
-            new Response('Offline - Content not available', {
-              status: 503,
-              statusText: 'Service Unavailable',
-              headers: { 'Content-Type': 'text/plain' },
-            })
-        );
-      })
-    );
-}
-
-/** Prefer network when online; fall back to cache; update cache in background. */
-function staleWhileRevalidate(request) {
-  return caches.open(CACHE_NAME).then((cache) =>
-    cache.match(request).then((cached) => {
-      const networkPromise = fetch(request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            cache.put(request, response.clone());
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      // Online path: race — if network is fast, use it; else cached then refresh
-      return cached
-        ? Promise.race([
-            networkPromise,
-            new Promise((resolve) => {
-              // Return cache immediately; network updates cache for next load
-              resolve(cached);
-              networkPromise.catch(() => undefined);
-            }),
-          ]).then((result) => result || networkPromise)
-        : networkPromise;
-    })
-  );
+function isNavigation(request) {
+  if (request.mode === 'navigate') return true;
+  const accept = request.headers.get('accept') || '';
+  return accept.includes('text/html');
 }
 
 self.addEventListener('fetch', (event) => {
@@ -142,20 +59,37 @@ self.addEventListener('fetch', (event) => {
   if (!event.request.url.startsWith(self.location.origin)) return;
 
   const url = new URL(event.request.url);
-  const accept = event.request.headers.get('accept') || '';
-  const isHTML =
-    accept.includes('text/html') ||
-    url.pathname === '/' ||
-    (!url.pathname.includes('.') && !url.pathname.startsWith('/assets'));
 
-  const isStaticAsset =
+  // Never cache the service worker script itself
+  if (url.pathname === '/sw.js') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // HTML / SPA navigations: always hit network when possible
+  if (isNavigation(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => response)
+        .catch(() =>
+          caches.match('/offline.html').then(
+            (offline) =>
+              offline ||
+              new Response('Offline', {
+                status: 503,
+                headers: { 'Content-Type': 'text/plain' },
+              })
+          )
+        )
+    );
+    return;
+  }
+
+  const isHashedAsset =
     url.pathname.startsWith('/assets/') ||
-    /\.(js|css|woff2?|png|jpg|jpeg|svg|webp|ico)$/i.test(url.pathname);
+    /\.(js|css|woff2?)$/i.test(url.pathname);
 
-  if (isHTML) {
-    event.respondWith(networkFirst(event.request));
-  } else if (isStaticAsset) {
-    // Network-first for hashed assets so Ctrl+R gets new deploy; cache on success
+  if (isHashedAsset) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -169,49 +103,61 @@ self.addEventListener('fetch', (event) => {
           caches.match(event.request).then(
             (cached) =>
               cached ||
-              new Response('Offline', {
-                status: 503,
-                statusText: 'Service Unavailable',
-              })
+              new Response('Offline', { status: 503, statusText: 'Service Unavailable' })
           )
         )
     );
-  } else {
-    event.respondWith(staleWhileRevalidate(event.request));
+    return;
   }
+
+  // Other static: stale-while-revalidate
+  event.respondWith(
+    caches.open(CACHE_NAME).then((cache) =>
+      cache.match(event.request).then((cached) => {
+        const network = fetch(event.request)
+          .then((response) => {
+            if (response && response.status === 200 && response.type === 'basic') {
+              cache.put(event.request, response.clone());
+            }
+            return response;
+          })
+          .catch(() => cached);
+        return cached || network;
+      })
+    )
+  );
 });
 
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (!event.data) return;
+
+  if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
 
-  if (event.data && event.data.type === 'CLIENTS_CLAIM') {
+  if (event.data.type === 'CLIENTS_CLAIM') {
     self.clients.claim();
   }
 
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
+  if (event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
-      caches.keys().then((cacheNames) => Promise.all(cacheNames.map((name) => caches.delete(name)))).then(() => {
+      caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n)))).then(() => {
         if (event.ports && event.ports[0]) {
-          event.ports[0].postMessage({ success: true, message: 'All caches cleared' });
+          event.ports[0].postMessage({ success: true });
         }
       })
     );
   }
 
-  if (event.data && event.data.type === 'UNREGISTER_SW') {
+  if (event.data.type === 'UNREGISTER_SW') {
     event.waitUntil(
       caches
         .keys()
-        .then((cacheNames) => Promise.all(cacheNames.map((name) => caches.delete(name))))
+        .then((names) => Promise.all(names.map((n) => caches.delete(n))))
         .then(() =>
           self.registration.unregister().then((success) => {
             if (event.ports && event.ports[0]) {
-              event.ports[0].postMessage({
-                success,
-                message: success ? 'Service worker unregistered' : 'Failed to unregister',
-              });
+              event.ports[0].postMessage({ success });
             }
           })
         )

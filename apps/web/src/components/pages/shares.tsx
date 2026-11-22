@@ -179,7 +179,7 @@ export default function SharesPage(): React.JSX.Element {
                 onClose={() => setDeleteLinkId(null)}
                 title="Delete shared link"
             >
-                <div className="flex items-start gap-3 mb-4">
+                <div className="flex items-start gap-3 mb-4 pr-8">
                     <Trash2 className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg mb-1 text-destructive">
@@ -192,14 +192,6 @@ export default function SharesPage(): React.JSX.Element {
                             This action cannot be undone!
                         </p>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteLinkId(null)}
-                        className="h-6 w-6 p-0 flex-shrink-0"
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
                 </div>
                 <div className="flex flex-col gap-2">
                     <Button
@@ -225,7 +217,7 @@ export default function SharesPage(): React.JSX.Element {
                 onClose={() => setShowClearWarning(false)}
                 title="Clear all shared links"
             >
-                <div className="flex items-start gap-3 mb-4">
+                <div className="flex items-start gap-3 mb-4 pr-8">
                     <Trash2 className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                         <h3 className="font-semibold text-lg mb-1 text-destructive">
@@ -238,14 +230,6 @@ export default function SharesPage(): React.JSX.Element {
                             This action cannot be undone!
                         </p>
                     </div>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowClearWarning(false)}
-                        className="h-6 w-6 p-0 flex-shrink-0"
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
                 </div>
                 <div className="flex flex-col gap-2">
                     <Button

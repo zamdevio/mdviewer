@@ -8,9 +8,28 @@ function activateWaiting(worker: ServiceWorker) {
 }
 
 /**
- * Registers the service worker and activates updates so a normal reload
- * (Ctrl+R) is enough — no hard refresh required.
+ * Production only — Vite HMR + a SW fighting over modules breaks normal reloads.
+ * On localhost we unregister any existing SW and clear mdviewer caches so Ctrl+R works.
  */
+async function disableServiceWorkerInDev() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys
+          .filter((k) => k.startsWith("mdviewer-") || k.startsWith("workbox-") || k.startsWith("next-"))
+          .map((k) => caches.delete(k))
+      );
+    }
+    console.info("[SW] Dev mode: unregistered service workers and cleared app caches");
+  } catch (error) {
+    console.warn("[SW] Dev cleanup failed:", error);
+  }
+}
+
 export function ServiceWorkerRegister() {
   const checkForUpdates = useCallback(async (reg: ServiceWorkerRegistration) => {
     try {
@@ -25,10 +44,15 @@ export function ServiceWorkerRegister() {
       return;
     }
 
+    // Dev / localhost: never control the page
+    if (import.meta.env.DEV) {
+      void disableServiceWorkerInDev();
+      return;
+    }
+
     let cancelled = false;
 
     const onControllerChange = () => {
-      // Avoid reload loops when multiple tabs claim
       if (sessionStorage.getItem(RELOAD_GUARD_KEY)) {
         sessionStorage.removeItem(RELOAD_GUARD_KEY);
         return;
@@ -48,7 +72,6 @@ export function ServiceWorkerRegister() {
 
         if (cancelled) return;
 
-        // Waiting worker from a previous visit — activate immediately
         if (reg.waiting) {
           activateWaiting(reg.waiting);
         }
@@ -59,7 +82,7 @@ export function ServiceWorkerRegister() {
           newWorker.addEventListener("statechange", () => {
             if (newWorker.state !== "installed") return;
             if (navigator.serviceWorker.controller) {
-              toast.info("Update ready — applying…", { duration: 2500 });
+              toast.info("Update ready — applying…", { duration: 2000 });
               activateWaiting(newWorker);
             }
           });
@@ -75,7 +98,6 @@ export function ServiceWorkerRegister() {
         document.addEventListener("visibilitychange", handleVisibilityChange);
 
         const updateInterval = setInterval(() => checkForUpdates(reg), 5 * 60 * 1000);
-
         const handleOnline = () => checkForUpdates(reg);
         window.addEventListener("online", handleOnline);
 

@@ -29,14 +29,14 @@ export function ConfirmDeleteDialog({
             showTitle={false}
             showCloseButton
         >
-            <div className="flex items-start gap-3 mb-4">
+            <div className="flex items-start gap-3 mb-4 pr-8">
                 <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-lg mb-1 text-destructive">{title}</h3>
                     <p className="text-sm text-muted-foreground mb-2">
                         Are you sure you want to delete{" "}
                         <span
-                            className="font-medium text-foreground truncate block"
+                            className="font-medium text-foreground break-all"
                             title={name ?? undefined}
                         >
                             {name}

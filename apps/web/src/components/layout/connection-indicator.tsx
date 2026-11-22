@@ -11,7 +11,6 @@ import {
   ShieldAlert,
   Wifi,
   WifiOff,
-  X,
 } from "lucide-react";
 
 type DisplayStatus = ConnectionStatus | "api-unset";
@@ -149,7 +148,7 @@ export function ConnectionIndicator() {
         onClose={() => setDialogOpen(false)}
         title={config.label}
       >
-        <div className="flex items-start gap-3 mb-4">
+        <div className="flex items-start gap-3 mb-4 pr-8">
           <Icon className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-lg mb-1">{config.label}</h3>
@@ -188,14 +187,6 @@ export function ConnectionIndicator() {
               </Button>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDialogOpen(false)}
-            className="h-6 w-6 p-0 flex-shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </Button>
         </div>
       </ModalShell>
     </>

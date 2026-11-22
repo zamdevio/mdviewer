@@ -16,35 +16,43 @@ export const MAX_FILENAME_LENGTH = 47; // Max filename without .md extension (47
 export const MAX_DISPLAY_FILENAME_LENGTH = 30; // Max characters to display in UI
 
 /**
+ * Sanitize filename — strip every trailing `.md` so user-typed
+ * `notes.md` or `notes.md.md` both become `notes` (caller adds one `.md`).
+ */
+export function sanitizeFileName(filename: string): string {
+    let name = filename.trim();
+    while (/\.md$/i.test(name)) {
+        name = name.replace(/\.md$/i, "").trim();
+    }
+    return name;
+}
+
+/**
  * Truncate filename for display
  * Shows first 20 chars, then "....md" for longer filenames
  * Example: "very-long-filename-that-exceeds-20-chars.md" -> "very-long-filename....md"
  */
 export function truncateFilenameForDisplay(filename: string): string {
-    const nameWithoutExt = filename.replace(/\.md$/i, '');
-    
+    const nameWithoutExt = sanitizeFileName(filename);
+
     if (nameWithoutExt.length <= MAX_DISPLAY_FILENAME_LENGTH) {
-        return filename; // Return as-is if within limit
+        return `${nameWithoutExt}.md`;
     }
-    
-    // Truncate to 20 chars and add "....md"
-    const truncated = nameWithoutExt.substring(0, MAX_DISPLAY_FILENAME_LENGTH);
-    return `${truncated}....md`;
+
+    return `${nameWithoutExt.substring(0, MAX_DISPLAY_FILENAME_LENGTH)}....md`;
 }
 
 /**
  * Truncate filename to max length (47 chars + .md = 50 total)
  */
 export function truncateFilename(filename: string): string {
-    const nameWithoutExt = filename.replace(/\.md$/i, '');
-    
+    const nameWithoutExt = sanitizeFileName(filename);
+
     if (nameWithoutExt.length <= MAX_FILENAME_LENGTH) {
-        return filename.endsWith('.md') ? filename : `${filename}.md`;
+        return `${nameWithoutExt}.md`;
     }
-    
-    // Truncate to max length
-    const truncated = nameWithoutExt.substring(0, MAX_FILENAME_LENGTH);
-    return `${truncated}.md`;
+
+    return `${nameWithoutExt.substring(0, MAX_FILENAME_LENGTH)}.md`;
 }
 
 /**
@@ -71,13 +79,6 @@ export async function saveCurrentContentToFile(
     }
     
     return null;
-}
-
-/**
- * Sanitize filename (remove .md extension, trim)
- */
-export function sanitizeFileName(filename: string): string {
-    return filename.trim().replace(/\.md$/i, '');
 }
 
 /**
