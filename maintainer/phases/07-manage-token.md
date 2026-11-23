@@ -2,7 +2,7 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** Design locked — Slice A not started  
+**Status:** Slice A implemented (Worker); B–E open  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
 **Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
@@ -23,6 +23,18 @@
 Do not start B until A’s auth split is deployable. C may land in the same PR as B if the dialog is already shared. D can share a PR with E.
 
 **Slice A approach:** in-place swap on existing routes (not a Worker rewrite).
+
+### Slice A — implementation checklist
+
+> Agentic workers: TDD per step. Caps/literals live in `config.ts`. Protocol 3 only.
+
+- [x] **A1** Create `apps/worker/src/lib/config.ts` (TTL, `MAX_FILE_SIZE`, `ROTATE_MANAGE_MAX_IDS=50`, fair-use defaults). Rewire `ttl.ts` / `content.ts` / `fair-use.ts` to import from it. Tests still pass.
+- [x] **A2** Extend `ShareMetadata` → `manageTokenHash` + `protocol: 3`; public meta `protocol: 3`. Add `readManageToken` + `requireManageToken` / view-only password helper in `password.ts` (or small `share-auth` helpers). Unit tests for header parse + auth fail paths.
+- [x] **A3** `upload.ts` + `share.ts`: manage required on create/mutate/delete; view password GET-only; remove flat-key / protocol-2 mutate paths. CORS: `Authorization`, `X-Share-Manage-Token`.
+- [x] **A4** `POST /share/rotate-manage`: hash-once, parallel meta, cap 50, partial `{ updated, failed }`, fair-use. Tests for cap / partial / hash-once.
+- [x] **A5** `/compatibility` → protocol 3, features (`manageToken`, `viewPasswordSeparate`, …), `limits`, rotate endpoint listed. OpenAPI descriptions updated.
+- [x] **A6** MCP tools: `manageToken` for upload/mutate/delete; view password GET-only.
+- [x] **A7** Worker unit tests green (`pnpm test` in `apps/worker`). Prod/wrangler smoke + SPA (B) still open.
 
 ---
 
@@ -187,13 +199,13 @@ Headers: manage = `Authorization: Bearer <token>` (preferred) or `X-Share-Manage
 
 ### Worker
 
-- [ ] `lib/config.ts` + consumers
-- [ ] Metadata: `manageTokenHash` always; `passwordHash` = view-only optional; `protocol: 3`
-- [ ] Auth split on GET vs mutate; drop flat-key / protocol-2 paths
-- [ ] Bulk rotate endpoint + fair-use
-- [ ] Compatibility protocol 3 + features + `limits`
-- [ ] OpenAPI / Swagger route descriptions
-- [ ] MCP tools: manageToken for mutate/upload
+- [x] `lib/config.ts` + consumers
+- [x] Metadata: `manageTokenHash` always; `passwordHash` = view-only optional; `protocol: 3`
+- [x] Auth split on GET vs mutate; drop flat-key / protocol-2 paths
+- [x] Bulk rotate endpoint + fair-use
+- [x] Compatibility protocol 3 + features + `limits`
+- [x] OpenAPI / Swagger route descriptions
+- [x] MCP tools: manageToken for mutate/upload
 
 ### Agent surfaces
 

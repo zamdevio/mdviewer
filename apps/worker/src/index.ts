@@ -15,9 +15,9 @@ export { RateLimiter } from "./rate-limiter";
 
 const CORS_METHODS = "GET, POST, PUT, PATCH, DELETE, OPTIONS";
 const CORS_HEADERS =
-  "Content-Type, X-Share-Password, X-Share-TTL-Seconds, X-Share-View-Protected, X-Share-Type, X-Share-Filename, X-MDViewer-Client";
+  "Content-Type, Authorization, X-Share-Manage-Token, X-Share-Password, X-Share-TTL-Seconds, X-Share-View-Protected, X-Share-Type, X-Share-Filename, X-MDViewer-Client";
 const CORS_EXPOSE =
-  "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After, X-Expires-At, X-Content-Size, X-Uploaded-At, X-Share-Filename, X-Share-Legacy";
+  "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, Retry-After, X-Expires-At, X-Content-Size, X-Uploaded-At, X-Share-Filename";
 
 const app = new OpenAPIHono<{
   Bindings: Env;
@@ -76,9 +76,9 @@ app.doc("/openapi.json", {
   openapi: "3.1.0",
   info: {
     title: "MDViewer API",
-    version: "2.0.0",
+    version: "3.0.0",
     description:
-      "Edge API for sharing markdown via Cloudflare Workers + R2. Protocol 2: prefix layout, fixed TTL, optional password / viewProtected, fair-use (IP+UA). Uploads fair-use limited; downloads unlimited.",
+      "Edge API for sharing markdown via Cloudflare Workers + R2. Protocol 3: manage token for mutate/upload; optional disposable view password for GET; fixed TTL; fair-use (IP+UA). Caps via GET /compatibility.",
   },
   tags: [
     { name: "System", description: "Health, compatibility handshake, and ops" },

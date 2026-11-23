@@ -5,7 +5,6 @@ import { hashPassword, verifyPassword } from "../lib/password";
 import {
   deleteSharePrefix,
   putShare,
-  readLegacyShare,
   readMetadata,
   readShareContent,
   sanitizeShareFilename,
@@ -40,19 +39,25 @@ const PROTOCOL_VERSIONS = ["2025-06-18", "2025-03-26", "2024-11-05"] as const;
 const TOOLS = [
   {
     name: "get_share",
-    description: "Fetch shared markdown content by id (password if viewProtected).",
+    description:
+      "Fetch shared markdown by id. Pass viewPassword when viewProtected (view only — not admin).",
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string" },
-        password: { type: "string", description: "Required when viewProtected" },
+        viewPassword: {
+          type: "string",
+          description: "Required when viewProtected",
+        },
+        /** @deprecated use viewPassword */
+        password: { type: "string" },
       },
       required: ["id"],
     },
   },
   {
     name: "get_share_meta",
-    description: "Anonymous share metadata (no content, no password hash).",
+    description: "Anonymous share metadata (no content, no secret hashes).",
     inputSchema: {
       type: "object",
       properties: { id: { type: "string" } },
@@ -61,44 +66,46 @@ const TOOLS = [
   },
   {
     name: "upload_share",
-    description: "Create a share (fair-use limited). Optional password / TTL / viewProtected.",
+    description:
+      "Create a share (fair-use limited). Requires manageToken. Optional viewPassword + viewProtected / TTL.",
     inputSchema: {
       type: "object",
       properties: {
         content: { type: "string" },
-        password: { type: "string" },
+        manageToken: { type: "string" },
+        viewPassword: { type: "string" },
         ttlSeconds: { type: "number" },
         viewProtected: { type: "boolean" },
         filename: { type: "string" },
         type: { type: "string", enum: ["file", "project"] },
       },
-      required: ["content"],
+      required: ["content", "manageToken"],
     },
   },
   {
     name: "update_share",
-    description: "Replace share content; keeps expiresAt. Requires password.",
+    description: "Replace share content; keeps expiresAt. Requires manageToken.",
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string" },
         content: { type: "string" },
-        password: { type: "string" },
+        manageToken: { type: "string" },
         filename: { type: "string" },
       },
-      required: ["id", "content", "password"],
+      required: ["id", "content", "manageToken"],
     },
   },
   {
     name: "delete_share",
-    description: "Wipe shares/{id}/ prefix. Requires password.",
+    description: "Wipe shares/{id}/ prefix. Requires manageToken.",
     inputSchema: {
       type: "object",
       properties: {
         id: { type: "string" },
-        password: { type: "string" },
+        manageToken: { type: "string" },
       },
-      required: ["id", "password"],
+      required: ["id", "manageToken"],
     },
   },
 ] as const;
@@ -130,68 +137,68 @@ async function callTool(
       const id = String(args.id || "");
       if (!id) return toolText("id required", true);
       const meta = await readMetadata(env.R2_BUCKET, id);
-      if (meta) {
-        if (isExpired(meta.expiresAt)) {
-          await deleteSharePrefix(env.R2_BUCKET, id);
-          return toolText("Share expired", true);
-        }
-        return toolText(JSON.stringify(toPublicMeta(meta), null, 2));
+      if (!meta) return toolText("Not found", true);
+      if (isExpired(meta.expiresAt)) {
+        await deleteSharePrefix(env.R2_BUCKET, id);
+        return toolText("Share expired", true);
       }
-      const legacy = await readLegacyShare(env.R2_BUCKET, id);
-      if (!legacy) return toolText("Not found", true);
-      return toolText(
-        JSON.stringify(
-          {
-            id,
-            legacy: true,
-            size: legacy.size,
-            createdAt: legacy.uploadedAt,
-          },
-          null,
-          2,
-        ),
-      );
+      return toolText(JSON.stringify(toPublicMeta(meta), null, 2));
     }
     case "get_share": {
       const id = String(args.id || "");
-      const password = args.password != null ? String(args.password) : null;
+      const viewPassword =
+        args.viewPassword != null
+          ? String(args.viewPassword)
+          : args.password != null
+            ? String(args.password)
+            : null;
       if (!id) return toolText("id required", true);
       const meta = await readMetadata(env.R2_BUCKET, id);
-      if (meta) {
-        if (isExpired(meta.expiresAt)) {
-          await deleteSharePrefix(env.R2_BUCKET, id);
-          return toolText("Share expired", true);
-        }
-        if (meta.viewProtected) {
-          if (!password || !(await verifyPassword(password, meta.passwordHash))) {
-            return toolText("Unauthorized: view password required", true);
-          }
-        }
-        const content = await readShareContent(env.R2_BUCKET, meta);
-        if (content == null) return toolText("Content missing", true);
-        return toolText(content);
+      if (!meta) return toolText("Not found", true);
+      if (isExpired(meta.expiresAt)) {
+        await deleteSharePrefix(env.R2_BUCKET, id);
+        return toolText("Share expired", true);
       }
-      const legacy = await readLegacyShare(env.R2_BUCKET, id);
-      if (!legacy) return toolText("Not found", true);
-      return toolText(legacy.content);
+      if (meta.viewProtected) {
+        if (
+          !viewPassword ||
+          !(await verifyPassword(viewPassword, meta.passwordHash))
+        ) {
+          return toolText("Unauthorized: view password required", true);
+        }
+      }
+      const content = await readShareContent(env.R2_BUCKET, meta);
+      if (content == null) return toolText("Content missing", true);
+      return toolText(content);
     }
     case "upload_share": {
       const fair = await checkFairUse(env, request, frontendOrigin);
       if (!fair.allowed) {
-        return toolText(`Rate limited until ${new Date(fair.resetAt).toISOString()}`, true);
+        return toolText(
+          `Rate limited until ${new Date(fair.resetAt).toISOString()}`,
+          true,
+        );
       }
       const content = String(args.content ?? "");
+      const manageToken = String(args.manageToken || "");
       if (!content) return toolText("content required", true);
+      if (!manageToken) return toolText("manageToken required", true);
       const size = new Blob([content]).size;
       if (size > MAX_FILE_SIZE) return toolText("Content exceeds 5MB", true);
       const id = generateId();
       const createdAt = new Date().toISOString();
       const ttl = clampTtlSeconds(
-        typeof args.ttlSeconds === "number" ? args.ttlSeconds : TTL_DEFAULT_SECONDS,
+        typeof args.ttlSeconds === "number"
+          ? args.ttlSeconds
+          : TTL_DEFAULT_SECONDS,
       );
       const expiresAt = expiresAtFromTtl(ttl);
-      const password = args.password != null ? String(args.password) : "";
-      const passwordHash = password ? await hashPassword(password) : null;
+      const manageTokenHash = await hashPassword(manageToken);
+      const viewPassword =
+        args.viewPassword != null ? String(args.viewPassword) : "";
+      const passwordHash = viewPassword
+        ? await hashPassword(viewPassword)
+        : null;
       const viewProtected = Boolean(passwordHash) && Boolean(args.viewProtected);
       const filename = sanitizeShareFilename(
         args.filename != null ? String(args.filename) : "content.md",
@@ -204,16 +211,16 @@ async function callTool(
         size,
         createdAt,
         expiresAt,
+        manageTokenHash,
         passwordHash,
         viewProtected,
-        protocol: 2,
+        protocol: 3,
       };
       await putShare(env.R2_BUCKET, meta, content);
       const frontendShareUrl = new URL(frontendOrigin);
       frontendShareUrl.pathname = `/share/${encodeURIComponent(id)}`;
       frontendShareUrl.search = "";
       frontendShareUrl.hash = "";
-      // Raw markdown is always path-style on the Worker (same shape as SPA viewer).
       const contentUrl = new URL(request.url);
       contentUrl.pathname = `/share/${encodeURIComponent(id)}`;
       contentUrl.search = "";
@@ -237,16 +244,16 @@ async function callTool(
     }
     case "update_share": {
       const id = String(args.id || "");
-      const password = String(args.password || "");
+      const manageToken = String(args.manageToken || "");
       const content = String(args.content ?? "");
-      if (!id || !password || !content) {
-        return toolText("id, password, and content required", true);
+      if (!id || !manageToken || !content) {
+        return toolText("id, manageToken, and content required", true);
       }
       const meta = await readMetadata(env.R2_BUCKET, id);
       if (!meta || isExpired(meta.expiresAt)) {
         return toolText("Not found or expired", true);
       }
-      if (!meta.passwordHash || !(await verifyPassword(password, meta.passwordHash))) {
+      if (!(await verifyPassword(manageToken, meta.manageTokenHash))) {
         return toolText("Unauthorized", true);
       }
       const size = new Blob([content]).size;
@@ -266,11 +273,13 @@ async function callTool(
     }
     case "delete_share": {
       const id = String(args.id || "");
-      const password = String(args.password || "");
-      if (!id || !password) return toolText("id and password required", true);
+      const manageToken = String(args.manageToken || "");
+      if (!id || !manageToken) {
+        return toolText("id and manageToken required", true);
+      }
       const meta = await readMetadata(env.R2_BUCKET, id);
       if (!meta) return toolText("Not found", true);
-      if (!meta.passwordHash || !(await verifyPassword(password, meta.passwordHash))) {
+      if (!(await verifyPassword(manageToken, meta.manageTokenHash))) {
         return toolText("Unauthorized", true);
       }
       await deleteSharePrefix(env.R2_BUCKET, id);

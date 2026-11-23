@@ -14,7 +14,7 @@
   - `GET /llms.txt`, `GET /llms-full.txt` — agent briefs
   - `GET /health`, `GET /compatibility` (`protocol: 3`, features + `ttl` + `limits`)
 
-**Until Slice A ships:** prod may still speak protocol 2 (password-gated mutate, flat-key GET fallback). Do not document dual auth as a product promise — hard cut in 07.
+**Protocol 3 (Slice A):** manage token on create/mutate; view password GET-only; `POST /share/rotate-manage`; no flat-key fallback. SPA Slice B must send Bearer manage token before prod share UX works against a protocol-3 Worker.
 
 **MCP icons in Cursor:** server emits valid SEP-973 `icons[]`; Cursor’s Customize → MCPs list often still shows a generic puzzle glyph for user-added remote servers (staff-confirmed client gap). Marketplace plugins (e.g. tldraw) get icons from plugin metadata, not `serverInfo.icons`.
 - Docs: `GET /docs`, `GET /openapi.json`

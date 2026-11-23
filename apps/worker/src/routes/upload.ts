@@ -7,7 +7,11 @@ import {
   MAX_FILE_SIZE,
 } from "../lib/content";
 import { checkFairUse } from "../lib/fair-use";
-import { hashPassword, readSharePassword } from "../lib/password";
+import {
+  hashPassword,
+  readManageToken,
+  readSharePassword,
+} from "../lib/password";
 import {
   putShare,
   sanitizeShareFilename,
@@ -27,7 +31,7 @@ const uploadRoute = createRoute({
   tags: ["Share"],
   summary: "Upload markdown/text content",
   description:
-    "Accepts text/plain (or markdown content-types) body, or multipart/form-data. Stores under shares/{id}/ with metadata + fixed TTL. Optional X-Share-Password (hashed), X-Share-TTL-Seconds, X-Share-View-Protected, X-Share-Filename, X-Share-Type. Fair-use limited per IP+UA.",
+    "Requires manage token (Authorization Bearer or X-Share-Manage-Token). Accepts text/plain or multipart/form-data. Optional view password via X-Share-Password when X-Share-View-Protected. Fixed TTL headers. Fair-use limited per IP+UA.",
   request: {
     body: {
       required: true,
@@ -72,6 +76,17 @@ const uploadRoute = createRoute({
     },
     400: {
       description: "Empty content",
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    401: {
+      description: "Manage token missing",
       content: {
         "application/json": {
           schema: z.object({
@@ -162,6 +177,18 @@ app.openapi(uploadRoute, async (c) => {
     );
   }
 
+  const manageToken = readManageToken(c.req.raw);
+  if (!manageToken) {
+    return c.json(
+      {
+        error: "Unauthorized",
+        message:
+          "Provide Authorization: Bearer <manageToken> or X-Share-Manage-Token to create a share.",
+      },
+      401,
+    );
+  }
+
   let content: string;
   let contentType: string;
   try {
@@ -211,6 +238,7 @@ app.openapi(uploadRoute, async (c) => {
   const createdAt = new Date().toISOString();
   const ttlSeconds = parseTtlHeader(c.req.raw);
   const expiresAt = expiresAtFromTtl(ttlSeconds);
+  const manageTokenHash = await hashPassword(manageToken);
   const passwordPlain = readSharePassword(c.req.raw);
   const passwordHash = passwordPlain ? await hashPassword(passwordPlain) : null;
   const viewProtected = parseViewProtected(c.req.raw);
@@ -228,9 +256,10 @@ app.openapi(uploadRoute, async (c) => {
     size: contentSize,
     createdAt,
     expiresAt,
+    manageTokenHash,
     passwordHash,
     viewProtected: effectiveViewProtected,
-    protocol: 2,
+    protocol: 3,
   };
 
   try {

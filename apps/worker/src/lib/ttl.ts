@@ -1,7 +1,15 @@
-/** Fixed TTL rules (Phase C) — expiresAt set once at create, never slid. */
-export const TTL_DEFAULT_SECONDS = 7 * 24 * 60 * 60;
-export const TTL_MAX_SECONDS = 30 * 24 * 60 * 60;
-export const TTL_MIN_SECONDS = 60;
+/** Re-export from central config (self-host: edit `config.ts`). */
+export {
+  TTL_DEFAULT_SECONDS,
+  TTL_MAX_SECONDS,
+  TTL_MIN_SECONDS,
+} from "./config";
+
+import {
+  TTL_DEFAULT_SECONDS,
+  TTL_MAX_SECONDS,
+  TTL_MIN_SECONDS,
+} from "./config";
 
 export function clampTtlSeconds(raw: number | null | undefined): number {
   if (raw == null || !Number.isFinite(raw)) return TTL_DEFAULT_SECONDS;

@@ -70,3 +70,54 @@ export function readSharePassword(request: Request): string | null {
   if (header == null || header === "") return null;
   return header;
 }
+
+/** Prefer Authorization Bearer; fall back to X-Share-Manage-Token. */
+export function readManageToken(request: Request): string | null {
+  const auth = request.headers.get("Authorization");
+  if (auth) {
+    const match = /^Bearer\s+(.+)$/i.exec(auth.trim());
+    if (match?.[1]) return match[1];
+  }
+  const header = request.headers.get("X-Share-Manage-Token");
+  if (header == null || header === "") return null;
+  return header;
+}
+
+export type ManageAuthFail = {
+  status: 401 | 403;
+  error: string;
+  message: string;
+};
+
+/** Verify manage token against stored hash. View password must not call this. */
+export async function requireManageToken(
+  manageTokenHash: string | null | undefined,
+  request: Request,
+): Promise<ManageAuthFail | null> {
+  if (!manageTokenHash) {
+    return {
+      status: 403,
+      error: "Manage token required",
+      message:
+        "This share has no manage token. Create a new share with a manage token.",
+    };
+  }
+  const token = readManageToken(request);
+  if (!token) {
+    return {
+      status: 401,
+      error: "Unauthorized",
+      message:
+        "Provide Authorization: Bearer <manageToken> or X-Share-Manage-Token.",
+    };
+  }
+  const ok = await verifyPassword(token, manageTokenHash);
+  if (!ok) {
+    return {
+      status: 401,
+      error: "Unauthorized",
+      message: "Invalid manage token.",
+    };
+  }
+  return null;
+}

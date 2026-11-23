@@ -5,11 +5,22 @@ import {
   extractContent,
   MAX_FILE_SIZE,
 } from "../lib/content";
-import { readSharePassword, verifyPassword } from "../lib/password";
+import { checkFairUse } from "../lib/fair-use";
+import {
+  hashPassword,
+  readManageToken,
+  readSharePassword,
+  requireManageToken,
+  verifyPassword,
+} from "../lib/password";
+import {
+  assertRotateRequest,
+  rotateManageOnBucket,
+} from "../lib/rotate-manage";
 import {
   deleteSharePrefix,
   putShare,
-  readLegacyShare,
+  putShareMetadata,
   readMetadata,
   readShareContent,
   sanitizeShareFilename,
@@ -45,42 +56,8 @@ const PublicMetaSchema = z.object({
   expiresAt: z.string(),
   viewProtected: z.boolean(),
   hasPassword: z.boolean(),
-  protocol: z.literal(2),
-  legacy: z.boolean().optional(),
+  protocol: z.literal(3),
 });
-
-type AuthFail = { status: 401 | 403; error: string; message: string };
-
-async function requirePassword(
-  meta: ShareMetadata,
-  request: Request,
-): Promise<AuthFail | null> {
-  if (!meta.passwordHash) {
-    return {
-      status: 403,
-      error: "Password required",
-      message:
-        "This share has no mutate password. Create a new share with X-Share-Password to enable update/delete.",
-    };
-  }
-  const password = readSharePassword(request);
-  if (!password) {
-    return {
-      status: 401,
-      error: "Unauthorized",
-      message: "Provide X-Share-Password for this operation.",
-    };
-  }
-  const ok = await verifyPassword(password, meta.passwordHash);
-  if (!ok) {
-    return {
-      status: 401,
-      error: "Unauthorized",
-      message: "Invalid share password.",
-    };
-  }
-  return null;
-}
 
 async function loadLiveMeta(
   bucket: R2Bucket,
@@ -101,7 +78,7 @@ const getShareRoute = createRoute({
   tags: ["Share"],
   summary: "Fetch shared markdown/text content",
   description:
-    "Returns raw text. If viewProtected, requires X-Share-Password. Legacy flat R2 keys still supported. Expired shares are wiped and return 404.",
+    "Returns raw text. If viewProtected, requires X-Share-Password (view only). Expired shares are wiped and return 404.",
   request: { params: IdParam },
   responses: {
     200: {
@@ -113,7 +90,7 @@ const getShareRoute = createRoute({
       content: { "application/json": { schema: ErrorSchema } },
     },
     401: {
-      description: "Password required for view-protected share",
+      description: "View password required",
       content: { "application/json": { schema: ErrorSchema } },
     },
     404: {
@@ -133,49 +110,7 @@ app.openapi(getShareRoute, async (c) => {
 
   try {
     const loaded = await loadLiveMeta(c.env.R2_BUCKET, id);
-    if ("expired" in loaded) {
-      return c.json(
-        { error: "Not found", message: "The shared content has expired." },
-        404,
-      );
-    }
-
-    if ("meta" in loaded) {
-      const { meta } = loaded;
-      if (meta.viewProtected) {
-        const password = readSharePassword(c.req.raw);
-        if (!password || !(await verifyPassword(password, meta.passwordHash))) {
-          return c.json(
-            {
-              error: "Unauthorized",
-              message: "This share is view-protected. Provide X-Share-Password.",
-            },
-            401,
-          );
-        }
-      }
-      const content = await readShareContent(c.env.R2_BUCKET, meta);
-      if (content == null) {
-        return c.json(
-          { error: "Not found", message: "Share content missing." },
-          404,
-        );
-      }
-      return c.text(content, 200, {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": meta.viewProtected
-          ? "private, no-store"
-          : "public, max-age=3600",
-        "X-Content-Size": String(meta.size),
-        "X-Uploaded-At": meta.createdAt,
-        "X-Expires-At": meta.expiresAt,
-        "X-Share-Filename": meta.filename,
-      });
-    }
-
-    // Legacy flat key (no TTL / password)
-    const legacy = await readLegacyShare(c.env.R2_BUCKET, id);
-    if (!legacy) {
+    if ("expired" in loaded || "missing" in loaded) {
       return c.json(
         {
           error: "Not found",
@@ -184,17 +119,44 @@ app.openapi(getShareRoute, async (c) => {
         404,
       );
     }
-    return c.text(legacy.content, 200, {
+
+    const { meta } = loaded;
+    if (meta.viewProtected) {
+      const password = readSharePassword(c.req.raw);
+      if (!password || !(await verifyPassword(password, meta.passwordHash))) {
+        return c.json(
+          {
+            error: "Unauthorized",
+            message: "This share is view-protected. Provide X-Share-Password.",
+          },
+          401,
+        );
+      }
+    }
+    const content = await readShareContent(c.env.R2_BUCKET, meta);
+    if (content == null) {
+      return c.json(
+        { error: "Not found", message: "Share content missing." },
+        404,
+      );
+    }
+    return c.text(content, 200, {
       "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "public, max-age=3600",
-      "X-Content-Size": String(legacy.size),
-      "X-Uploaded-At": legacy.uploadedAt,
-      "X-Share-Legacy": "1",
+      "Cache-Control": meta.viewProtected
+        ? "private, no-store"
+        : "public, max-age=3600",
+      "X-Content-Size": String(meta.size),
+      "X-Uploaded-At": meta.createdAt,
+      "X-Expires-At": meta.expiresAt,
+      "X-Share-Filename": meta.filename,
     });
   } catch (error) {
     console.error("Error retrieving file:", error);
     return c.json(
-      { error: "Retrieval error", message: "Failed to retrieve shared content." },
+      {
+        error: "Retrieval error",
+        message: "Failed to retrieve shared content.",
+      },
       500,
     );
   }
@@ -205,8 +167,7 @@ const getMetaRoute = createRoute({
   path: "/share/{id}/meta",
   tags: ["Share"],
   summary: "Anonymous share metadata",
-  description:
-    "Public meta without content or password hash. Legacy shares return a synthetic meta object.",
+  description: "Public meta without content or secret hashes.",
   request: { params: IdParam },
   responses: {
     200: {
@@ -223,40 +184,13 @@ const getMetaRoute = createRoute({
 app.openapi(getMetaRoute, async (c) => {
   const { id } = c.req.valid("param");
   const loaded = await loadLiveMeta(c.env.R2_BUCKET, id);
-  if ("expired" in loaded) {
+  if ("expired" in loaded || "missing" in loaded) {
     return c.json(
-      { error: "Not found", message: "The shared content has expired." },
+      { error: "Not found", message: "The shared content was not found or has expired." },
       404,
     );
   }
-  if ("meta" in loaded) {
-    return c.json(toPublicMeta(loaded.meta), 200);
-  }
-  const legacy = await readLegacyShare(c.env.R2_BUCKET, id);
-  if (!legacy) {
-    return c.json(
-      { error: "Not found", message: "The shared content was not found." },
-      404,
-    );
-  }
-  return c.json(
-    toPublicMeta(
-      {
-        id,
-        type: "file",
-        filename: "content.md",
-        contentType: "text/plain",
-        size: legacy.size,
-        createdAt: legacy.uploadedAt || new Date(0).toISOString(),
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        passwordHash: null,
-        viewProtected: false,
-        protocol: 2,
-      },
-      { legacy: true },
-    ),
-    200,
-  );
+  return c.json(toPublicMeta(loaded.meta), 200);
 });
 
 const putShareRoute = createRoute({
@@ -265,7 +199,7 @@ const putShareRoute = createRoute({
   tags: ["Share"],
   summary: "Replace share content",
   description:
-    "Requires X-Share-Password. Keeps expiresAt and id. Body same as upload (text/plain or multipart).",
+    "Requires manage token (Authorization Bearer or X-Share-Manage-Token). Keeps expiresAt and id.",
   request: {
     params: IdParam,
     body: {
@@ -306,7 +240,7 @@ const putShareRoute = createRoute({
       content: { "application/json": { schema: ErrorSchema } },
     },
     403: {
-      description: "No mutate password",
+      description: "Forbidden",
       content: { "application/json": { schema: ErrorSchema } },
     },
     404: {
@@ -334,7 +268,7 @@ app.openapi(putShareRoute, async (c) => {
     );
   }
   const { meta } = loaded;
-  const authErr = await requirePassword(meta, c.req.raw);
+  const authErr = await requireManageToken(meta.manageTokenHash, c.req.raw);
   if (authErr) {
     return c.json(
       { error: authErr.error, message: authErr.message },
@@ -372,7 +306,6 @@ app.openapi(putShareRoute, async (c) => {
     );
   }
 
-  // Keep expiresAt + password; replace content (same filename unless header overrides)
   const filenameHeader = c.req.raw.headers.get("X-Share-Filename");
   const next: ShareMetadata = {
     ...meta,
@@ -387,11 +320,8 @@ app.openapi(putShareRoute, async (c) => {
     size: contentSize,
   };
 
-  // If filename changed, drop old file key
   if (next.filename !== meta.filename) {
-    await c.env.R2_BUCKET.delete(
-      `shares/${meta.id}/files/${meta.filename}`,
-    );
+    await c.env.R2_BUCKET.delete(`shares/${meta.id}/files/${meta.filename}`);
   }
 
   await putShare(c.env.R2_BUCKET, next, content);
@@ -412,8 +342,9 @@ const patchShareRoute = createRoute({
   method: "patch",
   path: "/share/{id}",
   tags: ["Share"],
-  summary: "Update viewProtected flag",
-  description: "Requires X-Share-Password. Body: { viewProtected: boolean }.",
+  summary: "Update view protection",
+  description:
+    "Requires manage token. Body: { viewProtected: boolean, viewPassword?: string }. Clearing protect drops the view hash; enabling protect needs a view password (header X-Share-Password or body.viewPassword).",
   request: {
     params: IdParam,
     body: {
@@ -422,6 +353,7 @@ const patchShareRoute = createRoute({
         "application/json": {
           schema: z.object({
             viewProtected: z.boolean(),
+            viewPassword: z.string().optional(),
           }),
         },
       },
@@ -431,6 +363,10 @@ const patchShareRoute = createRoute({
     200: {
       description: "Updated meta",
       content: { "application/json": { schema: PublicMetaSchema } },
+    },
+    400: {
+      description: "Bad request",
+      content: { "application/json": { schema: ErrorSchema } },
     },
     401: {
       description: "Unauthorized",
@@ -457,7 +393,7 @@ app.openapi(patchShareRoute, async (c) => {
     );
   }
   const { meta } = loaded;
-  const authErr = await requirePassword(meta, c.req.raw);
+  const authErr = await requireManageToken(meta.manageTokenHash, c.req.raw);
   if (authErr) {
     return c.json(
       { error: authErr.error, message: authErr.message },
@@ -466,15 +402,37 @@ app.openapi(patchShareRoute, async (c) => {
   }
 
   const body = c.req.valid("json");
+  const wantProtect = Boolean(body.viewProtected);
+  let passwordHash = meta.passwordHash;
+  if (!wantProtect) {
+    passwordHash = null;
+  } else {
+    const fromBody =
+      typeof body.viewPassword === "string" && body.viewPassword !== ""
+        ? body.viewPassword
+        : null;
+    const fromHeader = readSharePassword(c.req.raw);
+    const viewPlain = fromBody || fromHeader;
+    if (viewPlain) {
+      passwordHash = await hashPassword(viewPlain);
+    } else if (!passwordHash) {
+      return c.json(
+        {
+          error: "View password required",
+          message:
+            "Enable viewProtected with viewPassword (body) or X-Share-Password.",
+        },
+        400,
+      );
+    }
+  }
+
   const next: ShareMetadata = {
     ...meta,
-    viewProtected: Boolean(body.viewProtected),
+    viewProtected: wantProtect && Boolean(passwordHash),
+    passwordHash: wantProtect ? passwordHash : null,
   };
-  await c.env.R2_BUCKET.put(
-    `shares/${id}/metadata.json`,
-    JSON.stringify(next),
-    { httpMetadata: { contentType: "application/json; charset=utf-8" } },
-  );
+  await putShareMetadata(c.env.R2_BUCKET, next);
   return c.json(toPublicMeta(next), 200);
 });
 
@@ -483,7 +441,8 @@ const deleteShareRoute = createRoute({
   path: "/share/{id}",
   tags: ["Share"],
   summary: "Delete share",
-  description: "Requires X-Share-Password. Wipes shares/{id}/ prefix (and legacy flat key).",
+  description:
+    "Requires manage token. Wipes shares/{id}/ prefix.",
   request: { params: IdParam },
   responses: {
     200: {
@@ -513,25 +472,13 @@ app.openapi(deleteShareRoute, async (c) => {
   const { id } = c.req.valid("param");
   const meta = await readMetadata(c.env.R2_BUCKET, id);
   if (!meta) {
-    // Legacy flat: require no password path — refuse without password for safety
-    const legacy = await readLegacyShare(c.env.R2_BUCKET, id);
-    if (!legacy) {
-      return c.json(
-        { error: "Not found", message: "Share not found." },
-        404,
-      );
-    }
     return c.json(
-      {
-        error: "Password required",
-        message:
-          "Legacy shares cannot be deleted via API without a migrate password. Contact host or wait for natural cleanup.",
-      },
-      403,
+      { error: "Not found", message: "Share not found." },
+      404,
     );
   }
 
-  const authErr = await requirePassword(meta, c.req.raw);
+  const authErr = await requireManageToken(meta.manageTokenHash, c.req.raw);
   if (authErr) {
     return c.json(
       { error: authErr.error, message: authErr.message },
@@ -541,6 +488,107 @@ app.openapi(deleteShareRoute, async (c) => {
 
   await deleteSharePrefix(c.env.R2_BUCKET, id);
   return c.json({ ok: true as const, id }, 200);
+});
+
+const rotateManageRoute = createRoute({
+  method: "post",
+  path: "/share/rotate-manage",
+  tags: ["Share"],
+  summary: "Bulk rotate manage token hashes",
+  description:
+    "Auth with the old manage token (Bearer). Body: { shareIds, newManageToken }. Hashes the new token once and writes it to each matching share (metadata only). Cap from server config (compatibility.limits.rotateManageMaxIds).",
+  request: {
+    body: {
+      required: true,
+      content: {
+        "application/json": {
+          schema: z.object({
+            shareIds: z.array(z.string()).min(1),
+            newManageToken: z.string().min(1),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Partial results OK",
+      content: {
+        "application/json": {
+          schema: z.object({
+            updated: z.array(z.string()),
+            failed: z.array(
+              z.object({ id: z.string(), error: z.string() }),
+            ),
+          }),
+        },
+      },
+    },
+    400: {
+      description: "Bad request / over cap",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+    401: {
+      description: "Missing old manage token",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+    429: {
+      description: "Fair-use",
+      content: { "application/json": { schema: ErrorSchema } },
+    },
+  },
+});
+
+app.openapi(rotateManageRoute, async (c) => {
+  const frontendOrigin = c.get("frontendOrigin");
+  const fairUse = await checkFairUse(c.env, c.req.raw, frontendOrigin);
+  if (!fairUse.allowed) {
+    return c.json(
+      {
+        error: "Rate limit exceeded",
+        message: `Too many requests. Retry after ${Math.ceil((fairUse.resetAt - Date.now()) / 1000)} seconds.`,
+      },
+      429,
+      {
+        "X-RateLimit-Limit": String(fairUse.limit),
+        "X-RateLimit-Remaining": String(fairUse.remaining),
+        "X-RateLimit-Reset": String(fairUse.resetAt),
+        "Retry-After": String(Math.ceil((fairUse.resetAt - Date.now()) / 1000)),
+      },
+    );
+  }
+
+  const oldToken = readManageToken(c.req.raw);
+  if (!oldToken) {
+    return c.json(
+      {
+        error: "Unauthorized",
+        message:
+          "Provide Authorization: Bearer <oldManageToken> or X-Share-Manage-Token.",
+      },
+      401,
+    );
+  }
+
+  const body = c.req.valid("json");
+  const checked = assertRotateRequest(body.shareIds, body.newManageToken);
+  if ("error" in checked) {
+    return c.json({ error: "Bad request", message: checked.error }, 400);
+  }
+
+  const newHash = await hashPassword(checked.newManageToken);
+  const result = await rotateManageOnBucket(
+    c.env.R2_BUCKET,
+    checked.shareIds,
+    oldToken,
+    newHash,
+  );
+
+  return c.json(result, 200, {
+    "X-RateLimit-Limit": String(fairUse.limit),
+    "X-RateLimit-Remaining": String(fairUse.remaining),
+    "X-RateLimit-Reset": String(fairUse.resetAt),
+  });
 });
 
 export default app;

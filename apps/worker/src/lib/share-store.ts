@@ -12,9 +12,12 @@ export type ShareMetadata = {
   createdAt: string;
   /** Immutable wipe time — set once at create */
   expiresAt: string;
+  /** Creator manage secret (required, protocol 3) */
+  manageTokenHash: string;
+  /** View-only password hash; null when not view-protected */
   passwordHash: string | null;
   viewProtected: boolean;
-  protocol: 2;
+  protocol: 3;
 };
 
 export type PublicShareMeta = {
@@ -27,8 +30,7 @@ export type PublicShareMeta = {
   expiresAt: string;
   viewProtected: boolean;
   hasPassword: boolean;
-  protocol: 2;
-  legacy?: boolean;
+  protocol: 3;
 };
 
 export function metaKey(id: string): string {
@@ -48,10 +50,7 @@ export function sanitizeShareFilename(name: string | null | undefined): string {
   return base.slice(0, 180);
 }
 
-export function toPublicMeta(
-  meta: ShareMetadata,
-  opts?: { legacy?: boolean },
-): PublicShareMeta {
+export function toPublicMeta(meta: ShareMetadata): PublicShareMeta {
   return {
     id: meta.id,
     type: meta.type,
@@ -62,8 +61,7 @@ export function toPublicMeta(
     expiresAt: meta.expiresAt,
     viewProtected: meta.viewProtected,
     hasPassword: Boolean(meta.passwordHash),
-    protocol: 2,
-    ...(opts?.legacy ? { legacy: true } : {}),
+    protocol: 3,
   };
 }
 
@@ -87,6 +85,15 @@ export async function putShare(
   });
 }
 
+export async function putShareMetadata(
+  bucket: R2Bucket,
+  meta: ShareMetadata,
+): Promise<void> {
+  await bucket.put(metaKey(meta.id), JSON.stringify(meta), {
+    httpMetadata: { contentType: "application/json; charset=utf-8" },
+  });
+}
+
 export async function readMetadata(
   bucket: R2Bucket,
   id: string,
@@ -94,9 +101,16 @@ export async function readMetadata(
   const obj = await bucket.get(metaKey(id));
   if (!obj) return null;
   try {
-    const parsed = (await obj.json()) as ShareMetadata;
+    const parsed = (await obj.json()) as Partial<ShareMetadata> & {
+      id?: string;
+      filename?: string;
+      expiresAt?: string;
+    };
     if (!parsed?.id || !parsed.filename || !parsed.expiresAt) return null;
-    return parsed;
+    if (parsed.protocol !== 3 || typeof parsed.manageTokenHash !== "string") {
+      return null;
+    }
+    return parsed as ShareMetadata;
   } catch {
     return null;
   }
@@ -109,21 +123,6 @@ export async function readShareContent(
   const obj = await bucket.get(fileKey(meta.id, meta.filename));
   if (!obj) return null;
   return obj.text();
-}
-
-/** Legacy flat R2 key = share id (pre–Phase C). */
-export async function readLegacyShare(
-  bucket: R2Bucket,
-  id: string,
-): Promise<{ content: string; size: number; uploadedAt: string } | null> {
-  const obj = await bucket.get(id);
-  if (!obj) return null;
-  const content = await obj.text();
-  return {
-    content,
-    size: Number(obj.customMetadata?.size || content.length),
-    uploadedAt: obj.customMetadata?.uploadedAt || "",
-  };
 }
 
 export async function deleteSharePrefix(
@@ -139,8 +138,6 @@ export async function deleteSharePrefix(
     }
     cursor = listed.truncated ? listed.cursor : undefined;
   } while (cursor);
-  // Best-effort legacy flat key
-  await bucket.delete(id);
 }
 
 export async function sweepExpiredShares(env: Env): Promise<{ deleted: number }> {

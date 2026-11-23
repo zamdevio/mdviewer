@@ -1,4 +1,4 @@
-export const MAX_FILE_SIZE = 5 * 1024 * 1024;
+export { MAX_FILE_SIZE } from "./config";
 
 export const ALLOWED_CONTENT_TYPES = [
   "text/plain",

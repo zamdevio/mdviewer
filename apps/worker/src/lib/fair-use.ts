@@ -1,9 +1,10 @@
 import type { Env } from "../env";
+import {
+  FAIR_USE_AGENT_MAX_REQUESTS,
+  FAIR_USE_MAX_REQUESTS,
+  FAIR_USE_WINDOW_SECONDS,
+} from "./config";
 import { getClientIP } from "./rate-limit";
-
-const DEFAULT_WINDOW = 60;
-const DEFAULT_MAX = 10;
-const AGENT_MAX = 3;
 
 /** Fingerprint for fair-use DO: IP + UA (+ optional CF). Not an account. */
 export function getFairUseFingerprint(request: Request): string {
@@ -30,16 +31,16 @@ export async function checkFairUse(
 ): Promise<{ allowed: boolean; remaining: number; resetAt: number; limit: number }> {
   const windowSec = env.RATE_LIMIT_WINDOW
     ? parseInt(env.RATE_LIMIT_WINDOW, 10)
-    : DEFAULT_WINDOW;
+    : FAIR_USE_WINDOW_SECONDS;
   const baseMax = env.RATE_LIMIT_MAX_REQUESTS
     ? parseInt(env.RATE_LIMIT_MAX_REQUESTS, 10)
-    : DEFAULT_MAX;
+    : FAIR_USE_MAX_REQUESTS;
   const agent = isAgentShapedRequest(request);
   const maxRequests = agent
-    ? Math.min(baseMax, AGENT_MAX)
+    ? Math.min(baseMax, FAIR_USE_AGENT_MAX_REQUESTS)
     : Number.isFinite(baseMax)
       ? baseMax
-      : DEFAULT_MAX;
+      : FAIR_USE_MAX_REQUESTS;
 
   const fingerprint = getFairUseFingerprint(request);
   const id = env.RATE_LIMITER.idFromName(fingerprint);
