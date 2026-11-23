@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
   Bot,
+  Cloud,
   Eye,
   FileText,
   FolderTree,
@@ -43,9 +44,16 @@ const features = [
   {
     icon: Shield,
     title: "Security-minded",
-    body: "Preview HTML sanitized, Mermaid strict, Pages CSP + frame protections. Local-first by default.",
+    body: "Local-first until you share. Sanitized preview, Mermaid strict, manage token + optional view password, CORS allowlist.",
   },
 ] as const;
+
+const APPFLARE_DOCS =
+  "https://github.com/zamdevio/mdviewer/blob/main/docs/appflare.md";
+const SECURITY_DOCS =
+  "https://github.com/zamdevio/mdviewer/blob/main/docs/security.md";
+const APPFLARE_INSTALL =
+  "https://appflare.dev/install/github/zamdevio/mdviewer";
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
@@ -178,20 +186,63 @@ export default function Home() {
           ))}
         </section>
 
-        <p
-          className={`text-center text-sm text-muted-foreground transition duration-1000 delay-700 ${
+        <section
+          className={`flex w-full flex-col gap-8 border-t border-border/60 pt-10 text-left transition duration-1000 delay-700 ${
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
+          aria-label="Security and Appflare"
         >
-          <a
-            href="https://github.com/zamdevio/mdviewer/blob/main/docs/security.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            Read the security notes
-          </a>
-        </p>
+          <div className="flex gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-muted/30">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 space-y-2">
+              <h2 className="text-sm font-semibold text-foreground">Security</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Files stay on-device until you share. Preview HTML is sanitized and Mermaid runs
+                strict. Edge share uses a manage token for writes, an optional view password for
+                reads, CORS allowlisting, and fair-use limits — agents get the same rules via MCP.
+              </p>
+              <a
+                href={SECURITY_DOCS}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Threat model &amp; notes
+              </a>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/80 bg-muted/30">
+              <Cloud className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 space-y-3">
+              <h2 className="text-sm font-semibold text-foreground">Deploy with Appflare</h2>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                One Cloudflare Worker for the whole product: SPA at{" "}
+                <code className="rounded bg-muted px-1 text-xs">/</code>, share API at{" "}
+                <code className="rounded bg-muted px-1 text-xs">/api</code>. Build command{" "}
+                <code className="rounded bg-muted px-1 text-xs">pnpm run appflare:build</code> —
+                no separate Pages project or API subdomain.
+              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <Button asChild size="sm" className="gap-1.5">
+                  <a href={APPFLARE_INSTALL} target="_blank" rel="noopener noreferrer">
+                    <Cloud className="h-3.5 w-3.5" />
+                    Install on Appflare
+                  </a>
+                </Button>
+                <Button asChild variant="outline" size="sm">
+                  <a href={APPFLARE_DOCS} target="_blank" rel="noopener noreferrer">
+                    Appflare guide
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

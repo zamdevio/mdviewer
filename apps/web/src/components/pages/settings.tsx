@@ -431,15 +431,18 @@ export default function SettingsPage(): React.JSX.Element {
                         </label>
                         <input
                             id="share-api-url"
-                            type="url"
-                            placeholder={buildTimeConfig.API_URL || "https://api.example.com"}
+                            type="text"
+                            inputMode="url"
+                            placeholder={buildTimeConfig.API_URL || "/api"}
                             value={shareApiUrl}
                             onChange={(e) => setShareApiUrl(e.target.value)}
                             disabled={!isMounted}
                             className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                         />
                         <p className="text-xs text-muted-foreground mt-1">
-                            Base URL for /health, /upload, /share, /compatibility
+                            Absolute Worker URL, or same-origin path like{" "}
+                            <code className="bg-muted px-1 rounded text-[0.7rem]">/api</code>{" "}
+                            (unified Appflare install).
                         </p>
                     </div>
                     <div>
@@ -448,16 +451,24 @@ export default function SettingsPage(): React.JSX.Element {
                         </label>
                         <input
                             id="share-frontend-url"
-                            type="url"
+                            type="text"
+                            inputMode="url"
                             placeholder={
                                 buildTimeConfig.FRONTEND_URL ||
-                                (typeof window !== "undefined" ? window.location.origin : "https://app.example.com")
+                                (typeof window !== "undefined"
+                                    ? window.location.origin
+                                    : "same-origin")
                             }
                             value={shareFrontendUrl}
                             onChange={(e) => setShareFrontendUrl(e.target.value)}
                             disabled={!isMounted}
                             className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                         />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Absolute SPA origin, or leave empty /{" "}
+                            <code className="bg-muted px-1 rounded text-[0.7rem]">same-origin</code>{" "}
+                            when API is <code className="bg-muted px-1 rounded text-[0.7rem]">/api</code>.
+                        </p>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                         <Button
@@ -465,14 +476,26 @@ export default function SettingsPage(): React.JSX.Element {
                             className="gap-2"
                             disabled={!isMounted}
                             onClick={() => {
-                                if (!shareApiUrl.trim() || !shareFrontendUrl.trim()) {
-                                    toast.error("Both API URL and Frontend URL are required");
+                                const api = shareApiUrl.trim();
+                                let frontend = shareFrontendUrl.trim();
+                                if (!api) {
+                                    toast.error("API URL is required");
+                                    return;
+                                }
+                                if (
+                                    !frontend &&
+                                    (api.startsWith("/") && !api.startsWith("//"))
+                                ) {
+                                    frontend = "same-origin";
+                                }
+                                if (!frontend) {
+                                    toast.error("Frontend URL is required (or use /api + same-origin)");
                                     return;
                                 }
                                 try {
                                     setApiOverride({
-                                        apiUrl: shareApiUrl.trim(),
-                                        frontendUrl: shareFrontendUrl.trim(),
+                                        apiUrl: api,
+                                        frontendUrl: frontend,
                                     });
                                     toast.success("Share API settings saved", {
                                         id: "settings-saved",
@@ -497,20 +520,31 @@ export default function SettingsPage(): React.JSX.Element {
                             onClick={async () => {
                                 setTestingShare(true);
                                 try {
-                                    // Persist draft URLs for the probe if fields filled
-                                    if (shareApiUrl.trim() && shareFrontendUrl.trim()) {
-                                        try {
-                                            setApiOverride({
-                                                apiUrl: shareApiUrl.trim(),
-                                                frontendUrl: shareFrontendUrl.trim(),
-                                            });
-                                        } catch (error) {
-                                            toast.error(
-                                                error instanceof Error
-                                                    ? error.message
-                                                    : "Invalid share API URL"
-                                            );
-                                            return;
+                                    // Persist draft URLs for the probe if API is filled
+                                    if (shareApiUrl.trim()) {
+                                        const api = shareApiUrl.trim();
+                                        let frontend = shareFrontendUrl.trim();
+                                        if (
+                                            !frontend &&
+                                            api.startsWith("/") &&
+                                            !api.startsWith("//")
+                                        ) {
+                                            frontend = "same-origin";
+                                        }
+                                        if (frontend) {
+                                            try {
+                                                setApiOverride({
+                                                    apiUrl: api,
+                                                    frontendUrl: frontend,
+                                                });
+                                            } catch (error) {
+                                                toast.error(
+                                                    error instanceof Error
+                                                        ? error.message
+                                                        : "Invalid share API URL"
+                                                );
+                                                return;
+                                            }
                                         }
                                     }
                                     const result = await testShareConnection();

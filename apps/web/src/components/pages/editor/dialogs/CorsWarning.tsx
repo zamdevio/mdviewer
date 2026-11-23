@@ -13,7 +13,7 @@ export function CorsWarningDialog({
   detail?: string | null;
 }) {
   const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    typeof window !== "undefined" ? window.location.origin : "(open this dialog in the browser)";
   const { API_URL } = getEffectiveApiConfig();
 
   return (
@@ -45,11 +45,10 @@ export function CorsWarningDialog({
               </code>
             </p>
             <p>
-              Fix: add that origin to{" "}
-              <code className="bg-muted px-1 rounded text-xs">ALLOWED_ORIGINS</code> in{" "}
-              <code className="bg-muted px-1 rounded text-xs">apps/worker/wrangler.jsonc</code>, then
-              redeploy the worker. Local share needs{" "}
-              <code className="bg-muted px-1 rounded text-xs">http://localhost:3000</code>.
+              Fix: add{" "}
+              <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{origin}</code>{" "}
+              to <code className="bg-muted px-1 rounded text-xs">ALLOWED_ORIGINS</code> (Worker /
+              Appflare vars), then redeploy or save settings.
             </p>
           </div>
           <Button variant="default" size="sm" onClick={onClose} className="w-full">

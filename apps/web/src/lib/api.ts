@@ -67,9 +67,11 @@ async function toApiRequestError(
 
   const kind = await classifyFetchFailure(probeUrl);
   if (kind === "cors") {
+    const origin =
+      typeof window !== "undefined" ? window.location.origin : "(this page origin)";
     return new ApiRequestError(
       "cors",
-      "Share API blocked by CORS. Add this origin to the worker ALLOWED_ORIGINS (e.g. http://localhost:3000 for local dev)."
+      `Share API blocked by CORS. Add ${origin} to the worker ALLOWED_ORIGINS, then redeploy.`
     );
   }
 

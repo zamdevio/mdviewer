@@ -25,7 +25,7 @@ interface StatusConfig {
   shareSettingsCta?: boolean;
 }
 
-function getStatusConfig(status: DisplayStatus): StatusConfig {
+function getStatusConfig(status: DisplayStatus, pageOrigin: string): StatusConfig {
   switch (status) {
     case "offline":
       return {
@@ -45,8 +45,7 @@ function getStatusConfig(status: DisplayStatus): StatusConfig {
         labelClass: "text-orange-600 dark:text-orange-400",
         description:
           "API is up but this origin is not allowed. Add it to worker ALLOWED_ORIGINS.",
-        detail:
-          "The share worker answered, but the browser blocked the request. Add this page origin to ALLOWED_ORIGINS on the worker (include http://localhost:3000 for local Vite), then redeploy.",
+        detail: `The share worker answered, but the browser blocked the request. Add ${pageOrigin} to ALLOWED_ORIGINS on the worker (or Appflare vars), then redeploy.`,
         shareSettingsCta: true,
       };
     case "server-down":
@@ -98,7 +97,9 @@ export function ConnectionIndicator() {
 
   const displayStatus: DisplayStatus =
     status === "online" && !isApiConfigured() ? "api-unset" : status;
-  const config = getStatusConfig(displayStatus);
+  const pageOrigin =
+    typeof window !== "undefined" ? window.location.origin : "(this page origin)";
+  const config = getStatusConfig(displayStatus, pageOrigin);
 
   useEffect(() => {
     const timer = setTimeout(() => setMounted(true), 0);

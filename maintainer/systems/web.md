@@ -48,4 +48,3 @@ Do not confuse with **rotate view password** (per-share PATCH in Compose).
 - **Temp / Files editing:** empty or exact Settings default sample is *baseline* — not unsaved temp; does not trip Load warning; clears Files “Editing” mark on New / empty / no saved file
 - **Load tiers (virt badge):** Sync → Light → Steady → Elevated (≥1MB) → Heavy (≥2MB / high heap) → Critical — ~1.8–2MB ⇒ Elevated is expected
 - **Size honesty:** practical large-preview bar ~**2MB** (machine-dependent); editor textarea not virt; no 5–10MB claim; follow-ups in [`../phases/parked.md`](../phases/parked.md) · receipt [`../shipped/perf-large-docs.md`](../shipped/perf-large-docs.md)
-- **Stress fixtures:** `node scripts/gen-large-md.mjs --mb 2` (local only)

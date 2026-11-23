@@ -1,9 +1,11 @@
 # Deploy
 
-**GitHub Actions → Cloudflare** on every `main` push ([`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)):
+**Split production (this repo’s hosted app):** GitHub Actions → Cloudflare on every `main` push ([`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)):
 
 1. Pages project `markview` (`apps/web` → Vite dist)
 2. Worker `mdviewer` (`apps/worker`) — `*.workers.dev` host follows Wrangler `name`; custom domain still `api.mdviewer.zamdev.dev`
+
+**One-Worker (Appflare):** SPA + `/api` on a single Worker — see [`appflare.md`](appflare.md) (`pnpm run appflare:build`).
 
 **Rename note:** Changing Wrangler `name` deploys a **new** Worker. After first `pnpm worker:deploy` as `mdviewer`, move the custom domain onto it (or keep `routes` in `wrangler.jsonc` and let deploy attach), then delete the old `mdviewer-api` script in the dashboard so you are not billed/confused by two copies. Pages project **`markview`** is unchanged.
 

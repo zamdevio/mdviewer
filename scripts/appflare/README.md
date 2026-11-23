@@ -1,19 +1,30 @@
-# Appflare packaging
+# Appflare / unified Worker
 
-Dedicated Worker config for [Appflare](https://appflare.dev/) catalog installs. Leaves `apps/worker/wrangler.jsonc` and Pages deploys alone.
+One Worker: SPA at `/`, share API at `/api/*`. No changes under `apps/*` — gateway only.
 
 | Path | Role |
 |------|------|
-| `wrangler.jsonc` | Worker-only share API: R2 + RateLimiter DO + daily TTL cron. No custom routes. Neutral default `ALLOWED_ORIGINS` (installer overrides). |
+| [`../../wrangler.jsonc`](../../wrangler.jsonc) | Root config Appflare “From a repository” detects |
+| `entry.ts` | `/api/*` → Worker routes; else Vite assets |
+| `build.mjs` | `pnpm appflare:build` — llms generate + web build |
 
-Catalog entry (`appflare/catalog` → `apps/mdviewer/appflare.jsonc`) should set:
+Production stays split: Pages (`apps/web`) + `apps/worker/wrangler.jsonc`.
 
-- `install.wranglerConfig`: `scripts/appflare/wrangler.jsonc`
-- `install.packageManager`: `pnpm`
-- `install.installDirs`: `[{ "path": "." }]` (workspace root installs `apps/worker`)
-- `install.buildCommand`: `pnpm --filter @mdviewer/worker run generate:llms`
-- `install.health`: `{ "path": "/health" }`
-- `plan`: `"paid"` (cron), `requires`: `["r2"]`
-- `vars`: required `ALLOWED_ORIGINS` (comma-separated SPA origins)
+## Local
 
-Full product (SPA assets + API) is out of scope until this Worker-only pack is green.
+```bash
+pnpm appflare:build   # injects VITE_API_URL=/api + VITE_FRONTEND_URL=same-origin
+pnpm appflare:dev
+# SPA:  http://127.0.0.1:8787/
+# API:  http://127.0.0.1:8787/api/health
+```
+
+Share settings are baked for same-origin (`/api`). Set Worker **ALLOWED_ORIGINS** to the page origin (dev defaults cover `8787`).
+
+## Appflare (self-host, from repo)
+
+1. Building apps → sandbox on (Workers Paid).
+2. Catalog → **From a repository** → `zamdevio/mdviewer`.
+3. Build command: **Run this command** → `pnpm run appflare:build` (not “Work it out”).
+4. Install; set **ALLOWED_ORIGINS** to the app origin (`https://…workers.dev`).
+5. Open the app — Share should already use `/api` + same-origin (no Settings required).

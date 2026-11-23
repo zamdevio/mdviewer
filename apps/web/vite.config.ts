@@ -94,13 +94,19 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // Public defaults (not secrets) — match .env.example. Override via env / GH Actions Variables.
+      // process.env wins so `pnpm appflare:build` can inject `/api` + `same-origin`
+      // without fighting loadEnv / .env defaults.
       "import.meta.env.VITE_API_URL": JSON.stringify(
-        env.VITE_API_URL ||
+        process.env.VITE_API_URL ||
+          process.env.API_URL ||
+          env.VITE_API_URL ||
           env.API_URL ||
           "https://api.mdviewer.zamdev.dev",
       ),
       "import.meta.env.VITE_FRONTEND_URL": JSON.stringify(
-        env.VITE_FRONTEND_URL ||
+        process.env.VITE_FRONTEND_URL ||
+          process.env.FRONTEND_URL ||
+          env.VITE_FRONTEND_URL ||
           env.FRONTEND_URL ||
           "https://mdviewer.zamdev.dev",
       ),

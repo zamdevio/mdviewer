@@ -81,9 +81,17 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 - Prefer `/llms.txt` → `/llms-full.txt` before calling tools
 
 ### Security
-- Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode
-- Pages security headers (CSP, frame deny, COOP); share API override accepts http(s) only
+- **Local-first:** files stay in the browser until you share; no account for core editing
+- **Preview:** HTML sanitized; Mermaid `strict`; no raw HTML passthrough for untrusted markdown
+- **Edge:** manage token for mutate; optional view password on GET; CORS allowlist (`ALLOWED_ORIGINS`); fair-use fingerprint
+- **Transport / headers:** Pages CSP, frame deny, COOP; Share settings accept http(s) or same-origin paths (`/api`) only
 - Report vulns: [`SECURITY.md`](./SECURITY.md) · threat model: [`docs/security.md`](./docs/security.md)
+
+### Appflare (one Worker)
+- Install SPA + share API on **one** Cloudflare Worker via [Appflare](https://appflare.dev/) — `/` for the app, `/api/*` for the Worker
+- From your Appflare: Catalog → **From a repository** → `zamdevio/mdviewer` → build command `pnpm run appflare:build`
+- Deep link: `https://<your-appflare>/install/github/zamdevio/mdviewer`
+- Guide: [`docs/appflare.md`](./docs/appflare.md) · local: `pnpm appflare:build` && `pnpm appflare:dev`
 
 ## Quick start
 
@@ -111,7 +119,9 @@ pnpm typecheck
 apps/
   web/          Vite + React SPA (Cloudflare Pages)
   worker/       Hono OpenAPI Worker (R2 + rate limiter)
-docs/           Getting started, API, deploy
+wrangler.jsonc  Appflare unified Worker (SPA assets + /api gateway)
+scripts/appflare/  entry + appflare:build
+docs/           Getting started, API, deploy, Appflare
 maintainer/     Internal phases, systems maps, agent guides
 ```
 
@@ -129,6 +139,7 @@ maintainer/     Internal phases, systems maps, agent guides
 | [`docs/api.md`](./docs/api.md) | Worker endpoints + compatibility |
 | [`docs/deploy.md`](./docs/deploy.md) | Pages + Worker + CI |
 | [`docs/security.md`](./docs/security.md) | Threat model + mitigations |
+| [`docs/appflare.md`](./docs/appflare.md) | Unified Worker via Appflare (from repo) |
 | [`maintainer/`](./maintainer/) | Focus, phases, systems (contributors) |
 
 ## Development

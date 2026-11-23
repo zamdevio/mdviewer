@@ -2,8 +2,8 @@
  * Application configuration
  *
  * Build-time (Vite):
- * - VITE_API_URL (or API_URL via vite.config define)
- * - VITE_FRONTEND_URL (or FRONTEND_URL via vite.config define)
+ * - VITE_API_URL (or API_URL via vite.config define) — absolute or same-origin path (`/api`)
+ * - VITE_FRONTEND_URL (or FRONTEND_URL via vite.config define) — absolute, `/`, `.`, or `same-origin`
  *
  * Runtime overlay: localStorage `mdviewer_api_override` (Settings → Share).
  * Version comes from apps/web/package.json via Vite `define`.
@@ -33,6 +33,64 @@ export interface ApiOverride {
   frontendUrl?: string;
 }
 
+/** Same-origin path like `/api` (not protocol-relative `//…`). */
+export function isRelativeAppPath(url: string): boolean {
+  return url.startsWith("/") && !url.startsWith("//");
+}
+
+/** Empty / `.` / `/` / `same-origin` → use `window.location.origin`. */
+export function isSameOriginFrontendToken(url: string): boolean {
+  const t = url.trim().toLowerCase();
+  return t === "" || t === "." || t === "/" || t === "same-origin";
+}
+
+/** Absolute http(s) only (no javascript:). */
+export function isSafeHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+/** Absolute http(s) or same-origin app path (`/api`). */
+export function isSafeApiEndpoint(url: string): boolean {
+  const t = url.trim();
+  if (!t) return false;
+  if (isRelativeAppPath(t)) return true;
+  return isSafeHttpUrl(t);
+}
+
+function currentOrigin(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.origin;
+}
+
+/** Resolve stored/build value to an absolute URL for fetch + share links. */
+export function resolveApiEndpoint(raw: string): string {
+  const t = raw.trim();
+  if (!t) return "";
+  if (isRelativeAppPath(t)) {
+    const origin = currentOrigin();
+    if (!origin) return removeTrailingSlash(t);
+    return removeTrailingSlash(`${origin}${t}`);
+  }
+  return removeTrailingSlash(t);
+}
+
+function resolveFrontendUrl(frontendRaw: string, apiRaw: string): string {
+  const trimmed = frontendRaw.trim();
+  if (trimmed.toLowerCase() === "same-origin" || trimmed === "." || trimmed === "/") {
+    return currentOrigin();
+  }
+  if (!trimmed) {
+    // Empty frontend + relative API → same Worker / Appflare install
+    return isRelativeAppPath(apiRaw) ? currentOrigin() : "";
+  }
+  return resolveApiEndpoint(trimmed);
+}
+
 export function getApiOverride(): ApiOverride | null {
   if (typeof window === "undefined") return null;
   try {
@@ -50,32 +108,25 @@ export function getApiOverride(): ApiOverride | null {
   }
 }
 
-/** Only allow http(s) absolute URLs for share API overrides (no javascript:). */
-export function isSafeHttpUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === "https:" || parsed.protocol === "http:";
-  } catch {
-    return false;
-  }
-}
-
 export function setApiOverride(override: ApiOverride): void {
   if (typeof window === "undefined") return;
   const next: ApiOverride = {};
   if (override.apiUrl?.trim()) {
     const apiUrl = removeTrailingSlash(override.apiUrl.trim());
-    if (!isSafeHttpUrl(apiUrl)) {
-      throw new Error("API URL must be an http(s) URL");
+    if (!isSafeApiEndpoint(apiUrl)) {
+      throw new Error("API URL must be http(s) or a path like /api");
     }
     next.apiUrl = apiUrl;
   }
   if (override.frontendUrl?.trim()) {
     const frontendUrl = removeTrailingSlash(override.frontendUrl.trim());
-    if (!isSafeHttpUrl(frontendUrl)) {
-      throw new Error("Frontend URL must be an http(s) URL");
+    if (isSameOriginFrontendToken(frontendUrl) || frontendUrl.toLowerCase() === "same-origin") {
+      next.frontendUrl = "same-origin";
+    } else if (!isSafeApiEndpoint(frontendUrl)) {
+      throw new Error("Frontend URL must be http(s), /api-style path, or same-origin");
+    } else {
+      next.frontendUrl = frontendUrl;
     }
-    next.frontendUrl = frontendUrl;
   }
   localStorage.setItem(API_OVERRIDE_KEY, JSON.stringify(next));
   window.dispatchEvent(new Event("storage"));
@@ -98,11 +149,11 @@ export function getEffectiveApiConfig(): {
   usingOverride: boolean;
 } {
   const override = getApiOverride();
-  const API_URL = override?.apiUrl || buildTimeConfig.API_URL;
-  const FRONTEND_URL = override?.frontendUrl || buildTimeConfig.FRONTEND_URL;
+  const apiRaw = override?.apiUrl || buildTimeConfig.API_URL;
+  const frontendRaw = override?.frontendUrl || buildTimeConfig.FRONTEND_URL;
   return {
-    API_URL,
-    FRONTEND_URL,
+    API_URL: resolveApiEndpoint(apiRaw),
+    FRONTEND_URL: resolveFrontendUrl(frontendRaw, apiRaw),
     usingOverride: Boolean(override?.apiUrl || override?.frontendUrl),
   };
 }
