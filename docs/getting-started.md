@@ -44,6 +44,27 @@ You can override the share worker **without rebuilding**:
 
 Build-time `VITE_*` values remain the fallback when no override is stored.
 
+## Manage token (protocol 3)
+
+Sharing requires a **manage token** (Settings → Manage token, `/settings#token`). The SPA auto-generates one; you can rotate it (bulk re-key for local share ids, batch size from `/compatibility`).
+
+| Secret | Used for |
+|--------|----------|
+| Manage token | Create / update / protect toggle / delete |
+| View password | Optional per-share GET protect (disposable; never authorizes mutate) |
+
+## Agents: MCP + llms.txt
+
+Same share rules as the SPA — no privileged agent path.
+
+| Surface | Where |
+|---------|--------|
+| Agent brief | SPA `/llms.txt` · `/llms-full.txt` (Worker mirrors these) |
+| MCP | Worker `POST /mcp` (tools: `upload_share`, `get_share`, `get_share_meta`, `update_share`, `delete_share`) |
+| Discovery | `GET /mcp` |
+
+Mutating MCP tools take `manageToken`; view-protected `get_share` takes `viewPassword`. Prefer reading `/llms.txt` then `/llms-full.txt` before calling tools. Details: [`api.md`](./api.md).
+
 ## Files: grid vs tree
 
 On **Files**, toggle **Grid** / **Tree**. Preference is saved in settings (`filesLayout`).

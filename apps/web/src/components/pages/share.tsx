@@ -13,6 +13,8 @@ import {
     Info,
 } from "lucide-react";
 import { MarkdownViewer } from "@/components/markdown";
+import { VirtualMarkdownViewer } from "@/components/markdown/virtual-viewer";
+import { shouldVirtualizePreview } from "@/lib/markdown/split-chunks";
 import {
     fetchSharedMarkdown,
     fetchShareMeta,
@@ -155,6 +157,7 @@ export default function ShareViewPage(): React.JSX.Element {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [previewScrollEl, setPreviewScrollEl] = useState<HTMLDivElement | null>(null);
     const [shareId, setShareId] = useState<string | null>(null);
     const [importing, setImporting] = useState(false);
     const [needsPassword, setNeedsPassword] = useState(false);
@@ -495,8 +498,18 @@ export default function ShareViewPage(): React.JSX.Element {
                 </div>
             </div>
 
-            <Card className="flex-1 p-6 overflow-auto border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm">
-                <MarkdownViewer content={content || ""} />
+            <Card
+                ref={setPreviewScrollEl}
+                className="flex-1 p-6 overflow-auto border-primary/20 shadow-lg bg-card/50 backdrop-blur-sm"
+            >
+                {shouldVirtualizePreview(content || "") ? (
+                    <VirtualMarkdownViewer
+                        content={content || ""}
+                        scrollElement={previewScrollEl}
+                    />
+                ) : (
+                    <MarkdownViewer content={content || ""} />
+                )}
             </Card>
             {detailsDialog}
         </div>

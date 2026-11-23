@@ -168,12 +168,31 @@ const MarkdownComponents: Components = {
     },
 };
 
-export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps) {
-    const articleRef = useRef<HTMLElement>(null);
-
+/** Inner react-markdown tree (no article wrapper) — used by virtualized chunks. */
+export function MarkdownDocument({ content }: { content: string }) {
     useEffect(() => {
         ensureKatexCss();
     }, []);
+
+    return (
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm, remarkMath, remarkEmoji]}
+            rehypePlugins={[
+                rehypeRaw,
+                rehypeKatex,
+                rehypeSlug,
+                // Sanitize after KaTeX/slug so generated HTML + ids are filtered (user-content- prefix)
+                [rehypeSanitize, sanitizeSchema],
+            ]}
+            components={MarkdownComponents}
+        >
+            {content}
+        </ReactMarkdown>
+    );
+}
+
+export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps) {
+    const articleRef = useRef<HTMLElement>(null);
 
     // Deep-link / refresh: scroll to hash after content paints (share URL or editor split)
     useEffect(() => {
@@ -210,19 +229,7 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
 
     return (
         <article ref={articleRef} className={`markdown-body ${className}`}>
-            <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath, remarkEmoji]}
-                rehypePlugins={[
-                    rehypeRaw,
-                    rehypeKatex,
-                    rehypeSlug,
-                    // Sanitize after KaTeX/slug so generated HTML + ids are filtered (user-content- prefix)
-                    [rehypeSanitize, sanitizeSchema],
-                ]}
-                components={MarkdownComponents}
-            >
-                {content}
-            </ReactMarkdown>
+            <MarkdownDocument content={content} />
         </article>
     );
 }

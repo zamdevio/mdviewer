@@ -8,15 +8,20 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
   [![pnpm](https://img.shields.io/badge/pnpm-package%20manager-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
   [![Cloudflare Pages](https://img.shields.io/badge/Cloudflare-Pages-F38020?logo=cloudflare&logoColor=white)](https://markview.pages.dev)
+  <a href="https://api.mdviewer.zamdev.dev/mcp"><img src="https://api.mdviewer.zamdev.dev/favicon.png" alt="" width="20" height="20" /></a>
+  [![MCP](https://img.shields.io/badge/MCP-POST%20%2Fmcp-111111)](https://api.mdviewer.zamdev.dev/mcp)
+  [![llms.txt](https://img.shields.io/badge/llms.txt-agent%20brief-0ea5e9)](https://mdviewer.zamdev.dev/llms.txt)
 
-  <p><strong>Edit · organize · preview · share · offline</strong></p>
+  <p><strong>Edit · organize · preview · share · offline · agents</strong></p>
   <p>
-    Offline-first Markdown studio — live preview, local projects, and optional edge share links.
+    Offline-first Markdown studio — live preview, local projects, optional edge share,
+    and the same share API for humans and agents (<code>POST /mcp</code> + <code>/llms*.txt</code>).
     Private by default. Share when you want.
   </p>
   <p>
     <a href="https://mdviewer.zamdev.dev">App</a> ·
     <a href="https://markview.pages.dev">Pages</a> ·
+    <a href="https://api.mdviewer.zamdev.dev/mcp">MCP</a> ·
     <a href="./docs/getting-started.md">Docs</a> ·
     <a href="#quick-start">Quick start</a>
   </p>
@@ -62,12 +67,16 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 ### Rich preview
 - GFM, Mermaid, KaTeX, syntax highlighting, image lightbox
 
-### Edge share
-- Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, **manage token** (mutate) + optional disposable **view password** (GET), OpenAPI `/docs`
-- Protocol **3** — Settings → Manage token (`#token`); SPA reads `/compatibility` for TTL/`limits`
-- **Agents and humans share the same manage/view rules** — MCP (`POST /mcp`) is not a privileged path
-- SPA + Worker ship [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) / [`/llms-full.txt`](https://api.mdviewer.zamdev.dev/llms-full.txt); MCP tools take `manageToken` for mutate
-- Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`04-perf-large-docs`](./maintainer/phases/04-perf-large-docs.md)
+### Edge share (protocol 3)
+- Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, OpenAPI `/docs`
+- **Manage token** (Settings → `#token`) for create/mutate/delete; optional disposable **view password** for GET
+- SPA reads `GET /compatibility` for protocol, TTL, and `limits` (no hardcoded caps)
+
+### Agent-native (same rules as the SPA)
+- **MCP** — [`POST /mcp`](https://api.mdviewer.zamdev.dev/mcp) JSON-RPC tools (`upload_share`, `get_share`, …); brand icon on the API origin
+- **llms.txt** — [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) · [`/llms-full.txt`](https://mdviewer.zamdev.dev/llms-full.txt) (SPA + Worker)
+- Agents are **not** privileged: mutate needs `manageToken`; view-protected GET needs `viewPassword`
+- Prefer `/llms.txt` → `/llms-full.txt` before calling tools
 
 ### Security
 - Local-first by default; preview sanitizes HTML; Mermaid runs in `strict` mode
@@ -113,7 +122,7 @@ maintainer/     Internal phases, systems maps, agent guides
 
 | Doc | Topic |
 |-----|-------|
-| [`docs/getting-started.md`](./docs/getting-started.md) | Install, local run, Settings → Share |
+| [`docs/getting-started.md`](./docs/getting-started.md) | Install, share settings, manage token, MCP / llms |
 | [`docs/architecture.md`](./docs/architecture.md) | High-level layout |
 | [`docs/api.md`](./docs/api.md) | Worker endpoints + compatibility |
 | [`docs/deploy.md`](./docs/deploy.md) | Pages + Worker + CI |

@@ -2,23 +2,23 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   ArrowRight,
-  Download,
+  Bot,
   Eye,
   FileText,
   FolderTree,
   Github,
   Share2,
+  Shield,
   Sparkles,
-  Wifi,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { APP_VERSION } from "@/lib/config";
+import { APP_VERSION, getEffectiveApiConfig } from "@/lib/config";
 
 const features = [
   {
     icon: FileText,
     title: "Local-first files",
-    body: "Write and save in the browser. No account for core use — notes stay on device.",
+    body: "Write and save in the browser — no account for core use. Import/export merges by fingerprint; installable PWA shell.",
   },
   {
     icon: FolderTree,
@@ -32,26 +32,25 @@ const features = [
   },
   {
     icon: Share2,
-    title: "Edge share",
-    body: "Optional Workers + R2. Manage token to create/update; optional disposable view password. Same rules for SPA, curl, and MCP.",
+    title: "Edge share (protocol 3)",
+    body: "Workers + R2. Manage token to create/update; optional view password on GET. Point Settings → Share at your own worker.",
   },
   {
-    icon: Wifi,
-    title: "Bring your own API",
-    body: "Point Settings → Share at your worker. Protocol 3 compatibility handshake and connection dialogs.",
+    icon: Bot,
+    title: "MCP + llms.txt",
+    body: "POST /mcp tools and /llms*.txt on the share Worker. Same manage/view rules for agents and humans.",
   },
   {
-    icon: Download,
-    title: "Import · export · PWA",
-    body: "Backups merge by content fingerprint. Installable shell; updates work on a normal reload.",
+    icon: Shield,
+    title: "Security-minded",
+    body: "Preview HTML sanitized, Mermaid strict, Pages CSP + frame protections. Local-first by default.",
   },
 ] as const;
 
-const securityBlurb =
-  "Local-first by default. Preview HTML is sanitized, Mermaid runs strict, and Pages ships CSP + frame protections. See docs/security.md.";
-
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const apiBase = (getEffectiveApiConfig().API_URL || "").replace(/\/$/, "");
+  const mcpUrl = apiBase ? `${apiBase}/mcp` : "https://api.mdviewer.zamdev.dev/mcp";
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
@@ -66,7 +65,7 @@ export default function Home() {
         <div className="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
       </div>
 
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center gap-16 px-1 py-16 sm:gap-20 sm:py-24">
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center gap-14 px-1 py-16 sm:gap-16 sm:py-24">
         <section className="w-full space-y-8 text-center">
           <div
             className={`inline-flex items-center gap-2 rounded-full border border-transparent bg-primary/10 px-4 py-2 text-xs font-semibold text-primary transition duration-700 hover:bg-primary/20 ${
@@ -112,17 +111,52 @@ export default function Home() {
             <Button asChild variant="outline" size="lg" className="h-12 gap-2 px-6 text-base">
               <Link to="/files">Files</Link>
             </Button>
-            <div className="flex items-center justify-center gap-4 text-sm sm:pl-2">
-              <a
-                href="https://github.com/zamdevio/mdviewer"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                <Github className="h-3.5 w-3.5" />
-                GitHub
-              </a>
+            <a
+              href="https://github.com/zamdevio/mdviewer"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline sm:pl-2"
+            >
+              <Github className="h-3.5 w-3.5" />
+              GitHub
+            </a>
+          </div>
+        </section>
+
+        <section
+          className={`flex w-full flex-col items-stretch justify-between gap-4 border-y border-border/60 py-5 sm:flex-row sm:items-center sm:gap-8 transition duration-1000 delay-400 ${
+            mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          }`}
+          aria-label="Agent-ready share"
+        >
+          <div className="flex items-start gap-3 text-left sm:items-center">
+            <img
+              src="/favicon.svg"
+              alt=""
+              width={36}
+              height={36}
+              className="mt-0.5 h-9 w-9 shrink-0 rounded-lg sm:mt-0"
+            />
+            <div className="min-w-0 space-y-0.5">
+              <p className="text-sm font-semibold text-foreground">Agent-ready share</p>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Same manage token and view-password rules for the SPA, curl, and MCP — no privileged agent path.
+              </p>
             </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
+            <Button asChild size="sm" className="gap-1.5">
+              <a href={mcpUrl} target="_blank" rel="noreferrer">
+                <Bot className="h-3.5 w-3.5" />
+                MCP
+                <span className="hidden font-normal text-primary-foreground/80 sm:inline">POST /mcp</span>
+              </a>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="gap-1.5">
+              <a href="/llms.txt" target="_blank" rel="noreferrer">
+                llms.txt
+              </a>
+            </Button>
           </div>
         </section>
 
@@ -144,27 +178,20 @@ export default function Home() {
           ))}
         </section>
 
-        <section
-          className={`w-full max-w-3xl text-center transition duration-1000 delay-700 ${
+        <p
+          className={`text-center text-sm text-muted-foreground transition duration-1000 delay-700 ${
             mounted ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
           }`}
         >
-          <h2
-            className="text-lg font-semibold text-foreground"
-            style={{ fontFamily: "inherit" }}
-          >
-            Security-minded by design
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">{securityBlurb}</p>
           <a
             href="https://github.com/zamdevio/mdviewer/blob/main/docs/security.md"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 inline-block text-sm text-primary underline-offset-4 hover:underline"
+            className="text-primary underline-offset-4 hover:underline"
           >
             Read the security notes
           </a>
-        </section>
+        </p>
       </div>
     </div>
   );
