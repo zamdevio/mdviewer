@@ -26,7 +26,12 @@ const app = new OpenAPIHono<{
 
 app.use("*", async (c, next) => {
   const allowedOrigins = parseAllowedOrigins(c.env);
+  // /health must answer without CORS config so Appflare / ops probes stay green.
   if (allowedOrigins.length === 0) {
+    if (c.req.path === "/health") {
+      await next();
+      return;
+    }
     return c.json(
       {
         error: "Configuration error",
