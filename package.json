@@ -16,7 +16,7 @@
     "worker:deploy": "pnpm --filter @mdviewer/worker deploy",
     "worker:typecheck": "pnpm --filter @mdviewer/worker typecheck",
     "appflare:build": "node scripts/appflare/build.mjs",
-    "appflare:dev": "pnpm --filter @mdviewer/worker exec wrangler dev -c ../../wrangler.jsonc",
+    "appflare:dev": "pnpm --filter @mdviewer/worker exec wrangler dev -c ../../wrangler.jsonc --var ALLOWED_ORIGINS:http://127.0.0.1:8787",
     "appflare:dry-run": "pnpm --filter @mdviewer/worker exec wrangler deploy --dry-run -c ../../wrangler.jsonc",
     "knip": "knip",
     "madge:circular": "node scripts/madge/run.mjs circular",

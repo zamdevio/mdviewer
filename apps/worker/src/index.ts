@@ -1,7 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { swaggerUI } from "@hono/swagger-ui";
 import type { Env } from "./env";
-import { parseAllowedOrigins, resolveRequestOrigins } from "./lib/origins";
+import { effectiveAllowedOrigins, resolveRequestOrigins } from "./lib/origins";
 import { sweepExpiredShares } from "./lib/share-store";
 import health from "./routes/health";
 import compatibility from "./routes/compatibility";
@@ -25,22 +25,8 @@ const app = new OpenAPIHono<{
 }>();
 
 app.use("*", async (c, next) => {
-  const allowedOrigins = parseAllowedOrigins(c.env);
-  // /health must answer without CORS config so Appflare / ops probes stay green.
-  if (allowedOrigins.length === 0) {
-    if (c.req.path === "/health") {
-      await next();
-      return;
-    }
-    return c.json(
-      {
-        error: "Configuration error",
-        message:
-          "ALLOWED_ORIGINS environment variable is not set or invalid. Configure it in wrangler.jsonc.",
-      },
-      500,
-    );
-  }
+  // Configured allowlist + this Worker origin (unified SPA+/api installs need no manual CORS).
+  const allowedOrigins = effectiveAllowedOrigins(c.env, c.req.raw);
 
   const { frontendOrigin, corsOrigin } = resolveRequestOrigins(
     c.req.raw,

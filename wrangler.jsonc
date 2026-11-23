@@ -6,9 +6,11 @@
   "main": "scripts/appflare/entry.ts",
   "compatibility_date": "2024-01-01",
   "vars": {
-    // After install: set to this Worker's origin (e.g. https://mdviewer.<account>.workers.dev).
-    // Local `pnpm appflare:dev` defaults below match wrangler’s usual ports.
-    "ALLOWED_ORIGINS": "http://127.0.0.1:8787,http://localhost:8787",
+    // Share-link + CORS allowlist. Appflare expands {{appUrl}} on install/update.
+    // Worker always also allows its own origin (unified SPA+/api needs no manual CORS).
+    // Local: `pnpm appflare:dev` passes localhost via --var (see package.json).
+    "ALLOWED_ORIGINS": "{{appUrl}}",
+    // Optional fair-use window (seconds) and max requests per IP per window.
     "RATE_LIMIT_WINDOW": "60",
     "RATE_LIMIT_MAX_REQUESTS": "10"
   },

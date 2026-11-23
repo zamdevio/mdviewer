@@ -4,6 +4,8 @@ MDViewer ships a **unified Worker** pack for [Appflare](https://appflare.dev/): 
 
 Production hosted at [mdviewer.zamdev.dev](https://mdviewer.zamdev.dev) still uses the split path (Pages + `apps/worker`). Appflare uses the root [`wrangler.jsonc`](../wrangler.jsonc) + [`scripts/appflare/`](../scripts/appflare/).
 
+Example install: [appflaremdviewer.zamdevio.workers.dev](https://appflaremdviewer.zamdevio.workers.dev/).
+
 ## What you get
 
 | Path | Serves |
@@ -12,7 +14,7 @@ Production hosted at [mdviewer.zamdev.dev](https://mdviewer.zamdev.dev) still us
 | `/api/*` | Share Worker (health, upload, share, MCP, OpenAPI) |
 | Cron | Daily TTL sweep of expired shares (needs **Workers Paid**) |
 
-Build injects `VITE_API_URL=/api` and `VITE_FRONTEND_URL=same-origin`, so Share settings work on the Worker origin without manual URL overrides.
+Build injects `VITE_API_URL=/api` and `VITE_FRONTEND_URL=same-origin`, so Share works on the Worker origin without manual SPA URL overrides.
 
 ## Requirements
 
@@ -28,21 +30,29 @@ Build injects `VITE_API_URL=/api` and `VITE_FRONTEND_URL=same-origin`, so Share 
 4. Build command: **Run this command** → `pnpm run appflare:build`  
    Do **not** use “Work it out” (root `pnpm build` is the whole monorepo).
 5. **Build for review**, then install.
-6. Set **ALLOWED_ORIGINS** to the app origin (e.g. `https://mdviewer.<account>.workers.dev`).
+6. **Allowed origins** — leave as `{{appUrl}}` (Appflare expands it). The Worker also **always allows its own origin**, so unified SPA+`/api` installs work even if an old localhost value is still in settings. Only add extra origins if you open the UI from another host (split SPA).
 
-Deep link (opens “from repository” on *your* Appflare host):
+Deep link:
 
 ```text
 https://<your-appflare>/install/github/zamdevio/mdviewer
 ```
 
-If you use [Use this Appflare on appflare.dev](https://appflare.dev/guides/install-links/), Install buttons on appflare.dev can route to that manager.
+### Settings that should *not* appear
 
-### After install
+Root `.env.example` no longer lists `VITE_*` (those wrongly showed up as Worker secrets). SPA env for Pages lives in [`apps/web/.env.example`](../apps/web/.env.example).
 
-- Open the Worker URL — Share should already target `/api` on the same origin.
-- CORS: `ALLOWED_ORIGINS` must include that origin (same value as the address bar).
-- Optional: Settings → Share still accepts absolute URLs or `/api` + `same-origin`.
+If an older install still shows **Vite api url** / **Vite frontend url** secrets: clear them in Appflare → app Settings (or leave unset). They are unused by the unified pack.
+
+### Logo / icon
+
+The Worker serves the MDViewer favicon from SPA assets (`/favicon.svg`, `/favicon.png`) — browser tab and bookmarks use that. Appflare’s **from-repo** app list uses a monogram today; a catalog entry can ship a proper icon later. No extra Appflare-only logo file is required for the product itself.
+
+## After install
+
+- Open the Worker URL — Share already targets `/api` on the same origin (build injects `/api` + `same-origin`; no Vite secrets needed).
+- Same-origin CORS is automatic; prefer `ALLOWED_ORIGINS={{appUrl}}` so share *links* use this host (stale localhost is ignored for CORS to self).
+- First visit: a one-time dialog asks whether to show example editor content (default **On**). Change later under Settings → Editor.
 
 ## Local smoke (same pack)
 
@@ -53,14 +63,15 @@ pnpm appflare:dev
 # API  http://127.0.0.1:8787/api/health
 ```
 
-`appflare:build` strips Pages-only `dist/_redirects` so Workers Assets SPA fallback does not loop.
+`appflare:build` strips Pages-only `dist/_redirects` so Workers Assets SPA fallback does not loop. Dev overrides CORS with `--var ALLOWED_ORIGINS:…` because `{{appUrl}}` is Appflare-only.
 
 ## Catalog status
 
-Not listed in the public Appflare catalog yet (star soft-bar). **From a repository** works without a catalog entry. A catalog PR can come later once packaging stays green on your self-hosted Appflare.
+Not listed in the public Appflare catalog yet (star soft-bar). **From a repository** works without a catalog entry.
 
 ## Related
 
 - [`deploy.md`](deploy.md) — split Pages + Worker production deploy
 - [`security.md`](security.md) — threat model
 - [`scripts/appflare/README.md`](../scripts/appflare/README.md) — packaging notes
+- [`images/`](images/) — screenshot drop zone for README

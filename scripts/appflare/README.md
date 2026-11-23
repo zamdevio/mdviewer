@@ -19,12 +19,12 @@ pnpm appflare:dev
 # API:  http://127.0.0.1:8787/api/health
 ```
 
-Share settings are baked for same-origin (`/api`). Set Worker **ALLOWED_ORIGINS** to the page origin (dev defaults cover `8787`).
+Share settings are baked for same-origin (`/api`). Appflare sets **ALLOWED_ORIGINS** from `{{appUrl}}` (install origin). Local `appflare:dev` passes a localhost `--var` override.
 
 ## Appflare (self-host, from repo)
 
 1. Building apps → sandbox on (Workers Paid).
 2. Catalog → **From a repository** → `zamdevio/mdviewer`.
 3. Build command: **Run this command** → `pnpm run appflare:build` (not “Work it out”).
-4. Install; set **ALLOWED_ORIGINS** to the app origin (`https://…workers.dev`).
-5. Open the app — Share should already use `/api` + same-origin (no Settings required).
+4. Install; keep **ALLOWED_ORIGINS** as `{{appUrl}}` (Appflare expands it).
+5. Open the app — Share uses `/api` + same-origin. Clear any leftover Vite_* secrets from older installs.
