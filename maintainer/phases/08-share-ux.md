@@ -2,7 +2,7 @@
 
 **Focus label:** **Shipped** ([`focus.md`](./focus.md))  
 **Order:** ahead of remaining 04 / Appflare  
-**Status:** Shipped on `share/ux-manage-flow`  
+**Status:** Shipped — compact one-dialog polish + bound-share heal on `polish/share-virt-badge`  
 **Depends on:** Protocol 3 ([`07-manage-token.md`](./07-manage-token.md)), dialog shell ([`02-share-dialog.md`](./02-share-dialog.md))
 
 ## Goals

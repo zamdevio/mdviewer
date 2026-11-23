@@ -4,6 +4,7 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Share bind + compact UX + preview polish | Bound share survives reload; one Share dialog; table/code overflow-x; virt badge; lazy visible worker parse |
 | 2026-11 | Perf slice 2 worker hast parse | `worker-parser` + Vite module worker → hast; content-hash LRU; `HastDocument` on virtual preview/share; &lt;100KB sync unchanged |
 | 2026-11 | Share UX 08 | Manage→compose→distribute; DELETE 404→local prune; rotate-manage results panel + safe token persist; docs/systems |
 | 2026-11 | Preview virt + showcase visibility + `mdviewer` naming | Virtualized preview/share ≥100KB; home agent band; MCP/compat/`wrangler` name `mdviewer` (Pages `markview`); editor virt deferred |

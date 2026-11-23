@@ -9,13 +9,12 @@
 
 ## Share UX (protocol 3)
 
-Dialog flow ([`../phases/08-share-ux.md`](../phases/08-share-ux.md)):
+Dialog ([`../phases/08-share-ux.md`](../phases/08-share-ux.md) → compact polish):
 
-| Step | Component | Role |
-|------|-----------|------|
-| **Manage** | `ShareComposeDialog` | Bound link + Copy · Update (PUT) · New link · Delete share |
-| **Compose** | same | TTL (create only) · view protect · rotate **view** password (PATCH) · existing link + copy |
-| **Distribute** | `SharePanel` | Success copy/share sheet; **Back** → Compose |
+| Surface | Role |
+|---------|------|
+| **ShareComposeDialog** | One sheet: bound link + Update/New/Delete + TTL/protect; success = toast + clipboard |
+| **SharePanel** | Optional distribute sheet if clipboard fails / toolbar reopen |
 
 Rules:
 
@@ -37,5 +36,9 @@ Do not confuse with **rotate view password** (per-share PATCH in Compose).
 - **&lt;100KB:** sync `MarkdownViewer` / `ReactMarkdown` (`components/markdown/viewer.tsx`)
 - **≥100KB (`VIRTUALIZE_PREVIEW_BYTES`):** `VirtualMarkdownViewer` — h1/h2 `splitMarkdownChunks`, `@tanstack/react-virtual`
 - **Worker parse (04 slice 2):** `lib/markdown/worker-parser.ts` + `parser.worker.ts` → **hast**; main renders via `HastDocument` (`hast-util-to-jsx-runtime` + shared `MarkdownComponents`)
+- **Lazy parse:** plan/split immediately; parse first ~6 chunks + visible/overscan on scroll (`ensureChunkHasts`)
 - **Incremental:** content-hash LRU (`chunk-cache.ts`, ~200) — unchanged chunk text reuses hast even if indices shift
+- **Wide media:** `.markdown-table-scroll` + `pre` overflow-x so page width stays fixed
+- **Perf badge:** `PreviewPerfBadge` in editor toolbar (when scrolled) + status bar next to Auto — virt/sync, bytes, chunks, heap
 - Fallback: if Worker fails, virtual path falls back to sync `MarkdownDocument` per chunk
+- **Bound share:** `lib/share/bound-share.ts` resolves `SavedFile.shareId` or SharedLinks by filename so Manage survives reload

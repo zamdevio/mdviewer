@@ -76,7 +76,7 @@
 | **0** | Size-aware preview debounce, Mermaid debounce/lazy/LRU, scroll throttle, auto-save scaling, memory warn | **Shipped** |
 | **1** | Virtual scroll preview + lazy viewport blocks | **Shipped** (preview + share); editor virt **deferred** (textarea — no rewrite) |
 | **2** | Chunked markdown parse in Web Worker + content-hash incremental | **Shipped** |
-| **3** | Per-component opts (code / Mermaid / math / tables / images) | **Open — start here** (Focus Now) |
+| **3** | Per-component opts (code / Mermaid / math / tables / images) | **In progress** — table/code scroll + preview perf badge landed; Mermaid/math/images still open |
 | **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open — after 3 |
 
 ### Slice 2 acceptance

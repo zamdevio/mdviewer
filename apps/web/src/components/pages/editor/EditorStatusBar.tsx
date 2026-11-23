@@ -1,5 +1,6 @@
 import { getStats } from "@/lib/editor";
 import { Check, Save, AlertCircle, Loader2 } from "lucide-react";
+import { PreviewPerfBadge } from "./PreviewPerfBadge";
 
 export function EditorStatusBar({ markdown, saveStatus, lastSaved, timeSinceSave, isAutoSave }: {
     markdown: string,
@@ -69,6 +70,7 @@ export function EditorStatusBar({ markdown, saveStatus, lastSaved, timeSinceSave
                         <span className="font-bold uppercase tracking-wider text-[8px] sm:text-[9px]">Auto</span>
                     </div>
                 )}
+                <PreviewPerfBadge markdown={markdown} variant="chip" />
             </div>
         </div>
     );

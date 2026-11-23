@@ -11,6 +11,12 @@ export type ParsedMarkdownChunk = {
   hast: Root;
 };
 
+export type ChunkPlan = {
+  hash: string;
+  markdown: string;
+  hast: Root | null;
+};
+
 let worker: Worker | null = null;
 let workerFailed = false;
 let nextRequestId = 1;
@@ -77,39 +83,39 @@ function parseChunksViaWorker(
   });
 }
 
-/**
- * Split markdown, reuse content-hashed hast from LRU, parse misses (worker when available).
- */
-export async function parseDocumentChunks(
-  content: string,
-  options?: { signal?: AbortSignal },
-): Promise<ParsedMarkdownChunk[]> {
-  const parts = splitMarkdownChunks(content);
-  const planned = parts.map((markdown) => ({
-    hash: hashChunkMarkdown(markdown),
-    markdown,
-  }));
-
-  const ordered: (ParsedMarkdownChunk | null)[] = planned.map(({ hash, markdown }) => {
+/** Split + content-hash; fill hast from LRU when available (no worker yet). */
+export function planDocumentChunks(content: string): ChunkPlan[] {
+  return splitMarkdownChunks(content).map((markdown) => {
+    const hash = hashChunkMarkdown(markdown);
     const hit = chunkHastCache.get(hash);
-    if (hit) return { hash, markdown, hast: hit };
-    return null;
+    return { hash, markdown, hast: hit ?? null };
   });
+}
 
-  const misses: { index: number; id: string; markdown: string; hash: string }[] = [];
-  for (let i = 0; i < planned.length; i++) {
-    if (ordered[i]) continue;
-    const { hash, markdown } = planned[i]!;
-    misses.push({ index: i, id: String(i), markdown, hash });
-  }
-
-  if (misses.length === 0) {
-    return ordered as ParsedMarkdownChunk[];
-  }
+/**
+ * Ensure the given plan indices have hast (worker for misses). Returns a new array.
+ */
+export async function ensureChunkHasts(
+  plans: ChunkPlan[],
+  indices: number[],
+  options?: { signal?: AbortSignal },
+): Promise<ChunkPlan[]> {
+  const next = plans.map((p) => ({ ...p }));
+  const unique = [...new Set(indices)].filter(
+    (i) => i >= 0 && i < next.length && next[i] && !next[i]!.hast,
+  );
+  if (unique.length === 0) return next;
 
   if (options?.signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
   }
+
+  const misses = unique.map((index) => ({
+    index,
+    id: String(index),
+    markdown: next[index]!.markdown,
+    hash: next[index]!.hash,
+  }));
 
   let results: { id: string; hast: Root }[];
   try {
@@ -129,15 +135,25 @@ export async function parseDocumentChunks(
     const hast = byId.get(miss.id);
     if (!hast) continue;
     chunkHastCache.set(miss.hash, hast);
-    ordered[miss.index] = { hash: miss.hash, markdown: miss.markdown, hast };
+    next[miss.index] = { hash: miss.hash, markdown: miss.markdown, hast };
   }
+  return next;
+}
 
-  return ordered.map((c, i) => {
-    if (c) return c;
-    // Should not happen; sync fallback for safety
-    const { hash, markdown } = planned[i]!;
-    const hast = parseMarkdownToHast(markdown);
-    chunkHastCache.set(hash, hast);
-    return { hash, markdown, hast };
+/**
+ * Split markdown, reuse content-hashed hast from LRU, parse all misses (worker when available).
+ */
+export async function parseDocumentChunks(
+  content: string,
+  options?: { signal?: AbortSignal },
+): Promise<ParsedMarkdownChunk[]> {
+  const planned = planDocumentChunks(content);
+  const indices = planned.map((_, i) => i);
+  const filled = await ensureChunkHasts(planned, indices, options);
+  return filled.map((c, i) => {
+    if (c.hast) return { hash: c.hash, markdown: c.markdown, hast: c.hast };
+    const hast = parseMarkdownToHast(c.markdown);
+    chunkHastCache.set(c.hash, hast);
+    return { hash: c.hash, markdown: c.markdown, hast };
   });
 }

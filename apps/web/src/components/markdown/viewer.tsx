@@ -124,6 +124,13 @@ export const MarkdownComponents: Components = {
     },
     img: MarkdownImage,
     p: MarkdownBadges,
+    table: ({ children, className, ...rest }) => (
+        <div className="markdown-table-scroll">
+            <table className={className} {...rest}>
+                {children}
+            </table>
+        </div>
+    ),
     span: (props) => <span {...props} />,
     div: (props) => <div {...props} />,
     a: ({ href, children, onClick, ...rest }) => {

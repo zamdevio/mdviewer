@@ -48,15 +48,9 @@ export default function FilesPage(): React.JSX.Element {
     >(null);
     const [shareSubmitting, setShareSubmitting] = useState(false);
     const [shareDeleting, setShareDeleting] = useState(false);
-    const [shareComposeStep, setShareComposeStep] = useState<"manage" | "compose">("manage");
     const [shareSuccessUrl, setShareSuccessUrl] = useState<string | null>(null);
     const [shareSuccessExpires, setShareSuccessExpires] = useState<string | null>(null);
     const [shareSuccessName, setShareSuccessName] = useState<string | null>(null);
-    const [shareResumeTarget, setShareResumeTarget] = useState<
-        | { kind: "file"; file: SavedFile }
-        | { kind: "project"; project: Project }
-        | null
-    >(null);
 
     // Load items per page setting
     useEffect(() => {
@@ -708,7 +702,6 @@ export default function FilesPage(): React.JSX.Element {
                             toast.error("Nothing to share");
                             return;
                         }
-                        setShareComposeStep(file.shareId ? "manage" : "compose");
                         setShareTarget({ kind: "file", file });
                     }}
                     onShareProject={(project) => {
@@ -721,7 +714,6 @@ export default function FilesPage(): React.JSX.Element {
                             toast.error("Project has no files to share");
                             return;
                         }
-                        setShareComposeStep(project.shareId ? "manage" : "compose");
                         setShareTarget({ kind: "project", project });
                     }}
                 />
@@ -1046,7 +1038,6 @@ export default function FilesPage(): React.JSX.Element {
                           ? shareTarget.project.sharePassword
                           : null
                 }
-                initialStep={shareComposeStep}
                 submitting={shareSubmitting}
                 deleting={shareDeleting}
                 onClose={() =>
@@ -1102,10 +1093,6 @@ export default function FilesPage(): React.JSX.Element {
                 }
                 onConfirm={async (opts: ShareComposeConfirm) => {
                     if (!shareTarget) return;
-                    if (opts.mode === "existing") {
-                        setShareTarget(null);
-                        return;
-                    }
                     const manageToken = getSettings()?.manageToken?.trim() ?? "";
                     if (!manageToken) {
                         toast.error("Manage token required — open Settings → Manage token");
@@ -1117,6 +1104,7 @@ export default function FilesPage(): React.JSX.Element {
                         const viewPassword = opts.viewProtected
                             ? opts.viewPassword || undefined
                             : undefined;
+                        let readyUrl = "";
                         if (shareTarget.kind === "file") {
                             const file = shareTarget.file;
                             const content =
@@ -1168,6 +1156,7 @@ export default function FilesPage(): React.JSX.Element {
                                 password: viewPassword,
                                 expiresAt,
                             });
+                            readyUrl = url;
                             setShareSuccessUrl(url);
                             setShareSuccessExpires(expiresAt ?? null);
                             setShareSuccessName(file.filename);
@@ -1229,15 +1218,20 @@ export default function FilesPage(): React.JSX.Element {
                                 password: viewPassword,
                                 expiresAt,
                             });
+                            readyUrl = url;
                             setShareSuccessUrl(url);
                             setShareSuccessExpires(expiresAt ?? null);
                             setShareSuccessName(project.name);
                             setProjectsState(getProjects());
                         }
                         loadFiles();
-                        setShareResumeTarget(shareTarget);
                         setShareTarget(null);
-                        toast.success("Share ready");
+                        try {
+                            if (readyUrl) await navigator.clipboard.writeText(readyUrl);
+                            toast.success("Share ready — link copied");
+                        } catch {
+                            toast.success("Share ready");
+                        }
                     } catch (error) {
                         if (isCorsFailure(error)) {
                             toast.error("CORS blocked — check ALLOWED_ORIGINS");
@@ -1257,18 +1251,10 @@ export default function FilesPage(): React.JSX.Element {
                 shareUrl={shareSuccessUrl ?? ""}
                 fileName={shareSuccessName}
                 expiresAt={shareSuccessExpires}
-                onBack={() => {
-                    setShareSuccessUrl(null);
-                    setShareSuccessExpires(null);
-                    setShareSuccessName(null);
-                    setShareComposeStep("compose");
-                    if (shareResumeTarget) setShareTarget(shareResumeTarget);
-                }}
                 onClose={() => {
                     setShareSuccessUrl(null);
                     setShareSuccessExpires(null);
                     setShareSuccessName(null);
-                    setShareResumeTarget(null);
                 }}
             />
         </div>

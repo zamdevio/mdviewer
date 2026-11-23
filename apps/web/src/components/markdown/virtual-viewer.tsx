@@ -1,17 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { HastDocument } from "./hast-document";
 import { MarkdownDocument } from "./viewer";
 import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
 import { splitMarkdownChunks } from "@/lib/markdown/split-chunks";
 import {
-  parseDocumentChunks,
-  type ParsedMarkdownChunk,
+  ensureChunkHasts,
+  planDocumentChunks,
+  type ChunkPlan,
 } from "@/lib/markdown/worker-parser";
+
+const INITIAL_PARSE_COUNT = 6;
 
 /**
  * Virtualized markdown preview for large docs.
- * Chunks are split on h1/h2; hast is parsed off-thread (worker + content-hash cache).
+ * Splits immediately; parses near-viewport chunks via worker + content-hash cache.
  */
 export function VirtualMarkdownViewer({
   content,
@@ -23,17 +26,24 @@ export function VirtualMarkdownViewer({
   /** Overflow container that scrolls the preview (PreviewSection / share pane). */
   scrollElement: HTMLElement | null;
 }) {
-  const [chunks, setChunks] = useState<ParsedMarkdownChunk[] | null>(null);
+  const [plans, setPlans] = useState<ChunkPlan[]>(() => planDocumentChunks(content));
   const [parseFailed, setParseFailed] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
+  const plansRef = useRef(plans);
+  plansRef.current = plans;
 
+  // Resplit when content changes; keep cache hits
   useEffect(() => {
-    const ac = new AbortController();
+    const next = planDocumentChunks(content);
+    setPlans(next);
     setParseFailed(false);
-    void parseDocumentChunks(content, { signal: ac.signal })
-      .then((parsed) => {
+    const ac = new AbortController();
+    const initial = Math.min(INITIAL_PARSE_COUNT, next.length);
+    const indices = Array.from({ length: initial }, (_, i) => i);
+    void ensureChunkHasts(next, indices, { signal: ac.signal })
+      .then((filled) => {
         if (ac.signal.aborted) return;
-        setChunks(parsed);
+        setPlans(filled);
       })
       .catch((err: unknown) => {
         if (ac.signal.aborted) return;
@@ -43,19 +53,44 @@ export function VirtualMarkdownViewer({
     return () => ac.abort();
   }, [content]);
 
-  const rowCount = chunks?.length ?? 0;
-
   const virtualizer = useVirtualizer({
-    count: rowCount,
+    count: plans.length,
     getScrollElement: () => scrollElement,
     estimateSize: (index) => {
-      const len = chunks?.[index]?.markdown.length ?? 0;
+      const len = plans[index]?.markdown.length ?? 0;
       return Math.min(1200, Math.max(160, Math.ceil(len / 40) * 20));
     },
     overscan: 2,
   });
 
   const items = virtualizer.getVirtualItems();
+  const visibleKey = useMemo(
+    () => items.map((i) => i.index).join(","),
+    [items],
+  );
+
+  // Lazy-parse visible + overscan as user scrolls
+  useEffect(() => {
+    if (parseFailed || plans.length === 0) return;
+    const indices = items.map((i) => i.index);
+    if (indices.length === 0) return;
+    const needs = indices.some((i) => !plansRef.current[i]?.hast);
+    if (!needs) return;
+
+    const ac = new AbortController();
+    void ensureChunkHasts(plansRef.current, indices, { signal: ac.signal })
+      .then((filled) => {
+        if (ac.signal.aborted) return;
+        setPlans(filled);
+      })
+      .catch((err: unknown) => {
+        if (ac.signal.aborted) return;
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      });
+    return () => ac.abort();
+    // visibleKey tracks scroll window; plans.length for resplit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleKey, plans.length, parseFailed]);
 
   useEffect(() => {
     const hash = window.location.hash;
@@ -72,7 +107,7 @@ export function VirtualMarkdownViewer({
       cancelAnimationFrame(id);
       window.clearTimeout(t);
     };
-  }, [content, chunks]);
+  }, [content, plans]);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -94,7 +129,7 @@ export function VirtualMarkdownViewer({
     );
   }
 
-  if (!chunks) {
+  if (plans.length === 0) {
     return (
       <article ref={articleRef} className={`markdown-body ${className}`}>
         <p className="text-sm text-muted-foreground">Parsing preview…</p>
@@ -109,25 +144,34 @@ export function VirtualMarkdownViewer({
       style={{
         height: virtualizer.getTotalSize(),
         width: "100%",
+        maxWidth: "100%",
         position: "relative",
+        overflowX: "hidden",
       }}
     >
-      {items.map((item) => (
-        <div
-          key={chunks[item.index]?.hash ?? item.key}
-          data-index={item.index}
-          ref={virtualizer.measureElement}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            transform: `translateY(${item.start}px)`,
-          }}
-        >
-          <HastDocument hast={chunks[item.index]!.hast} />
-        </div>
-      ))}
+      {items.map((item) => {
+        const plan = plans[item.index];
+        return (
+          <div
+            key={plan?.hash ?? item.key}
+            data-index={item.index}
+            ref={virtualizer.measureElement}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              width: "100%",
+              transform: `translateY(${item.start}px)`,
+            }}
+          >
+            {plan?.hast ? (
+              <HastDocument hast={plan.hast} />
+            ) : (
+              <p className="text-xs text-muted-foreground py-4">Loading section…</p>
+            )}
+          </div>
+        );
+      })}
     </article>
   );
 }
@@ -162,7 +206,9 @@ function FallbackVirtualMarkdown({
       style={{
         height: virtualizer.getTotalSize(),
         width: "100%",
+        maxWidth: "100%",
         position: "relative",
+        overflowX: "hidden",
       }}
     >
       {items.map((item) => (

@@ -48,7 +48,6 @@ export default function SharesPage(): React.JSX.Element {
     const [editLink, setEditLink] = useState<SharedLink | null>(null);
     const [editSubmitting, setEditSubmitting] = useState(false);
     const [editDeleting, setEditDeleting] = useState(false);
-    const [editComposeStep, setEditComposeStep] = useState<"manage" | "compose">("manage");
     const [shareSuccessUrl, setShareSuccessUrl] = useState<string | null>(null);
     const [shareSuccessExpires, setShareSuccessExpires] = useState<string | null>(null);
     const [shareSuccessName, setShareSuccessName] = useState<string | null>(null);
@@ -137,6 +136,7 @@ export default function SharesPage(): React.JSX.Element {
             const viewPassword = opts.viewProtected
                 ? opts.viewPassword || undefined
                 : undefined;
+            let readyUrl = "";
 
             if (editBoundFile) {
                 const content =
@@ -188,6 +188,7 @@ export default function SharesPage(): React.JSX.Element {
                     password: viewPassword,
                     expiresAt,
                 });
+                readyUrl = url;
                 setShareSuccessUrl(url);
                 setShareSuccessExpires(expiresAt ?? null);
                 setShareSuccessName(editBoundFile.filename);
@@ -249,6 +250,7 @@ export default function SharesPage(): React.JSX.Element {
                     password: viewPassword,
                     expiresAt,
                 });
+                readyUrl = url;
                 setShareSuccessUrl(url);
                 setShareSuccessExpires(expiresAt ?? null);
                 setShareSuccessName(editBoundProject.name);
@@ -259,7 +261,18 @@ export default function SharesPage(): React.JSX.Element {
 
             setEditLink(null);
             setSharedLinks(getSharedLinks());
-            toast.success(opts.mode === "replace" ? "Share updated" : "Share link created");
+            try {
+                if (readyUrl) await navigator.clipboard.writeText(readyUrl);
+                toast.success(
+                    opts.mode === "replace"
+                        ? "Share updated — link copied"
+                        : "Share link created — copied",
+                );
+            } catch {
+                toast.success(
+                    opts.mode === "replace" ? "Share updated" : "Share link created",
+                );
+            }
         } catch (error) {
             if (isCorsFailure(error)) {
                 toast.error("CORS blocked — check ALLOWED_ORIGINS");
@@ -418,10 +431,7 @@ export default function SharesPage(): React.JSX.Element {
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
-                                            setEditComposeStep("manage");
-                                            setEditLink(link);
-                                        }}
+                                        onClick={() => setEditLink(link)}
                                         className="gap-2 flex-1 sm:flex-initial"
                                         aria-label="Edit share"
                                     >
@@ -448,13 +458,11 @@ export default function SharesPage(): React.JSX.Element {
                         ? null
                         : "No local file/project bound to this shareId — open it in the Editor to update content."
                 }
-                initialStep={editComposeStep}
                 submitting={editSubmitting}
                 deleting={editDeleting}
                 onClose={() => {
                     if (editSubmitting || editDeleting) return;
                     setEditLink(null);
-                    setEditComposeStep("manage");
                 }}
                 onConfirm={handleEditConfirm}
                 onDeleteShare={handleEditDelete}
@@ -465,16 +473,6 @@ export default function SharesPage(): React.JSX.Element {
                 shareUrl={shareSuccessUrl ?? ""}
                 fileName={shareSuccessName}
                 expiresAt={shareSuccessExpires}
-                onBack={() => {
-                    setShareSuccessUrl(null);
-                    setEditComposeStep("compose");
-                    // Re-open manage for the link we just touched if still listed
-                    const links = getSharedLinks();
-                    const last = shareSuccessUrl
-                        ? links.find((l) => l.url === shareSuccessUrl)
-                        : null;
-                    if (last) setEditLink(last);
-                }}
                 onClose={() => {
                     setShareSuccessUrl(null);
                     setShareSuccessExpires(null);

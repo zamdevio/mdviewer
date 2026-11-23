@@ -5,6 +5,7 @@ import {
     ChevronLeft, ChevronRight, X, SpellCheck 
 } from "lucide-react";
 import type { SoloMode } from "@/lib/scroll";
+import { PreviewPerfBadge } from "./PreviewPerfBadge";
 
 export function EditorControls({
     isClosed,
@@ -12,7 +13,6 @@ export function EditorControls({
     isMobile,
     showThemeToggle,
     markdown,
-    shareUrl,
     isSharing,
     effectiveMode,
     isSpellCheckActive,
@@ -21,7 +21,6 @@ export function EditorControls({
     onClose,
     onCopyAll,
     onShare,
-    onShowSharePanel,
     onSetSoloMode,
     onSetIsPreview,
     onFocusEditor,
@@ -32,7 +31,7 @@ export function EditorControls({
     isMobile: boolean;
     showThemeToggle: boolean;
     markdown: string;
-    shareUrl: string | null;
+    shareUrl?: string | null;
     isSharing: boolean;
     effectiveMode: SoloMode;
     isSpellCheckActive: boolean;
@@ -42,7 +41,7 @@ export function EditorControls({
     onClose: () => void;
     onCopyAll: () => void;
     onShare: () => void;
-    onShowSharePanel: () => void;
+    onShowSharePanel?: () => void;
     onSetSoloMode: (mode: SoloMode) => void;
     onSetIsPreview: (isPreview: boolean) => void;
     onFocusEditor: () => void;
@@ -66,6 +65,9 @@ export function EditorControls({
                             <div className="flex items-center flex-shrink-0">
                                 <ThemeToggle />
                             </div>
+                        )}
+                        {showThemeToggle && (
+                            <PreviewPerfBadge markdown={markdown} variant="icon" />
                         )}
                         {/* Scroll to Top Button - Only show when navbar is scrolled out of view */}
                         {showThemeToggle && (
@@ -97,12 +99,12 @@ export function EditorControls({
                         </Button>
                         {/* Share Button */}
                         <Button
-                            variant={shareUrl ? "default" : "default"}
+                            variant="default"
                             size="sm"
-                            onClick={shareUrl ? onShowSharePanel : onShare}
+                            onClick={onShare}
                             disabled={isSharing || !markdown.trim()}
                             className="h-8 w-8 p-0 flex-shrink-0"
-                            title={shareUrl ? "Open share panel" : (isSharing ? "Sharing..." : "Share")}
+                            title={isSharing ? "Sharing..." : "Share"}
                         >
                             <Share2 className="w-4 h-4" />
                         </Button>
@@ -210,16 +212,19 @@ export function EditorControls({
             )}
             {/* Collapse/Expand Button - Always visible when collapsed, on the right */}
             {isCollapsed && (
-                <div className="flex gap-2 border rounded-lg p-1 bg-muted/50">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={onToggleCollapse}
-                        className="gap-2 h-8"
-                        title="Expand"
-                    >
-                        <ChevronLeft className="w-4 h-4" />
-                    </Button>
+                <div className="flex items-center gap-1">
+                    <PreviewPerfBadge markdown={markdown} variant="chip" />
+                    <div className="flex gap-2 border rounded-lg p-1 bg-muted/50">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onToggleCollapse}
+                            className="gap-2 h-8"
+                            title="Expand"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>

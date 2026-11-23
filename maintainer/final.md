@@ -61,7 +61,8 @@ See [`phases/03-agent-surfaces.md`](./phases/03-agent-surfaces.md).
 See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
 - [x] Size-aware preview / Mermaid debounce / lazy Mermaid / LRU / scroll throttle / auto-save scaling
-- [ ] **Deferred for v4 claim:** virtual scroll preview + chunked worker parse (do not claim 5–10MB readiness until done — or note deferred in release notes)
+- [x] Virtual scroll preview + chunked worker parse + lazy visible chunks (04 slices 1–2 + polish)
+- [ ] **Still before a 5–10MB claim:** slice 3–4 leftovers / editor virt deferred — do not advertise full 5–10MB readiness until cleared or explicitly deferred in release notes
 
 ## 6b. Protocol 3 — manage token (**Now**)
 

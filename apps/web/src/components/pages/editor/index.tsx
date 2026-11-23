@@ -2,9 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { isApiConfigured } from "@/lib/config";
 import { toast } from "sonner";
-import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, getSavedFiles, getSharedLinks } from "@/lib/storage";
+import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, upsertSavedFile } from "@/lib/storage";
 import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
 import { wipeShareRemoteAndLocal } from "@/lib/share/remote-delete";
+import { resolveBoundShare } from "@/lib/share/bound-share";
 import { isCorsFailure } from "@/lib/api";
 import { autoSaveDebounceMs } from "@/lib/performance/preview-debounce";
 import { startMemoryMonitor } from "@/lib/performance/memory-monitor";
@@ -92,7 +93,6 @@ export default function EditorPage() {
     const [shareUrl, setShareUrl] = useState<string | null>(null);
     const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
     const [showShareCompose, setShowShareCompose] = useState(false);
-    const [shareComposeStep, setShareComposeStep] = useState<"manage" | "compose">("manage");
     const [shareDeleting, setShareDeleting] = useState(false);
     const [showSharePanel, setShowSharePanel] = useState(false);
     const [lastSharedContent, setLastSharedContent] = useState<string | null>(null);
@@ -1064,20 +1064,18 @@ export default function EditorPage() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [mounted]);
 
-    const boundShareFile = (() => {
-        if (!currentFileName) return null;
-        const files = getSavedFiles();
-        return (
-            files.find((f) => f.id === currentFileId) ||
-            files.find(
-                (f) =>
-                    f.filename === currentFileName ||
-                    f.filename === `${currentFileName}.md` ||
-                    f.filename.replace(/\.md$/i, "") === currentFileName.replace(/\.md$/i, ""),
-            ) ||
-            null
-        );
-    })();
+    const boundShare = resolveBoundShare(currentFileId, currentFileName);
+
+    // Heal SavedFile.shareId when we only have a SharedLinks match (survives reload)
+    useEffect(() => {
+        if (!boundShare?.file || !boundShare.shareId) return;
+        if (boundShare.file.shareId === boundShare.shareId) return;
+        upsertSavedFile({
+            ...boundShare.file,
+            shareId: boundShare.shareId,
+            sharePassword: boundShare.viewPassword,
+        });
+    }, [boundShare?.shareId, boundShare?.file?.id, boundShare?.file?.shareId, boundShare?.viewPassword]);
 
     const ensureNamedForAction = (): EditorState | null => {
         if (currentFileName) return editorState;
@@ -1105,7 +1103,6 @@ export default function EditorPage() {
             setShowApiWarning(true);
             return;
         }
-        setShareComposeStep(boundShareFile?.shareId ? "manage" : "compose");
         setShowShareCompose(true);
     };
 
@@ -1127,15 +1124,14 @@ export default function EditorPage() {
                 stateForShare = named;
             }
 
-            if (opts.mode === "existing") {
-                toast.dismiss("sharing");
-                setShowShareCompose(false);
-                return;
-            }
+            const freshBound = resolveBoundShare(
+                stateForShare.currentFileId,
+                stateForShare.currentFileName,
+            );
 
             const result = await handleShareLogic(markdown, stateForShare, {
                 mode: opts.mode,
-                existingShareId: boundShareFile?.shareId,
+                existingShareId: freshBound?.shareId ?? boundShare?.shareId,
                 viewPassword: opts.viewPassword || undefined,
                 ttlSeconds: opts.ttlSeconds,
                 viewProtected: opts.viewProtected,
@@ -1183,11 +1179,21 @@ export default function EditorPage() {
                 setShowCorsWarning(false);
                 setCorsWarningDetail(null);
                 setShowShareCompose(false);
-                setShowSharePanel(true);
-                toast.success(
-                    opts.mode === "replace" ? "Share updated!" : "Share link created!",
-                    { id: "sharing" },
-                );
+                try {
+                    await navigator.clipboard.writeText(result.shareUrl);
+                    toast.success(
+                        opts.mode === "replace"
+                            ? "Share updated — link copied"
+                            : "Share link created — copied",
+                        { id: "sharing" },
+                    );
+                } catch {
+                    toast.success(
+                        opts.mode === "replace" ? "Share updated!" : "Share link created!",
+                        { id: "sharing" },
+                    );
+                    setShowSharePanel(true);
+                }
             }
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Failed to share", { id: "sharing" });
@@ -1675,21 +1681,15 @@ export default function EditorPage() {
             <ShareComposeDialog
                 open={showShareCompose}
                 filename={currentFileName}
-                existingShareId={boundShareFile?.shareId}
-                existingViewPassword={boundShareFile?.sharePassword}
-                existingExpiresAt={
-                    boundShareFile?.shareId
-                        ? getSharedLinks().find((l) => l.shareId === boundShareFile.shareId)
-                              ?.expiresAt ?? shareExpiresAt
-                        : null
-                }
-                initialStep={shareComposeStep}
+                existingShareId={boundShare?.shareId}
+                existingViewPassword={boundShare?.viewPassword}
+                existingExpiresAt={boundShare?.expiresAt ?? shareExpiresAt}
                 submitting={isSharing}
                 deleting={shareDeleting}
                 onClose={() => !isSharing && !shareDeleting && setShowShareCompose(false)}
                 onConfirm={handleShareComposeConfirm}
                 onDeleteShare={
-                    boundShareFile?.shareId
+                    boundShare?.shareId
                         ? async () => {
                               const manageToken = getSettings()?.manageToken?.trim() ?? "";
                               if (!manageToken) {
@@ -1699,7 +1699,7 @@ export default function EditorPage() {
                               setShareDeleting(true);
                               try {
                                   const result = await wipeShareRemoteAndLocal(
-                                      boundShareFile.shareId!,
+                                      boundShare.shareId,
                                       manageToken,
                                   );
                                   setShowShareCompose(false);
@@ -1732,11 +1732,6 @@ export default function EditorPage() {
                 shareUrl={shareUrl ?? ''}
                 fileName={currentFileName}
                 expiresAt={shareExpiresAt}
-                onBack={() => {
-                    setShowSharePanel(false);
-                    setShareComposeStep("compose");
-                    setShowShareCompose(true);
-                }}
                 onClose={() => setShowSharePanel(false)}
                 onCopy={() => {
                     // Copy handled in SharePanel component

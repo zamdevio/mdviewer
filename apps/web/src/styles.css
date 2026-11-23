@@ -380,7 +380,7 @@
 }
 
 .markdown-body pre {
-  @apply rounded-lg overflow-x-auto mb-4;
+  @apply rounded-lg overflow-x-auto mb-4 max-w-full;
   background-color: transparent !important;
   padding: 0 !important;
 }
@@ -495,13 +495,27 @@
   @apply border-t border-border my-6;
 }
 
+/* Keep page width clean — wide tables scroll inside their own gutter */
+.markdown-body .markdown-table-scroll {
+  @apply w-full max-w-full overflow-x-auto mb-4;
+}
+
+.markdown-body .markdown-table-scroll > table,
 .markdown-body table {
-  @apply border-collapse w-full mb-4 overflow-auto;
+  @apply border-collapse mb-0;
+  width: max-content;
+  min-width: 100%;
 }
 
 .markdown-body table th,
 .markdown-body table td {
   @apply border border-border px-3 py-2;
+  white-space: nowrap;
+}
+
+.markdown-body table th:first-child,
+.markdown-body table td:first-child {
+  white-space: normal;
 }
 
 .markdown-body table th {

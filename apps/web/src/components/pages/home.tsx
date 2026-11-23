@@ -28,12 +28,12 @@ const features = [
   {
     icon: Eye,
     title: "Live preview",
-    body: "GFM, Mermaid, KaTeX math, and syntax highlighting as you type.",
+    body: "GFM, Mermaid, KaTeX, syntax highlighting. Large docs virtualize the preview and parse in a worker (≥100KB).",
   },
   {
     icon: Share2,
     title: "Edge share (protocol 3)",
-    body: "Workers + R2. Manage token to create/update; optional view password on GET. Point Settings → Share at your own worker.",
+    body: "Workers + R2. One share sheet for update/new/delete; manage token to mutate; optional view password on GET.",
   },
   {
     icon: Bot,

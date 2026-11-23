@@ -12,8 +12,8 @@
 
 ## Handoff (2026-11-23) — start here in a new chat
 
-1. Read **this file**, then [`04-perf-large-docs.md`](./04-perf-large-docs.md) slice **3** only.
-2. **Do next:** per-component opts (code / Mermaid / math / tables / images) — P2 in the phase doc. Slices 0–2 shipped.
+1. Read **this file**, then [`04-perf-large-docs.md`](./04-perf-large-docs.md) slice **3** leftovers.
+2. **Do next:** remaining per-component opts (Mermaid / math / images lazy) — tables/code scroll + virt badge already landed.
 3. **Do not:** Appflare pack (`06`) until Focus promotes **Next**; editor virt (textarea deferred); v4 bump; slice 4 until 3 lands.
 4. **Names:** product + Wrangler Worker script = `mdviewer`; Pages = `markview`; API = `api.mdviewer.zamdev.dev`. MCP/`/compatibility.name` = `mdviewer`.
 5. **Systems:** [`../systems/web.md`](../systems/web.md) · [`../systems/worker.md`](../systems/worker.md). Share UX 08 shipped.

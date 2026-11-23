@@ -66,6 +66,8 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 
 ### Rich preview
 - GFM, Mermaid, KaTeX, syntax highlighting, image lightbox
+- **Large-doc preview:** virtualized scroll + Web Worker parse (≥100KB); wide tables/code scroll in-place
+- Preview perf badge in the editor (virt/sync, size, chunks, heap when available) — editor textarea is not virtualized
 
 ### Edge share (protocol 3)
 - Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, OpenAPI `/docs`

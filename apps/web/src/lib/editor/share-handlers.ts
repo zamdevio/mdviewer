@@ -57,7 +57,7 @@ export async function handleShare(
     };
   }
 
-  const { currentFileName } = editorState;
+  const { currentFileName, currentFileId } = editorState;
 
   if (!currentFileName) {
     return {
@@ -146,12 +146,16 @@ export async function handleShare(
     addSharedLink(sharedLink);
 
     const files = getSavedFiles();
-    const file = files.find(
-      (f) =>
-        f.filename === currentFileName ||
-        f.filename === filename ||
-        f.filename === currentFileName.replace(/\.md$/i, ''),
-    );
+    const stem = currentFileName.replace(/\.md$/i, '');
+    const file =
+      (currentFileId ? files.find((f) => f.id === currentFileId) : undefined) ||
+      files.find(
+        (f) =>
+          f.filename === currentFileName ||
+          f.filename === filename ||
+          f.filename === stem ||
+          f.filename.replace(/\.md$/i, '') === stem,
+      );
     if (file) {
       upsertSavedFile({
         ...file,
