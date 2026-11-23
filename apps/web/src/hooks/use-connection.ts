@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { getEffectiveApiConfig } from "@/lib/config";
 import { probeApiHealth } from "@/lib/api-errors";
 
@@ -12,31 +12,71 @@ interface ConnectionState {
   lastChecked: number | null;
 }
 
-/**
- * Hook to monitor connection status (network + server + CORS).
- */
-export function useConnection() {
-  const [state, setState] = useState<ConnectionState>(() => {
+type Listener = () => void;
+
+const RETRY_MS = 30_000;
+
+const initialOnline =
+  typeof navigator !== "undefined" ? navigator.onLine : true;
+
+let state: ConnectionState = {
+  status: initialOnline ? "online" : "offline",
+  isOnline: initialOnline,
+  isServerReachable: true,
+  isCorsBlocked: false,
+  lastChecked: null,
+};
+
+const listeners = new Set<Listener>();
+let started = false;
+let inFlight: Promise<void> | null = null;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let bootTimer: ReturnType<typeof setTimeout> | null = null;
+
+function emit() {
+  for (const listener of listeners) {
+    listener();
+  }
+}
+
+function setState(next: ConnectionState) {
+  state = next;
+  emit();
+}
+
+function clearRetry() {
+  if (retryTimer !== null) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+}
+
+function scheduleRetryIfUnhealthy() {
+  clearRetry();
+  if (state.status === "online" || state.status === "offline") {
+    return;
+  }
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void refreshConnection();
+  }, RETRY_MS);
+}
+
+async function checkServerHealth(): Promise<"ok" | "cors" | "down" | "skip"> {
+  const { API_URL } = getEffectiveApiConfig();
+  if (!API_URL || !API_URL.trim()) {
+    return "skip";
+  }
+  return probeApiHealth(`${API_URL}/health`);
+}
+
+async function refreshConnection(): Promise<void> {
+  if (inFlight) {
+    return inFlight;
+  }
+
+  inFlight = (async () => {
     const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
-    return {
-      status: isOnline ? "online" : "offline",
-      isOnline,
-      isServerReachable: true,
-      isCorsBlocked: false,
-      lastChecked: null,
-    };
-  });
-
-  const checkServerHealth = useCallback(async (): Promise<"ok" | "cors" | "down" | "skip"> => {
-    const { API_URL } = getEffectiveApiConfig();
-    if (!API_URL || !API_URL.trim()) {
-      return "skip";
-    }
-    return probeApiHealth(`${API_URL}/health`);
-  }, []);
-
-  const updateStatus = useCallback(async () => {
-    const isOnline = navigator.onLine;
     if (!isOnline) {
       setState({
         status: "offline",
@@ -45,6 +85,7 @@ export function useConnection() {
         isCorsBlocked: false,
         lastChecked: Date.now(),
       });
+      clearRetry();
       return;
     }
 
@@ -60,10 +101,6 @@ export function useConnection() {
     } else if (health === "down") {
       status = "server-down";
       isServerReachable = false;
-    } else {
-      // ok | skip
-      status = "online";
-      isServerReachable = true;
     }
 
     setState({
@@ -73,47 +110,80 @@ export function useConnection() {
       isCorsBlocked,
       lastChecked: Date.now(),
     });
-  }, [checkServerHealth]);
+    scheduleRetryIfUnhealthy();
+  })().finally(() => {
+    inFlight = null;
+  });
 
-  useEffect(() => {
-    const initialCheck = setTimeout(() => {
-      updateStatus();
-    }, 100);
+  return inFlight;
+}
 
-    const handleOnline = () => {
-      updateStatus();
-    };
+function handleOnline() {
+  void refreshConnection();
+}
 
-    const handleOffline = () => {
-      setState((prev) => ({
-        ...prev,
-        status: "offline",
-        isOnline: false,
-        isServerReachable: false,
-        isCorsBlocked: false,
-        lastChecked: Date.now(),
-      }));
-    };
+function handleOffline() {
+  setState({
+    ...state,
+    status: "offline",
+    isOnline: false,
+    isServerReachable: false,
+    isCorsBlocked: false,
+    lastChecked: Date.now(),
+  });
+  clearRetry();
+}
 
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+function ensureStarted() {
+  if (started || typeof window === "undefined") {
+    return;
+  }
+  started = true;
+  window.addEventListener("online", handleOnline);
+  window.addEventListener("offline", handleOffline);
+  bootTimer = setTimeout(() => {
+    bootTimer = null;
+    void refreshConnection();
+  }, 100);
+}
 
-    const healthCheckInterval = setInterval(() => {
-      if (navigator.onLine) {
-        updateStatus();
-      }
-    }, 30000);
+function subscribe(listener: Listener): () => void {
+  listeners.add(listener);
+  ensureStarted();
+  return () => {
+    listeners.delete(listener);
+  };
+}
 
-    return () => {
-      clearTimeout(initialCheck);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      clearInterval(healthCheckInterval);
-    };
-  }, [updateStatus]);
+function getSnapshot(): ConnectionState {
+  return state;
+}
+
+function getServerSnapshot(): ConnectionState {
+  return state;
+}
+
+/**
+ * Shared connection status (network + share API + CORS).
+ * One health probe on first mount, on Recheck, when the browser comes online,
+ * and on a backoff timer only while the API looks unhealthy — never while Connected.
+ */
+export function useConnection() {
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [checking, setChecking] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setChecking(true);
+    try {
+      await refreshConnection();
+    } finally {
+      setChecking(false);
+    }
+  }, []);
 
   return {
-    ...state,
-    refresh: updateStatus,
+    ...snapshot,
+    checking,
+    refresh,
   };
 }

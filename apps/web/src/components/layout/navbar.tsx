@@ -85,28 +85,28 @@ export function Navbar() {
           </a>
         </div>
 
-        <div className="hidden items-center gap-2 md:flex">
+        <div className="flex items-center gap-2">
           <ConnectionIndicator />
-          <ThemeToggle />
-          {isHomePage && (
-            <Button asChild size="sm">
-              <Link to="/editor">Open editor</Link>
+          <div className="hidden items-center gap-2 md:flex">
+            <ThemeToggle />
+            {isHomePage && (
+              <Button asChild size="sm">
+                <Link to="/editor">Open editor</Link>
+              </Button>
+            )}
+          </div>
+          <div className={`items-center gap-2 ${isMobile ? "flex" : "flex md:hidden"}`}>
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-expanded={isOpen}
+              aria-label={isOpen ? "Close menu" : "Open menu"}
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
-          )}
-        </div>
-
-        <div className={`items-center gap-2 ${isMobile ? "flex" : "flex md:hidden"}`}>
-          <ConnectionIndicator />
-          <ThemeToggle />
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-expanded={isOpen}
-            aria-label={isOpen ? "Close menu" : "Open menu"}
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </Button>
+          </div>
         </div>
 
         {isOpen && (
