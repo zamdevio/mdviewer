@@ -30,8 +30,10 @@ import { sanitizeSchema } from "./html";
 import { MarkdownImage } from "./image";
 import { MarkdownMermaid } from "./mermaid";
 import { remarkEmoji } from "@/lib/remark-emoji";
+import { contentLikelyHasMath } from "@/lib/markdown/content-signals";
 import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
 import type { Components } from "react-markdown";
+import type { PluggableList } from "unified";
 
 let katexCssRequested = false;
 export function ensureKatexCss() {
@@ -178,20 +180,30 @@ export const MarkdownComponents: Components = {
 
 /** Inner react-markdown tree (no article wrapper) — used by virtualized chunks. */
 export function MarkdownDocument({ content }: { content: string }) {
+    const hasMath = contentLikelyHasMath(content);
+
     useEffect(() => {
-        ensureKatexCss();
-    }, []);
+        if (hasMath) ensureKatexCss();
+    }, [hasMath]);
+
+    const remarkPlugins: PluggableList = hasMath
+        ? [remarkGfm, remarkMath, remarkEmoji]
+        : [remarkGfm, remarkEmoji];
+
+    const rehypePlugins: PluggableList = hasMath
+        ? [
+              rehypeRaw,
+              rehypeKatex,
+              rehypeSlug,
+              // Sanitize after KaTeX/slug so generated HTML + ids are filtered
+              [rehypeSanitize, sanitizeSchema],
+          ]
+        : [rehypeRaw, rehypeSlug, [rehypeSanitize, sanitizeSchema]];
 
     return (
         <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath, remarkEmoji]}
-            rehypePlugins={[
-                rehypeRaw,
-                rehypeKatex,
-                rehypeSlug,
-                // Sanitize after KaTeX/slug so generated HTML + ids are filtered (user-content- prefix)
-                [rehypeSanitize, sanitizeSchema],
-            ]}
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
             components={MarkdownComponents}
         >
             {content}

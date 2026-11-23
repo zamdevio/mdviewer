@@ -127,16 +127,15 @@ function enhanceSvgLines(svgElement: SVGElement | null, isDark: boolean) {
  *       - Secondary: Other theme (loaded in background, ready for instant switch)
  *    d. Initializes mermaid with theme-specific config (once per theme)
  *    e. Generates unique diagram IDs for each theme
- *    f. Renders SVG for both themes using mermaid.render()
- *    g. Shows/hides based on current theme (instant theme switching, no re-render)
- * 6. When theme changes, just swaps visibility (instant, no re-render needed)
+ *    f. Renders SVG for the *current* theme only (opposite theme on switch / cache hit)
+ * 6. Theme change reuses LRU cache when available; otherwise renders the new theme
  */
 export function MarkdownMermaid({ code }: { code: string }) {
     const [inView, setInView] = useState(false);
     const hostRef = useRef<HTMLDivElement>(null);
     const [isLoadingPrimary, setIsLoadingPrimary] = useState(true);
-    const [isLoadingSecondary, setIsLoadingSecondary] = useState(true);
     const [errorPrimary, setErrorPrimary] = useState<string | null>(null);
+    const [sizeWarned, setSizeWarned] = useState(false);
     const [copied, setCopied] = useState(false);
     const [saved, setSaved] = useState(false);
     const mermaidRefDark = useRef<HTMLDivElement>(null);
@@ -176,7 +175,6 @@ export function MarkdownMermaid({ code }: { code: string }) {
     useEffect(() => {
         setErrorPrimary(null);
         setIsLoadingPrimary(true);
-        setIsLoadingSecondary(true);
     }, [code]);
 
     // Debounce code updates (longer for large diagrams)
@@ -186,6 +184,17 @@ export function MarkdownMermaid({ code }: { code: string }) {
         }, mermaidDebounceMs(code));
         return () => clearTimeout(timer);
     }, [code]);
+
+    // One-shot warn for very large diagrams (main-thread cost)
+    useEffect(() => {
+        if (!inView || sizeWarned) return;
+        if (code.length < 4000) return;
+        setSizeWarned(true);
+        toast.warning("Large Mermaid diagram — rendering may feel slow", {
+            id: "mermaid-size-warn",
+            duration: 4000,
+        });
+    }, [inView, code, sizeWarned]);
 
     // Generic function to render Mermaid diagram
     const renderMermaidDiagram = useCallback(async (
@@ -291,7 +300,6 @@ export function MarkdownMermaid({ code }: { code: string }) {
 
     const isDarkMode = currentIsDarkMode;
     const primaryTheme = isDarkMode ? 'dark' : 'default';
-    const secondaryTheme = isDarkMode ? 'default' : 'dark';
 
     // Copy Mermaid code or error to clipboard
     const handleCopyCode = async () => {
@@ -417,80 +425,6 @@ export function MarkdownMermaid({ code }: { code: string }) {
         };
     }, [inView, debouncedCode, primaryTheme, isDarkMode, themeReady, renderMermaidDiagram]);
 
-    // Render secondary theme (other theme) - only after primary is done and only if not cached
-    useEffect(() => {
-        if (!inView || !themeReady) return;
-        if (!debouncedCode || debouncedCode.trim() === '') {
-            setIsLoadingSecondary(false);
-            return;
-        }
-
-        // Only render secondary if primary is done
-        if (isLoadingPrimary) return;
-
-        let cancelled = false;
-        const cacheKey = getCacheKey(debouncedCode.trim(), secondaryTheme);
-        const cachedSvg = mermaidCacheGet(cacheKey);
-
-        const renderSecondary = async () => {
-            const ref = isDarkMode ? mermaidRefLight : mermaidRefDark;
-            if (!ref.current) return;
-
-            if (cachedSvg) {
-                if (cancelled || !ref.current) return;
-                ref.current.innerHTML = cachedSvg;
-                const svgElement = ref.current.querySelector('svg');
-                enhanceSvgLines(svgElement, !isDarkMode);
-                setIsLoadingSecondary(false);
-                return;
-            }
-
-            try {
-                setIsLoadingSecondary(true);
-                await new Promise((resolve) => setTimeout(resolve, 50));
-                if (cancelled) return;
-
-                const mermaid = (await import("mermaid")).default;
-                if (cancelled) return;
-
-                const id = `mermaid-${secondaryTheme}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-                if (isDarkMode) {
-                    diagramIdLightRef.current = id;
-                } else {
-                    diagramIdDarkRef.current = id;
-                }
-
-                const themeKey = `mermaid-${secondaryTheme}`;
-                const svg = await renderMermaidDiagram(
-                    mermaid,
-                    id,
-                    debouncedCode.trim(),
-                    secondaryTheme,
-                    themeKey,
-                );
-                if (cancelled) return;
-
-                mermaidCacheSet(cacheKey, svg);
-
-                if (ref.current) {
-                    ref.current.innerHTML = svg;
-                    const svgElement = ref.current.querySelector("svg");
-                    enhanceSvgLines(svgElement, !isDarkMode);
-                    setIsLoadingSecondary(false);
-                }
-            } catch (err) {
-                if (cancelled) return;
-                console.warn("Mermaid secondary rendering error:", err);
-                setIsLoadingSecondary(false);
-            }
-        };
-
-        void renderSecondary();
-        return () => {
-            cancelled = true;
-        };
-    }, [inView, debouncedCode, secondaryTheme, isDarkMode, isLoadingPrimary, themeReady, renderMermaidDiagram]);
-
     if (!inView) {
         return (
             <div
@@ -551,7 +485,8 @@ export function MarkdownMermaid({ code }: { code: string }) {
         );
     }
 
-    const isLoading = isLoadingPrimary || (isLoadingSecondary && !isDarkMode && isLoadingPrimary);
+    // Current theme only — opposite theme renders on switch (cache makes return trips instant)
+    const isLoading = isLoadingPrimary;
     const showDark = isDarkMode;
     const showLight = !isDarkMode;
 

@@ -62,7 +62,8 @@ See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
 - [x] Size-aware preview / Mermaid debounce / lazy Mermaid / LRU / scroll throttle / auto-save scaling
 - [x] Virtual scroll preview + chunked worker parse + lazy visible chunks (04 slices 1–2 + polish)
-- [ ] **Still before a 5–10MB claim:** slice 3–4 leftovers / editor virt deferred — do not advertise full 5–10MB readiness until cleared or explicitly deferred in release notes
+- [x] Slice 3 per-component (code/Mermaid/math/images); table row virt still in slice 4
+- [ ] **Still before a 5–10MB claim:** slice 4 leftovers / editor virt deferred — do not advertise full 5–10MB readiness until cleared or explicitly deferred in release notes
 
 ## 6b. Protocol 3 — manage token (**Now**)
 

@@ -3,7 +3,7 @@
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after protocol 3 + showcase visibility  
 **Goal:** Smooth edit/preview for 5–10MB markdown.  
-**Status:** Slices 0–2 shipped (debounce/LRU + preview virt + worker hast parse); editor virt deferred; **slice 3** next  
+**Status:** Slices 0–3 shipped (per-component: code collapse/lazy HL, Mermaid current-theme, skip math, image lazy+warn); editor virt deferred; table row virt → slice 4; **slice 4** next  
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -42,11 +42,11 @@
 
 ## P2 — Enhancements
 
-- [ ] Lazy-load syntax highlighter; virtualize huge code blocks; cache highlighted HTML; auto-collapse &gt; 100 lines
-- [ ] Lazy / batch / cache KaTeX
-- [ ] Mermaid: current-theme only pre-render; optional worker; diagram size warnings
-- [ ] Virtualize large tables (rows ± columns); lazy when off-screen
-- [ ] Image lazy-load (native), placeholders, size warnings
+- [x] Lazy-load syntax highlighter; auto-collapse &gt; 100 lines; highlight only near viewport (full code-block virt / HTML cache still open)
+- [x] Skip remark-math / rehype-katex when chunk/doc has no math delimiters; KaTeX CSS on demand
+- [x] Mermaid: current-theme only (no eager dual render); IO lazy; diagram size warning ≥4k chars; optional worker still open
+- [ ] Virtualize large tables (rows ± columns); lazy when off-screen — **deferred to slice 4** (overflow-x scroll shipped)
+- [x] Image `loading="lazy"` + `decoding="async"`; muted placeholder; one-shot size warning for huge naturals
 
 ## P3 — Advanced
 
@@ -76,8 +76,8 @@
 | **0** | Size-aware preview debounce, Mermaid debounce/lazy/LRU, scroll throttle, auto-save scaling, memory warn | **Shipped** |
 | **1** | Virtual scroll preview + lazy viewport blocks | **Shipped** (preview + share); editor virt **deferred** (textarea — no rewrite) |
 | **2** | Chunked markdown parse in Web Worker + content-hash incremental | **Shipped** |
-| **3** | Per-component opts (code / Mermaid / math / tables / images) | **In progress** — table/code scroll + preview perf badge landed; Mermaid/math/images still open |
-| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open — after 3 |
+| **3** | Per-component opts (code / Mermaid / math / tables / images) | **Shipped** — scroll wrappers + virt badge; code collapse/lazy HL; Mermaid current-theme; skip-math; image lazy+warn; table *row* virt → 4 |
+| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) + table row virt | **Next** |
 
 ### Slice 2 acceptance
 

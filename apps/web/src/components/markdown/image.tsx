@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { createPortal } from "react-dom";
@@ -6,7 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { getSettings } from "@/lib/storage";
+import { toast } from "sonner";
 import type { Components } from "react-markdown";
+
+/** Warn once per URL when natural size is huge (layout / decode cost). */
+const LARGE_IMAGE_PX = 4_000_000; // ~2000×2000
+const warnedImageUrls = new Set<string>();
 
 /**
  * Enhanced Image Component for Markdown
@@ -151,8 +155,21 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
                             height: badge ? '28px' : 'auto',
                             width: badge ? 'auto' : undefined,
                             display: 'block',
+                            backgroundColor: badge ? undefined : 'var(--muted)',
                             ...(width && !badge && { width: width }),
                             ...(height && !badge && { objectFit: 'contain' }),
+                        }}
+                        onLoad={(e) => {
+                            if (badge) return;
+                            const img = e.currentTarget;
+                            const px = img.naturalWidth * img.naturalHeight;
+                            if (px < LARGE_IMAGE_PX) return;
+                            if (warnedImageUrls.has(cleanUrl)) return;
+                            warnedImageUrls.add(cleanUrl);
+                            toast.warning(
+                                `Large image (${img.naturalWidth}×${img.naturalHeight}) — may slow scrolling`,
+                                { id: `img-size-${cleanUrl.slice(0, 48)}`, duration: 4000 },
+                            );
                         }}
                         onError={(e) => {
                             // Prevent infinite reload loop - only set error once
@@ -165,6 +182,7 @@ export const MarkdownImage: Components['img'] = ({ src, alt }) => {
                         }}
                         className={badge ? 'markdown-badge-img' : ''}
                         loading="lazy"
+                        decoding="async"
                     />
                 )}
             </span>

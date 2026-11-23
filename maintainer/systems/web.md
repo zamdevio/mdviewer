@@ -39,6 +39,9 @@ Do not confuse with **rotate view password** (per-share PATCH in Compose).
 - **Lazy parse:** plan/split immediately; parse first ~6 chunks + visible/overscan on scroll (`ensureChunkHasts`)
 - **Incremental:** content-hash LRU (`chunk-cache.ts`, ~200) — unchanged chunk text reuses hast even if indices shift
 - **Wide media:** `.markdown-table-scroll` + `pre` overflow-x so page width stays fixed
-- **Perf badge:** `PreviewPerfBadge` in editor toolbar (when scrolled) + status bar next to Auto — virt/sync, bytes, chunks, heap
+- **Perf badge:** `PreviewPerfBadge` in **expanded** editor tools (Theme → Virtualization → scroll/copy/share); also on `/share/:id` when gated — load tiers Sync→Critical
+- **Slice 3 components:** code auto-collapse &gt;100 lines + IO before highlight; Mermaid current-theme only; skip math plugins when no delimiters; images `lazy`/`async` + size warn
 - Fallback: if Worker fails, virtual path falls back to sync `MarkdownDocument` per chunk
 - **Bound share:** `lib/share/bound-share.ts` resolves `SavedFile.shareId` or SharedLinks by filename so Manage survives reload
+- **Share view helpers:** Copy markdown, scroll-to-top (after preview scrolled), Virtualization dialog (same badge)
+- **Connection:** single shared `/health` probe — once on load, Recheck, `online`, retry only while unhealthy (no Connected spam)
