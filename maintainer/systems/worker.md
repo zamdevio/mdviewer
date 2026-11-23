@@ -3,7 +3,7 @@
 - Framework: Hono `OpenAPIHono`
 - Config: [`wrangler.jsonc`](../../apps/worker/wrangler.jsonc)
 - **Tunable caps:** `src/lib/config.ts` (TTL bounds, max file bytes, rotate-manage max ids, fair-use defaults). Self-host: edit + redeploy; SPA adapts via `GET /compatibility` `ttl` / `limits`. Env `RATE_LIMIT_*` still overrides fair-use window/max.
-- Routes (target **protocol 3** — [`../phases/07-manage-token.md`](../phases/07-manage-token.md)):
+- Routes (target **protocol 3** — [`../shipped/07-manage-token.md`](../shipped/07-manage-token.md)):
   - `POST /upload` — create under `shares/{id}/` + metadata; **manage token required**; optional view password if protect on; fair-use DO
   - `GET /share/:id` — content; `X-Share-Password` only if `viewProtected`
   - `GET /share/:id/meta` — anon meta (no hashes)

@@ -27,17 +27,20 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 
 | Doc | Role |
 |-----|------|
-| [`phases/focus.md`](phases/focus.md) | Focus order (Now / Next / After that / Then / Parked) |
+| [`phases/focus.md`](phases/focus.md) | Focus order (Now / Next / Parked) |
 | [`final.md`](final.md) | Pre–v4.0 release checklist |
-| [`phases/01-share-protocol.md`](phases/01-share-protocol.md) | Phase C — password / TTL / fair-use |
-| [`phases/02-share-dialog.md`](phases/02-share-dialog.md) | Phase D — unified share dialog |
-| [`phases/03-agent-surfaces.md`](phases/03-agent-surfaces.md) | Phase E — MCP / agent surfaces |
-| [`phases/04-perf-large-docs.md`](phases/04-perf-large-docs.md) | Large markdown perf roadmap |
-| [`phases/05-showcase.md`](phases/05-showcase.md) | README / home / docs / agent-parity honesty |
-| [`phases/06-appflare.md`](phases/06-appflare.md) | Appflare catalog readiness + submit gates (**declared**) |
-| [`phases/07-manage-token.md`](phases/07-manage-token.md) | Protocol 3 — manage token vs view password; bulk rotate |
+| [`phases/04-perf-large-docs.md`](phases/04-perf-large-docs.md) | **Now** — large markdown perf (slice 4) |
+| [`phases/06-appflare.md`](phases/06-appflare.md) | **Next** — Appflare catalog readiness |
+| [`shipped/README.md`](shipped/README.md) | Closed-slice timeline + folded phase receipts |
+| [`shipped/01-share-protocol.md`](shipped/01-share-protocol.md) | Folded — Phase C protocol |
+| [`shipped/02-share-dialog.md`](shipped/02-share-dialog.md) | Folded — Phase D share dialog |
+| [`shipped/03-agent-surfaces.md`](shipped/03-agent-surfaces.md) | Folded — Phase E MCP / agents |
+| [`shipped/05-showcase.md`](shipped/05-showcase.md) | Folded — showcase honesty |
+| [`shipped/07-manage-token.md`](shipped/07-manage-token.md) | Folded — protocol 3 manage token |
+| [`shipped/08-share-ux.md`](shipped/08-share-ux.md) | Folded — share UX polish |
 | [`systems/web.md`](systems/web.md) | Web app map |
 | [`systems/worker.md`](systems/worker.md) | Worker API map |
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
-| [`shipped/README.md`](shipped/README.md) | Closed-slice timeline |
 | [`agents/tree.md`](agents/tree.md) | Directory conventions |
+
+`phases/01`–`03`, `05`, `07`, `08` are **stubs** → `shipped/`. Do not extend stubs.

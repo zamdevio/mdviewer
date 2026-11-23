@@ -9,7 +9,7 @@
 
 ## Share UX (protocol 3)
 
-Dialog ([`../phases/08-share-ux.md`](../phases/08-share-ux.md) → compact polish):
+Dialog ([`../shipped/08-share-ux.md`](../shipped/08-share-ux.md) → compact polish):
 
 | Surface | Role |
 |---------|------|
@@ -45,3 +45,5 @@ Do not confuse with **rotate view password** (per-share PATCH in Compose).
 - **Bound share:** `lib/share/bound-share.ts` resolves `SavedFile.shareId` or SharedLinks by filename so Manage survives reload
 - **Share view helpers:** Copy markdown, scroll-to-top (after preview scrolled), Virtualization dialog (same badge)
 - **Connection:** single shared `/health` probe — once on load, Recheck, `online`, retry only while unhealthy (no Connected spam)
+- **Temp / Files editing:** empty or exact Settings default sample is *baseline* — not unsaved temp; does not trip Load warning; clears Files “Editing” mark on New / empty / no saved file
+- **Load tiers (virt badge):** Sync → Light → Steady → Elevated (≥1MB) → Heavy (≥2MB / high heap) → Critical — 1.8MB ⇒ Elevated is expected

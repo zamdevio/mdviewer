@@ -6,17 +6,19 @@
 
 **Versioning:** Ship **3.x.x** until [`../final.md`](../final.md) is cleared; then **v4.0.0**.
 
-**Rule:** Labels below are the order — **Now → Next → After that → Then → Parked**. No hard “max 3” cap; still **one vertical at a time** unless a note says parallel-safe. New chat: open this file, take **Now**, work its slices in the phase doc.
+**Rule:** Labels below are the order — **Now → Next → Parked**. One vertical at a time unless a note says parallel-safe. New chat: open this file, take **Now**.
+
+Completed phase docs live under [`../shipped/`](../shipped/) — `phases/` stubs only point there. **Open** phase docs stay in `phases/`.
 
 ---
 
 ## Handoff (2026-11-23) — start here in a new chat
 
 1. Read **this file**, then [`04-perf-large-docs.md`](./04-perf-large-docs.md) **slice 4**.
-2. **Do next:** slice 4 — heading chunking / IndexedDB AST / metrics / robustness + table row virt (P3–P4). Editor textarea virt stays deferred.
-3. **Do not:** Appflare pack (`06`) until Focus promotes **Next**; v4 bump; claim full 5–10MB until slice 4 / `final.md` §6 cleared or explicitly deferred.
+2. **Do next:** slice 4 — heading chunking / IndexedDB AST / metrics / robustness + table row virt. Editor textarea virt stays deferred.
+3. **Do not:** Appflare pack (`06`) until Focus promotes **Next**; v4 bump; claim full 5–10MB until slice 4 / `final.md` §6 cleared or deferred in release notes.
 4. **Names:** product + Wrangler Worker script = `mdviewer`; Pages = `markview`; API = `api.mdviewer.zamdev.dev`. MCP/`/compatibility.name` = `mdviewer`.
-5. **Systems:** [`../systems/web.md`](../systems/web.md) · [`../systems/worker.md`](../systems/worker.md). Share UX 08 + share view helpers shipped.
+5. **Systems:** [`../systems/web.md`](../systems/web.md) · [`../systems/worker.md`](../systems/worker.md).
 
 ---
 
@@ -27,19 +29,15 @@
 | **Now** | Large-doc perf — slice 4 | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
 | **Next** | Appflare packaging + catalog submit | [`06-appflare.md`](./06-appflare.md) |
 | **Parked** | Nested projects / CSP nonce / ModalShell leftovers | [`../final.md`](../final.md) §7 |
-| **Shipped** | Perf slice 3 per-component (code/Mermaid/math/images) | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
-| **Shipped** | Share bind + compact UX + virt badge + share view helpers | [`08-share-ux.md`](./08-share-ux.md) |
-| **Shipped** | Showcase honesty + visibility (MCP/llms) | [`05-showcase.md`](./05-showcase.md) |
-| **Shipped** | Protocol 3 manage token | [`07-manage-token.md`](./07-manage-token.md) |
-| **Shipped** | Share protocol 2 / dialog / agents | [`01`](./01-share-protocol.md)–[`03`](./03-agent-surfaces.md) |
-| **Shipped** | Perf 0–2 (debounce/LRU + preview virt + worker parse; editor deferred) | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
+
+Folded (receipts only): [`../shipped/README.md`](../shipped/README.md) — protocol 01–03, showcase 05, manage token 07, share UX 08, perf 0–3 notes.
 
 ---
 
 ## Dependency chain
 
 ```txt
-01–03 + 07 + 05 + 08 Share UX   (shipped)
+01–03 + 07 + 05 + 08   (shipped / folded)
   → 04 slices 0–3 shipped; slice 4 next  ← Now
     → 06 Appflare pack + catalog PR     ← Next
   Parked: final.md §7
@@ -51,19 +49,18 @@
 
 ## Next task (do not guess)
 
-1. [`04-perf-large-docs.md`](./04-perf-large-docs.md) — **slice 4** (P3–P4 + table row virt). Editor virt deferred.
-2. Do **not** scaffold Appflare pack code until Focus promotes **Next**.
+1. [`04-perf-large-docs.md`](./04-perf-large-docs.md) — **slice 4**. Editor virt deferred.
+2. Do **not** scaffold Appflare pack until Focus promotes **Next**.
 3. Do **not** bump **v4.0.0** until [`../final.md`](../final.md) is clear.
 
 ---
 
 ## Open phase index
 
-| Doc | Label | Slices / notes |
-|-----|-------|----------------|
-| [`04-perf-large-docs.md`](./04-perf-large-docs.md) | **Now** | 0–3 **shipped** → **4** next |
+| Doc | Label | Notes |
+|-----|-------|-------|
+| [`04-perf-large-docs.md`](./04-perf-large-docs.md) | **Now** | 0–3 shipped → **4** next |
 | [`06-appflare.md`](./06-appflare.md) | **Next** / Declared | Pack → validate → catalog PR |
-| [`08-share-ux.md`](./08-share-ux.md) | **Shipped** | Compact one-dialog + bind heal; share view virt/copy/scroll |
 | [`../final.md`](../final.md) §7 | **Parked** | Nested projects, CSP nonce, ModalShell |
 
 ---

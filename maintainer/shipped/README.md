@@ -1,9 +1,11 @@
 # Shipped
 
-Closed slices (newest first).
+Closed slices (newest first). Full folded phase receipts live beside this index (`01`–`03`, `05`, `07`, `08`). Open work stays in [`../phases/`](../phases/) (`focus`, `04`, `06` only).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Fold phases 01–03 / 05 / 07 / 08 → `shipped/` | `phases/` stubs only; Focus lists open docs |
+| 2026-11 | Editor baseline / Files editing mark | Default sample + empty ≠ unsaved; clear Files “Editing” when New/empty/temp baseline |
 | 2026-11 | Perf slice 3 per-component | Code collapse/lazy HL; Mermaid current-theme + size warn; skip-math pipeline; image lazy/async + size warn; table row virt deferred to 4 |
 | 2026-11 | Share view helpers | `/share/:id` Virtualization badge, Copy markdown, gated scroll-up |
 | 2026-11 | Share bind + compact UX + preview polish | Bound share survives reload; one Share dialog; table/code overflow-x; virt badge; lazy visible worker parse; health probe de-spam |

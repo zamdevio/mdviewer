@@ -23,9 +23,14 @@ export {
 export {
     hasUnsavedContent,
     isContentEmpty,
+    isBaselineEditorContent,
 } from "./validation";
 
-export { saveTempFile } from "./temp-file";
+export {
+    saveTempFile,
+    tempFileHasUnsavedWork,
+    clearDisposableTempFile,
+} from "./temp-file";
 
 export {
     getSuggestedFilename,

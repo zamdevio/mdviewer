@@ -1,35 +1,7 @@
 # Share UX — manage / compose / distribute + rotate results
 
-**Focus label:** **Shipped** ([`focus.md`](./focus.md))  
-**Order:** ahead of remaining 04 / Appflare  
-**Status:** Shipped — compact one-dialog + bound-share heal; share view virt/copy/scroll on `main`  
-**Depends on:** Protocol 3 ([`07-manage-token.md`](./07-manage-token.md)), dialog shell ([`02-share-dialog.md`](./02-share-dialog.md))
+**Status:** Folded into shipped.
 
-## Goals
+Full receipt: [`../shipped/08-share-ux.md`](../shipped/08-share-ux.md) · index: [`../shipped/README.md`](../shipped/README.md)
 
-1. **Delete:** remote 404 / gone → prune local Shares row + clear `file`/`project` `shareId`; no hard error toast.
-2. **Rotate manage token:** scrollable results (updated + failed + View); persist new token if any id re-keyed or failures are only tombstones; prune gone/orphan locally from panel.
-3. **Share dialog steps:** **Manage** → **Compose** → **Distribute** (Back → Compose). Update = PUT; view password = PATCH; create = POST; Delete = remote + local only.
-4. **Shares Edit:** Update only when local file/project has that `shareId`.
-
-## Naming
-
-| UI | API |
-|----|-----|
-| Rotate **manage** token | `POST /share/rotate-manage` (Settings) |
-| Rotate / set **view** password | `PATCH /share/:id` |
-| Update content | `PUT /share/:id` (does not slide `expiresAt`) |
-
-## Checklist
-
-- [x] 404-tolerant remote delete + local prune (`lib/share/remote-delete.ts`, `share-gone.ts`)
-- [x] Rotate results dialog + persist rules (`RotateManageResultsDialog`, `lib/share/rotate-manage.ts`)
-- [x] ShareCompose manage/compose + SharePanel Back
-- [x] Wire editor + files + shares
-- [x] `systems/` + `shipped/` + `docs/api.md` + `docs/getting-started.md`
-
-## Systems / docs
-
-- [`../systems/web.md`](../systems/web.md) — Share UX + rotate manage
-- [`../systems/worker.md`](../systems/worker.md) — rotate failure codes
-- [`../../docs/api.md`](../../docs/api.md) · [`../../docs/getting-started.md`](../../docs/getting-started.md)
+Do not extend this stub — new work goes in Focus **Now** / open phase docs only.

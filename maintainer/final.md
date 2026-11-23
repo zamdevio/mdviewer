@@ -26,7 +26,7 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 
 ## 3. Phase C — share protocol
 
-See [`phases/01-share-protocol.md`](./phases/01-share-protocol.md).
+See [`shipped/01-share-protocol.md`](./shipped/01-share-protocol.md) (folded).
 
 - [x] R2 prefix layout + `metadata.json`
 - [x] Password hash; mutate/delete require `X-Share-Password`
@@ -38,7 +38,7 @@ See [`phases/01-share-protocol.md`](./phases/01-share-protocol.md).
 
 ## 4. Phase D — unified share dialog
 
-See [`phases/02-share-dialog.md`](./phases/02-share-dialog.md).
+See [`shipped/02-share-dialog.md`](./shipped/02-share-dialog.md) (folded).
 
 - [x] One Share dialog (editor + file + project)
 - [x] Local `shareId` binding; new link vs replace
@@ -47,7 +47,7 @@ See [`phases/02-share-dialog.md`](./phases/02-share-dialog.md).
 
 ## 5. Phase E — agent surfaces
 
-See [`phases/03-agent-surfaces.md`](./phases/03-agent-surfaces.md).
+See [`shipped/03-agent-surfaces.md`](./shipped/03-agent-surfaces.md) (folded).
 
 - [x] SPA `/llms.txt` + `/llms-full.txt` (done in 3.x)
 - [x] Worker MCP tools on same service (`get_share`, `upload_share`, …)
@@ -67,7 +67,7 @@ See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
 ## 6b. Protocol 3 — manage token (**Now**)
 
-See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`phases/focus.md`](./phases/focus.md) · systems [`systems/worker.md`](./systems/worker.md) (protocol 3 only; no dual auth).
+See [`shipped/07-manage-token.md`](./shipped/07-manage-token.md) (folded) · order in [`phases/focus.md`](./phases/focus.md) · systems [`systems/worker.md`](./systems/worker.md) (protocol 3 only; no dual auth).
 
 - [x] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
 - [x] View password disposable per share; mutate uses Bearer manage token only

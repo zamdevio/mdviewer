@@ -18,7 +18,10 @@ import {
     createNewFileFromUrl,
     hasUnsavedContent,
     isContentEmpty,
+    isBaselineEditorContent,
     saveTempFile,
+    clearDisposableTempFile,
+    tempFileHasUnsavedWork,
     getSuggestedFilename,
     DEFAULT_MARKDOWN,
     // URL helpers
@@ -279,23 +282,21 @@ export default function EditorPage() {
         }
 
         if (fileId) {
-            // Check if there's temp content that would be lost
-            const tempContent = getTempFile();
-            const hasTempContent = tempContent && tempContent.trim();
-
-            if (hasTempContent) {
-                // Show warning dialog - user has unsaved temp content
+            // Empty / settings default sample is not real unsaved work
+            const hasRealTemp = tempFileHasUnsavedWork();
+            if (!hasRealTemp) {
+                clearDisposableTempFile();
+                clearTempFile();
+                loadFileContentByFileId(fileId, "", false);
+            } else {
                 setPendingFileId(fileId);
                 setShowLoadFileDialog(true);
-            } else {
-                // No temp content, load file directly
-                loadFileContentByFileId(fileId, '', false);
             }
 
             // Remove query param
             const url = new URL(window.location.href);
-            url.searchParams.delete('file');
-            window.history.replaceState({}, '', url.toString());
+            url.searchParams.delete("file");
+            window.history.replaceState({}, "", url.toString());
             return;
         }
 
@@ -353,13 +354,13 @@ export default function EditorPage() {
                 toast.success("File loaded");
             }
         } else {
-            // File not found, reset to default state
+            // File not found — no Files "Editing" mark
+            clearAllEditingFlags();
             const newState = getInitialEditorState();
             setEditorState(newState);
-            // Reset undo/redo history
             setTimeout(() => {
                 if (textareaRef.current) {
-                    textareaRef.current.value = '';
+                    textareaRef.current.value = "";
                     textareaRef.current.value = newState.markdown;
                 }
             }, 0);
@@ -401,14 +402,16 @@ export default function EditorPage() {
     useEffect(() => {
         if (!mounted) return;
 
-        // Check for temp file first (unsaved content takes priority)
-        const tempContent = getTempFile();
-        if (tempContent) {
-            // Temp file exists - clear editing mode so files page doesn't show temp content as editing
-            // Temp content is not a real saved file, so it shouldn't be marked as editing
-            clearAllEditingFlags();
+        // Disposable temp (empty / default sample) must not block or look like "editing"
+        if (!tempFileHasUnsavedWork()) {
+            clearDisposableTempFile();
+            clearTempFile();
+        }
 
-            // Use temp content and don't load editing file
+        const tempContent = getTempFile();
+        if (tempContent && !isBaselineEditorContent(tempContent)) {
+            // Real unsaved work — clear Files editing mark (temp isn't a saved file)
+            clearAllEditingFlags();
             setEditorState({
                 markdown: tempContent,
                 currentFileName: null,
@@ -421,17 +424,14 @@ export default function EditorPage() {
             return;
         }
 
-        // Check for file with editing: true flag
         const editingFileData = getEditingFileFromSavedFiles();
 
         if (editingFileData) {
-            // Load the file that is marked as editing
             loadFileContentByFileId(editingFileData.id, editingFileData.filename, true);
         } else {
-            // No file marked as editing, use initial state
+            clearAllEditingFlags();
             const initialState = getInitialEditorState();
             setEditorState(initialState);
-            // Load auto-save setting
             const settings = getSettings();
             setAutoSaveEnabled(settings?.autoSave ?? true);
         }
@@ -614,33 +614,27 @@ export default function EditorPage() {
                         setSaveStatus('idle');
                     }
                 } else {
-                    // No file open, handle temp file
-                    if (markdown.trim()) {
-                        // Save to temp file if content exists
-                        try {
+                    // No file open — temp / baseline; never leave a Files "Editing" mark
+                    try {
+                        if (isBaselineEditorContent(markdown)) {
+                            clearTempFile();
+                            clearAllEditingFlags();
+                            setLastSavedContent("");
+                            setSaveStatus("idle");
+                        } else {
                             saveTempFile(markdown);
-                            // Clear editing mode when saving to temp file
-                            // Temp content is not a real saved file, so it shouldn't be marked as editing
                             clearAllEditingFlags();
                             setLastSaved(new Date());
                             setLastSavedContent(markdown);
-                            setSaveStatus('saved');
-                        } catch (error) {
-                            toast.error(`Error saving temp file: ${error instanceof Error ? error.message : 'Unknown error'}`);
-                            setSaveStatus('idle');
+                            setSaveStatus("saved");
                         }
-                    } else {
-                        // Clear temp file if content is empty
-                        try {
-                            clearTempFile();
-                            // Clear editing mode when clearing temp file (no content = no editing file)
-                            clearAllEditingFlags();
-                            setLastSavedContent('');
-                            setSaveStatus('idle');
-                        } catch (error) {
-                            toast.error("Error clearing temp file: " + (error instanceof Error ? error.message : "Unknown error"));
-                            setSaveStatus('idle');
-                        }
+                    } catch (error) {
+                        toast.error(
+                            `Error saving temp file: ${
+                                error instanceof Error ? error.message : "Unknown error"
+                            }`,
+                        );
+                        setSaveStatus("idle");
                     }
                 }
 
@@ -709,16 +703,23 @@ export default function EditorPage() {
         }
     }, [markdown, currentFileName, mounted, shareUrl, lastSharedContent, lastSharedFileName]);
 
-    // Save temp file on unmount if there's unsaved content
+    // Persist real unsaved work on unmount; clear baseline so Files→Load stays quiet
     useEffect(() => {
         return () => {
-            // Save temp file on component unmount if there's unsaved content
-            if (!currentFileName && markdown.trim()) {
-                try {
+            if (currentFileName) return;
+            try {
+                if (isBaselineEditorContent(markdown)) {
+                    clearTempFile();
+                    clearAllEditingFlags();
+                } else if (markdown.trim()) {
                     saveTempFile(markdown);
-                } catch (error) {
-                    toast.error("Error saving temp file on unmount: " + (error instanceof Error ? error.message : "Unknown error"));
+                    clearAllEditingFlags();
                 }
+            } catch (error) {
+                toast.error(
+                    "Error saving temp file on unmount: " +
+                        (error instanceof Error ? error.message : "Unknown error"),
+                );
             }
         };
     }, [markdown, currentFileName]);
