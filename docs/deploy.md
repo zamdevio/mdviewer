@@ -21,7 +21,13 @@
 | `VITE_API_URL` | `https://api.mdviewer.zamdev.dev` |
 | `VITE_FRONTEND_URL` | `https://mdviewer.zamdev.dev` |
 
-Users can still override hosts in **Settings → Share**. Self-host: point the SPA at your worker; see [`api.md`](./api.md) `/compatibility`.
+Users can still override hosts in **Settings → Share**. Self-host: point the SPA at your worker; see [`api.md`](./api.md) `/compatibility` (`protocol: 3`, `ttl`, `limits`).
+
+### Operator caps (self-host)
+
+Edit [`apps/worker/src/lib/config.ts`](../apps/worker/src/lib/config.ts) (TTL bounds, max file bytes, `ROTATE_MANAGE_MAX_IDS`, fair-use defaults), then redeploy the Worker. The SPA adapts via `GET /compatibility` — do not hardcode those numbers in clients. Optional env overrides: `RATE_LIMIT_WINDOW`, `RATE_LIMIT_MAX_REQUESTS`.
+
+Manage tokens live in the browser (Settings → Manage token / `#token`), not in Worker env.
 
 ## Manual
 

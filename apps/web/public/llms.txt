@@ -8,9 +8,9 @@ MDViewer is a client-side Markdown app (Vite + React) with an optional edge shar
 
 - [Getting started](https://github.com/zamdevio/mdviewer/blob/main/docs/getting-started.md): install and run
 - [Architecture](https://github.com/zamdevio/mdviewer/blob/main/docs/architecture.md): SPA + worker layout
-- [API](https://github.com/zamdevio/mdviewer/blob/main/docs/api.md): Worker endpoints (protocol 2)
+- [API](https://github.com/zamdevio/mdviewer/blob/main/docs/api.md): Worker endpoints (protocol 3)
 - [Security](https://github.com/zamdevio/mdviewer/blob/main/docs/security.md): threat model and mitigations
-- [Full agent brief](https://mdviewer.zamdev.dev/llms-full.txt): endpoints, password/TTL, MCP
+- [Full agent brief](https://mdviewer.zamdev.dev/llms-full.txt): endpoints, manage token vs view password, MCP
 
 ## App
 
@@ -24,8 +24,13 @@ MDViewer is a client-side Markdown app (Vite + React) with an optional edge shar
 
 Use path form only: SPA `https://mdviewer.zamdev.dev/share/<id>`, Worker raw `https://api.mdviewer.zamdev.dev/share/<id>`.
 
+## Auth (do not conflate)
+
+- **Manage token** — creator secret; required for upload / mutate / delete / rotate. Prefer `Authorization: Bearer`. Never put in the public URL.
+- **View password** — optional disposable per-share secret for GET when `viewProtected`. Header `X-Share-Password` only. Never use as admin.
+
 ## Optional
 
 - [Pages deploy](https://markview.pages.dev/): Cloudflare Pages mirror
-- [Compatibility](https://api.mdviewer.zamdev.dev/compatibility): versioned API handshake JSON
+- [Compatibility](https://api.mdviewer.zamdev.dev/compatibility): protocol 3 handshake + `ttl` / `limits`
 - [Worker llms-full](https://api.mdviewer.zamdev.dev/llms-full.txt): same brief on the API host

@@ -1,27 +1,38 @@
 # MDViewer — full agent brief
 
-> Protocol 2 share API + MCP on the Worker. SPA and Worker both serve `/llms.txt` / `/llms-full.txt` (SPA files are the source of truth; Worker embeds a generated copy).
+> Protocol 3 share API + MCP on the Worker. SPA and Worker both serve `/llms.txt` / `/llms-full.txt` (SPA files are the source of truth; Worker embeds a generated copy).
 
 ## Product
 
 - SPA: `apps/web` — local files/projects in browser storage, GFM + Mermaid + KaTeX preview
-- Worker: `apps/worker` — share upload/download on R2, fair-use, TTL, optional password
-- Config: public Vite defaults (`VITE_API_URL`, `VITE_FRONTEND_URL`) or Settings → Share override (http/https only)
+- Worker: `apps/worker` — share upload/download on R2, fair-use, fixed TTL, manage token + optional view password
+- Config: public Vite defaults (`VITE_API_URL`, `VITE_FRONTEND_URL`) or Settings → Share override (http/https only). Operator caps: `apps/worker/src/lib/config.ts` (self-host edit + redeploy); SPA reads `/compatibility`.
 
-## Public Worker API (protocol 2)
+## Auth (never conflate)
+
+| Capability | Mechanism | Who |
+|------------|-----------|-----|
+| View link | Share id in URL | Anyone with the link |
+| View-protect | Optional disposable **view password** → `X-Share-Password` on GET | Readers the creator trusts |
+| Manage | **Manage token** → `Authorization: Bearer` (preferred) or `X-Share-Manage-Token` | Creator device / SPA Settings `#token` / MCP client |
+
+Mutate/delete/upload/rotate **never** accept the view password as admin.
+
+## Public Worker API (protocol 3)
 
 Base: `https://api.mdviewer.zamdev.dev` (or self-hosted worker)
 
 | Method | Path | Notes |
 |--------|------|-------|
 | GET | `/health` | `{ ok: true }` |
-| GET | `/compatibility` | Handshake (`protocol: 2`); features + TTL bounds |
-| POST | `/upload` | Create under `shares/{id}/`; fair-use (IP+UA); optional password/TTL headers |
-| GET | `/share/:id` | Raw markdown; password if `viewProtected` |
-| GET | `/share/:id/meta` | Anon metadata |
-| PUT | `/share/:id` | Replace content; requires `X-Share-Password`; keeps `expiresAt` |
-| PATCH | `/share/:id` | `{ viewProtected }`; requires password |
-| DELETE | `/share/:id` | Wipe prefix; requires password |
+| GET | `/compatibility` | Handshake (`protocol: 3`); features + `ttl` + `limits` |
+| POST | `/upload` | Create; **manage token required**; optional view password + TTL headers |
+| GET | `/share/:id` | Raw markdown; view password if `viewProtected` |
+| GET | `/share/:id/meta` | Anon metadata (no hashes) |
+| PUT | `/share/:id` | Replace content; **manage token**; keeps `expiresAt` |
+| PATCH | `/share/:id` | `{ viewProtected, viewPassword? }`; **manage token** |
+| DELETE | `/share/:id` | Wipe prefix; **manage token** |
+| POST | `/share/rotate-manage` | Bulk re-key `manageTokenHash`; Bearer **old** token; body `shareIds` + `newManageToken`; cap from `limits.rotateManageMaxIds` (default 50) |
 | POST | `/mcp` | MCP JSON-RPC (`initialize`, `tools/list`, `tools/call`) |
 | GET | `/mcp` | Discovery JSON |
 | GET | `/llms.txt` | Agent brief |
@@ -29,13 +40,17 @@ Base: `https://api.mdviewer.zamdev.dev` (or self-hosted worker)
 | GET | `/docs` | Swagger UI |
 | GET | `/openapi.json` | OpenAPI document |
 
-CORS / constructed frontend share URLs use worker `ALLOWED_ORIGINS` (see `apps/worker/wrangler.jsonc`).
+CORS / constructed frontend share URLs use worker `ALLOWED_ORIGINS` (see `apps/worker/wrangler.jsonc`). Allow `Authorization` and `X-Share-Manage-Token`.
 
-Upload headers: `X-Share-Password`, `X-Share-TTL-Seconds` (default 7d, max 30d), `X-Share-View-Protected`, `X-Share-Filename`, `X-Share-Type`.
+Upload / manage headers: `Authorization: Bearer <manageToken>` or `X-Share-Manage-Token`; optional view `X-Share-Password` when protect on; `X-Share-TTL-Seconds` (default 7d, max 30d); `X-Share-View-Protected`; `X-Share-Filename`; `X-Share-Type`.
 
 ## MCP tools
 
-`get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share` — same semantics as REST; mutating tools take a `password` argument. Fair-use is stricter for MCP (`X-MDViewer-Client: mcp`).
+`get_share`, `get_share_meta`, `upload_share`, `update_share`, `delete_share`
+
+- `upload_share` / `update_share` / `delete_share` require **`manageToken`**
+- `get_share` uses **`viewPassword`** only when `viewProtected` (alias `password` deprecated)
+- Fair-use is stricter for MCP (`X-MDViewer-Client: mcp`)
 
 ## Share URLs (same path shape everywhere)
 
@@ -55,14 +70,15 @@ In-doc fragment links (`#heading`) work in editor preview and share viewer (firs
 
 - Large-doc performance (virtual scroll / lazy heavy blocks) — `maintainer/phases/04-perf-large-docs.md`
 - Nested projects / CSP nonce / ModalShell leftovers — `maintainer/final.md` §7
+- Wipe Worker R2 before real v4 deploy (protocol 3-only objects)
 
-Track release readiness in `maintainer/final.md`. Do **not** bump to v4.0 until that checklist is cleared and approved.
+Track release readiness in `maintainer/final.md`. Do **not** bump to v4.0 until that checklist is cleared and approved. Stay on **3.x.x** until then.
 
 ## Security notes
 
 - Preview: rehype-sanitize after KaTeX; Mermaid `securityLevel: "strict"`
 - Pages: CSP, X-Frame-Options DENY, COOP
-- Details: https://github.com/zamdevio/mdviewer/blob/main/docs/security.md
+- Manage vs view secrets: https://github.com/zamdevio/mdviewer/blob/main/docs/security.md
 
 ## Links
 

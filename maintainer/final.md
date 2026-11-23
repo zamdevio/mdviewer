@@ -18,10 +18,10 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 
 ## 2. Docs honesty
 
-- [x] [`apps/web/public/llms-full.txt`](../apps/web/public/llms-full.txt) — protocol 2 + MCP documented; Worker embeds generated copy
-- [x] [`README.md`](../README.md) — password/TTL/MCP listed as shipped where true
-- [x] [`docs/api.md`](../docs/api.md) — protocol 2 + MCP
-- [x] [`docs/security.md`](../docs/security.md) — Phase C rows marked hardened
+- [x] [`apps/web/public/llms-full.txt`](../apps/web/public/llms-full.txt) — protocol 3 + manage/view + MCP; Worker embeds generated copy
+- [x] [`README.md`](../README.md) — manage token / view password / TTL / MCP listed as shipped where true
+- [x] [`docs/api.md`](../docs/api.md) — protocol 3 + MCP
+- [x] [`docs/security.md`](../docs/security.md) — manage vs view hardened
 - [x] Root [`SECURITY.md`](../SECURITY.md) / [`CONTRIBUTING.md`](../CONTRIBUTING.md) present and linked
 
 ## 3. Phase C — share protocol
@@ -67,10 +67,11 @@ See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
 See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`phases/focus.md`](./phases/focus.md) · systems [`systems/worker.md`](./systems/worker.md) (protocol 3 only; no dual auth).
 
-- [ ] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
-- [ ] View password disposable per share; mutate uses Bearer manage token only
-- [ ] Already-shared UX core; Shares page Edit = editor dialog
-- [ ] Compatibility protocol 3 + llms + OpenAPI/MCP docs
+- [x] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
+- [x] View password disposable per share; mutate uses Bearer manage token only
+- [x] Already-shared UX core; Shares page Edit = editor dialog
+- [x] Compatibility protocol 3 + llms + OpenAPI/MCP docs
+- [ ] Local + prod smoke (health / compatibility 3 / upload+mutate with manage token / view protect GET)
 - [ ] **Wipe Worker R2** (share objects / bucket) before real **v4.0.0** deploy — start fresh; no protocol-2 leftovers
 - [ ] Appflare **Then** ([`phases/06-appflare.md`](./phases/06-appflare.md)) — declared; catalog describes protocol 3 once live
 

@@ -2,7 +2,7 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** Slice A–C implemented; D–E open (docs/MCP llms + migrate smoke)  
+**Status:** Slice A–D implemented; E smoke / Focus promote **Next** (05) after local+prod check + R2 wipe before real v4  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
 **Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
@@ -18,7 +18,7 @@
 | **B** SPA settings + compose | `#token` rename; auto-gen; block share if missing; rotate confirm → bulk rotate local ids (batch size from compatibility); view-protect → disposable auto-gen field; already-shared (existing / new link / edit protect / delete); SPA **reads** `/compatibility` and adapts (no hardcoded caps) | Editor share flow uses manage token only |
 | **C** Shares page | Edit next to Copy (mobile-friendly) → same already-shared dialog | Parity with editor; no second delete-only UX |
 | **D** Agents + public docs | `llms.txt` / `llms-full.txt`; MCP args; regen Worker embed; `docs/api.md` + `security.md` + README + deploy/self-host (`config.ts`) | Agents cannot treat view password as admin |
-| **E** Migrate + smoke | Settings key migrate; local + prod smoke; R2 wipe before real v4 | Focus promotes **Next** (05) |
+| **E** Migrate + smoke | Settings key migrate (**done** in B); local + prod smoke; R2 wipe before real v4 | Focus promotes **Next** (05) |
 
 Do not start B until A’s auth split is deployable. C may land in the same PR as B if the dialog is already shared. D can share a PR with E.
 
@@ -209,12 +209,12 @@ Headers: manage = `Authorization: Bearer <token>` (preferred) or `X-Share-Manage
 
 ### Agent surfaces
 
-- [ ] `llms.txt` / `llms-full.txt` — manage vs view password; MCP args
-- [ ] Regen worker embedded llms
+- [x] `llms.txt` / `llms-full.txt` — manage vs view password; MCP args
+- [x] Regen worker embedded llms
 
 ### Public docs
 
-- [ ] `docs/api.md`, `docs/security.md`, README share section, `docs/deploy.md` (config.ts self-host)
+- [x] `docs/api.md`, `docs/security.md`, README share section, `docs/deploy.md` (config.ts self-host)
 
 ---
 

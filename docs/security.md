@@ -8,7 +8,7 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 |---------|--------|
 | Browser localStorage (files, settings) | Same-origin XSS is the main risk |
 | Markdown preview (editor + `/share`) | Untrusted Markdown/HTML from user or shared links |
-| Share Worker (`POST /upload`, `GET /share/:id`, mutate routes) | Public GET by default; optional view password; mutate requires create-time password (protocol 2) |
+| Share Worker (`POST /upload`, `GET /share/:id`, mutate routes) | Public GET by default; optional disposable view password; mutate/upload require **manage token** (protocol 3) |
 | Settings API override | Must not accept `javascript:` / opaque URLs |
 
 ## Hardened (with proof in code)
@@ -30,8 +30,9 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 
 | Item | Status |
 |------|--------|
-| Public share GET by id (no view password) | **Intentional** default; set `viewProtected` + password at create to gate GET |
-| Share mutate/delete without password | **Hardened** — requires `X-Share-Password` when hash was set at create; shares created without password cannot mutate |
+| Public share GET by id (no view password) | **Intentional** default; set `viewProtected` + disposable view password at create to gate GET |
+| Share mutate/delete / upload | **Hardened** — require manage token (`Authorization: Bearer` / `X-Share-Manage-Token`); view password never authorizes mutate |
+| Manage token lost on device | Local shares become immutable until TTL; operator can wipe by id out-of-band |
 | Fixed TTL + cron expiry | **Hardened** — default 7d / max 30d; daily cron sweep |
 | Fair-use fingerprint DO | **Hardened** — IP+UA (+ CF country); stricter agent-shaped limits |
 | CSP `script-src 'unsafe-inline'` | Needed for inline theme bootstrap in `index.html`; prefer nonce in a later pass |
