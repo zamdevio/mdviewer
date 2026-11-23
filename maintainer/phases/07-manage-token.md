@@ -2,10 +2,11 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** Design locked — [`docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md`](../../docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md); Slice A not started  
+**Status:** Design locked — Slice A not started  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
-**Hard cut:** Protocol **3 only** in code/docs — no protocol-2 mutate path, no flat-key legacy. Wipe Worker R2 before real v4 (`final.md`).
+**Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
+**Systems map:** [`../systems/worker.md`](../systems/worker.md)
 
 ---
 
@@ -13,13 +14,15 @@
 
 | Slice | Scope | Done when |
 |-------|--------|-----------|
-| **A** Worker | `manageTokenHash` + optional view `passwordHash`; Bearer manage on mutate/delete/PATCH; `X-Share-Password` view-only; bulk rotate ≤N; `/compatibility` protocol 3 + flags; OpenAPI notes | Worker tests/smoke green; legacy protocol-2 mutate path documented |
-| **B** SPA settings + compose | `#token` rename; auto-gen; block share if missing; rotate confirm → bulk rotate local ids; view-protect → disposable auto-gen field; already-shared (existing / new link / edit protect / delete) | Editor share flow uses manage token only |
+| **A** Worker | In-place auth swap; `manageTokenHash` + optional view `passwordHash`; Bearer manage on upload/mutate/delete; `X-Share-Password` view-only; efficient bulk rotate (N=50); central `lib/config.ts`; `/compatibility` protocol 3 + `limits`; MCP tools use manageToken; drop flat-key / protocol-2 paths | Worker tests/smoke green |
+| **B** SPA settings + compose | `#token` rename; auto-gen; block share if missing; rotate confirm → bulk rotate local ids (batch size from compatibility); view-protect → disposable auto-gen field; already-shared (existing / new link / edit protect / delete); SPA **reads** `/compatibility` and adapts (no hardcoded caps) | Editor share flow uses manage token only |
 | **C** Shares page | Edit next to Copy (mobile-friendly) → same already-shared dialog | Parity with editor; no second delete-only UX |
-| **D** Agents + public docs | `llms.txt` / `llms-full.txt`; MCP args (`manageToken` vs view password); regen Worker embed; `docs/api.md` + `security.md` + README | Agents cannot treat view password as admin |
-| **E** Migrate + smoke | Settings key migrate; protocol-2 object handling; local + prod smoke | Focus promotes **Next** (05) |
+| **D** Agents + public docs | `llms.txt` / `llms-full.txt`; MCP args; regen Worker embed; `docs/api.md` + `security.md` + README + deploy/self-host (`config.ts`) | Agents cannot treat view password as admin |
+| **E** Migrate + smoke | Settings key migrate; local + prod smoke; R2 wipe before real v4 | Focus promotes **Next** (05) |
 
 Do not start B until A’s auth split is deployable. C may land in the same PR as B if the dialog is already shared. D can share a PR with E.
+
+**Slice A approach:** in-place swap on existing routes (not a Worker rewrite).
 
 ---
 
@@ -83,48 +86,90 @@ So a “view password” shared with a reader is also the admin secret. That is 
 
 ---
 
-## API (protocol 3)
+## Locked design (Worker / protocol 3)
 
-Bump `/compatibility` → `protocol: 3` + feature flags e.g. `manageToken`, `viewPasswordSeparate`.
+### Security
 
-### Headers / auth naming
+- Hashes live only in R2 `metadata.json`. Public meta never returns hashes — only booleans (`viewProtected`, `hasPassword`).
+- Client sends plaintext once in headers; Worker PBKDF2-hashes and constant-time compares (`hashPassword` / `verifyPassword`).
+- View password **never** authorizes upload/mutate/delete/rotate.
+- Rejected: server-minted JWTs / operator HMAC secrets (wrong fit for device-held manage token).
 
-| Concern | Header / mechanism |
-|---------|-------------------|
-| View password (GET if `viewProtected`) | `X-Share-Password` **view only** |
-| Manage (mutate / delete / protect toggle / rotate) | `Authorization: Bearer <manageToken>` (preferred) or `X-Share-Manage-Token` |
+### Metadata
 
-Do **not** overload `X-Share-Password` for mutate after this ships.
+```ts
+type ShareMetadata = {
+  id: string;
+  type: "file" | "project";
+  filename: string;
+  contentType: string;
+  size: number;
+  createdAt: string;
+  expiresAt: string;
+  manageTokenHash: string; // required
+  passwordHash: string | null; // view-only
+  viewProtected: boolean;
+  protocol: 3;
+};
+```
 
-### Create `POST /upload`
+Objects without `manageTokenHash` fail manage auth — no dedicated legacy branch.
 
-- Requires manage token (header).
-- Optional view password headers only if creating already view-protected.
-- Response includes: `id`, `frontendShareUrl`, `contentUrl`, `expiresAt`, …  
-  Manage token is **not** returned (client already has it from settings). MCP/clients that mint ephemeral tokens still send the same header.
+### Auth matrix
 
-### Mutate
+| Operation | Credential |
+|-----------|------------|
+| `POST /upload` | Manage token **required**; optional `X-Share-Password` if creating view-protected |
+| `GET /share/:id` | `X-Share-Password` iff `viewProtected` |
+| `GET /share/:id/meta` | Anonymous |
+| `PUT / PATCH / DELETE /share/:id` | Manage token |
+| `POST /share/rotate-manage` | Bearer **old** manage token; body `newManageToken` |
 
-- `PUT /share/:id`, `PATCH /share/:id`, `DELETE /share/:id` → Bearer manage token.
-- PATCH may set/clear `viewProtected` and replace view password hash when protect stays on.
+Headers: manage = `Authorization: Bearer <token>` (preferred) or `X-Share-Manage-Token`; view = `X-Share-Password` only. CORS must allow `Authorization` + `X-Share-Manage-Token`.
 
-### Bulk rotate
+### Bulk rotate (efficient)
 
-- `POST /share/rotate-manage` (or `/shares/rotate-manage`)  
-  Body: `{ shareIds: string[], newManageToken` proved by… }`  
-  Auth: Bearer **old** manage token; body/header carries proof of **new** token hash to write.  
-  Cap **N** ids per request (fair-use; suggest N=20–50).  
-  Used when Settings rotates the device manage token so worker metadata `manageTokenHash` matches.
+`POST /share/rotate-manage`
 
-### Host escape hatch
+- Body: `{ shareIds: string[], newManageToken: string }`
+- Cap: **`ROTATE_MANAGE_MAX_IDS = 50`** (from central config); over → 400
+- **Hash `newManageToken` once**; write that same hash onto every updated share
+- Parallel `readMetadata` → verify old token per id → parallel metadata puts (file blobs untouched)
+- Response 200: `{ updated: string[], failed: { id, error }[] }` — partial OK
+- Fair-use: same upload-class fingerprint DO
 
-- Operator can wipe any share by ID out-of-band (R2 / admin script). Independent of user tokens. Document in `docs/security.md` + self-host notes.
+### Central config + compatibility
 
-### Migration / hard cut
+- **`apps/worker/src/lib/config.ts`** — single home for TTL bounds, `MAX_FILE_SIZE`, `ROTATE_MANAGE_MAX_IDS`, fair-use defaults (env `RATE_LIMIT_*` overrides stay). Self-host: edit + redeploy; see `docs/deploy.md`.
+- Other libs import from `config.ts` (one literal home).
+- `GET /compatibility` → `protocol: 3`, features (`manageToken`, `viewPasswordSeparate`, `fixedTtl`, `viewProtected`, `fairUseFingerprint`, `mcp`, `llmsTxt`), `ttl`, `limits: { maxFileBytes, rotateManageMaxIds }`, endpoints (incl. rotate-manage + Bearer manage descriptions).
+- SPA (B+): **read** compatibility for the configured API URL and adapt TTL UI / rotate batch size — do not hardcode caps. Not a Worker config-write API.
 
-- **No** protocol-2 dual auth in the Worker. Objects without `manageTokenHash` fail manage; do not document legacy mutate.
-- Ops: wipe Worker R2 before real **v4.0.0** deploy (`final.md`).
-- SPA (slices B/E): migrate settings key `#password` → `#token`; map old default share password → manage token once with confirm if needed (local only).
+### MCP (Slice A)
+
+- Upload / mutate / delete require `manageToken`; view-protected GET still uses view password only.
+- Stop teaching view password as admin. Full llms regen can land in D; auth behavior must be correct in A.
+
+### Hard cut / ops
+
+- No protocol-2 dual auth in Worker or public docs.
+- Wipe Worker R2 before real **v4.0.0** (`final.md` checkbox).
+- SPA (B/E): migrate settings `#password` → `#token` locally.
+
+### Slice A tests
+
+- Manage required on upload/PUT/PATCH/DELETE; view password alone cannot mutate
+- View-protected GET still needs `X-Share-Password`
+- Rotate: hash-once, cap 50, partial failure shape
+- Compatibility protocol 3 + `limits.rotateManageMaxIds`
+- Caps enforced via central config values
+
+### Out of Slice A
+
+- SPA Settings / compose / Shares Edit (B/C)
+- Public docs honesty beyond MCP auth correctness (D + phase 05)
+- Appflare pack (06)
+- Worker config-write API
 
 ---
 
@@ -138,24 +183,26 @@ Do **not** overload `X-Share-Password` for mutate after this ships.
 - [ ] Already-shared dialog (existing link / new link / edit protect / delete)
 - [ ] Shares page: Edit → same dialog; mobile-friendly
 - [ ] Local storage: bind `shareId` + manage-token era; store view password for creator convenience only (optional)
+- [ ] Adapt TTL / rotate batch size from `/compatibility` for configured API URL
 
 ### Worker
 
-- [ ] Metadata: `manageTokenHash` always; `passwordHash` = view-only optional
-- [ ] Auth split on GET vs mutate
+- [ ] `lib/config.ts` + consumers
+- [ ] Metadata: `manageTokenHash` always; `passwordHash` = view-only optional; `protocol: 3`
+- [ ] Auth split on GET vs mutate; drop flat-key / protocol-2 paths
 - [ ] Bulk rotate endpoint + fair-use
-- [ ] Compatibility protocol 3 + features
+- [ ] Compatibility protocol 3 + features + `limits`
 - [ ] OpenAPI / Swagger route descriptions
+- [ ] MCP tools: manageToken for mutate/upload
 
 ### Agent surfaces
 
 - [ ] `llms.txt` / `llms-full.txt` — manage vs view password; MCP args
-- [ ] MCP tools: mutate takes `manageToken`; upload requires it; never document view password as admin
 - [ ] Regen worker embedded llms
 
 ### Public docs
 
-- [ ] `docs/api.md`, `docs/security.md`, README share section
+- [ ] `docs/api.md`, `docs/security.md`, README share section, `docs/deploy.md` (config.ts self-host)
 
 ---
 
@@ -165,11 +212,13 @@ Do **not** overload `X-Share-Password` for mutate after this ships.
 - Claim-on-first-mutate as the headline (optional tiny IP-bound rescue later only)
 - Sliding TTL
 - Putting manage token in the public URL
+- Protocol-2 / flat-key compatibility shims
 
 ---
 
 ## Related
 
-- Protocol 2 baseline: [`01-share-protocol.md`](./01-share-protocol.md), [`02-share-dialog.md`](./02-share-dialog.md)
-- Appflare still planned: [`06-appflare.md`](./06-appflare.md) (catalog after this protocol stabilizes is fine; don’t block Appflare docs work on 07)
+- Protocol 2 baseline (historical): [`01-share-protocol.md`](./01-share-protocol.md), [`02-share-dialog.md`](./02-share-dialog.md)
+- Worker systems map: [`../systems/worker.md`](../systems/worker.md)
+- Appflare: [`06-appflare.md`](./06-appflare.md) (after this protocol stabilizes)
 - Pre-v4 checklist: [`../final.md`](../final.md)

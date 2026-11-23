@@ -65,8 +65,7 @@ See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
 ## 6b. Protocol 3 — manage token (**Now**)
 
-See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`phases/focus.md`](./phases/focus.md).  
-Design: [`docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md`](../docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md) (protocol 3 only; no dual auth).
+See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`phases/focus.md`](./phases/focus.md) · systems [`systems/worker.md`](./systems/worker.md) (protocol 3 only; no dual auth).
 
 - [ ] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
 - [ ] View password disposable per share; mutate uses Bearer manage token only
