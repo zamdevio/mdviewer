@@ -46,7 +46,7 @@ jobs:
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-worker:
-    name: Worker (api)
+    name: Worker (mdviewer)
     runs-on: ubuntu-latest
     permissions:
       contents: read

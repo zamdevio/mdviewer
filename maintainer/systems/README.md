@@ -13,7 +13,7 @@ Deploy secrets/vars: [`../../docs/deploy.md`](../../docs/deploy.md).
 | Surface | Stack | Deploy |
 |---------|-------|--------|
 | `apps/web` | Vite + React + react-router + Tailwind | Cloudflare Pages (`markview`) |
-| `apps/worker` | Hono + `@hono/zod-openapi` + Swagger UI | Cloudflare Workers script `mdviewer-api`; product name `mdviewer` |
+| `apps/worker` | Hono + `@hono/zod-openapi` + Swagger UI | Cloudflare Workers script `mdviewer` (Pages stays `markview`) |
 | Storage | R2 bucket `mdviewer` | Worker binding |
 | Rate limit | Durable Object `RateLimiter` | Worker binding |
 

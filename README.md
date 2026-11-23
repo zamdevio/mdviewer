@@ -137,7 +137,7 @@ pnpm worker:dev
 pnpm web:build
 pnpm worker:typecheck
 pnpm web:deploy      # Pages → markview
-pnpm worker:deploy   # Workers → mdviewer-api
+pnpm worker:deploy   # Workers → mdviewer (*.workers.dev)
 ```
 
 Env names: see [`.env.example`](./.env.example). Worker CORS / share origins: `ALLOWED_ORIGINS` in [`apps/worker/wrangler.jsonc`](./apps/worker/wrangler.jsonc) (include `http://localhost:3000` for local share).

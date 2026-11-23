@@ -1,7 +1,7 @@
 {
   // Cloudflare Worker — MDViewer share API
   // After clone: set ALLOWED_ORIGINS, optional routes / R2 bucket name.
-  "name": "mdviewer-api",
+  "name": "mdviewer",
   "main": "src/index.ts",
   "compatibility_date": "2024-01-01",
 
