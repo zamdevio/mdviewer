@@ -89,7 +89,7 @@ See [`shipped/07-manage-token.md`](./shipped/07-manage-token.md) (folded).
 
 ## 8. Release gate
 
-- [ ] §1 `#heading` smoke accepted by human
+- [x] §1 `#heading` smoke accepted by human (2026-11-23; history Back fix shipped)
 - [ ] Sections 1–7 accepted (deferred notes above) — **needs human + agent approval**
 - [ ] Deploy current `main` (3.x) to prod and confirm green
 - [ ] Bump root + `apps/web` to **4.0.0**; tag release — **only after that deploy**
