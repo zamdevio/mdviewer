@@ -17,7 +17,7 @@
 ## Handoff (2026-11-23)
 
 1. Read **this file**.
-2. **Now / Next:** [`appflare.md`](./appflare.md) — packaging + catalog submit.
+2. **Now / Next:** [`appflare.md`](./appflare.md) — catalog PR [#536](https://github.com/appflare/catalog/pull/536); badge after merge.
 3. **Parked:** [`parked.md`](./parked.md) — perf-4, editor-virt, nested projects, CSP nonce, ModalShell leftovers.
 4. **Names:** product + Wrangler Worker = `mdviewer`; Pages = `markview`; API = `api.mdviewer.zamdev.dev`.
 5. **Honest large-doc claim:** ~2MB virtualized preview (machine-dependent); no 5–10MB.

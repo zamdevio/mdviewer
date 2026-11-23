@@ -3,7 +3,7 @@
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** packaging + catalog **after** v4.0.0 ships  
 **Goal:** Make MDViewer installable via [Appflare](https://appflare.dev/) and submit to [appflare/catalog](https://github.com/appflare/catalog) when packaging is green.  
-**Status:** **In progress** — Worker-only dedicated config landed under `scripts/appflare/`  
+**Status:** **Submitted** — packaging on `main` @ `963d35a`; catalog PR [#536](https://github.com/appflare/catalog/pull/536)  
 **Agent submit guide:** https://appflare.dev/agent/submit.md
 
 ## Slices
@@ -11,9 +11,9 @@
 | Slice | Scope | Status |
 |-------|--------|--------|
 | **1** | Scaffold `scripts/appflare/` + Appflare-only wrangler (leave prod configs alone) | Done |
-| **2** | `pnpm validate` + `pnpm pack-app` against a catalog fork; health green | Next |
-| **3** | Manifest (protocol 3 summary, `paid`, `r2`) → PR to `appflare/catalog` | Pending confirm |
-| **4** | Optional Install badge; later full-product SPA+API pack if wanted | Later |
+| **2** | `pnpm validate` + `pnpm pack-app` against a catalog fork; health green | Done |
+| **3** | Manifest (protocol 3 summary, `paid`, `r2`) → PR to `appflare/catalog` | [#536](https://github.com/appflare/catalog/pull/536) |
+| **4** | Optional Install badge; later full-product SPA+API pack if wanted | After merge |
 
 ## How submission works
 
@@ -91,8 +91,8 @@ Custom builder under `scripts/appflare/` that builds Vite + emits Worker assets 
 ## Checklist
 
 - [x] Scaffold `scripts/appflare/` + Appflare-only wrangler — leave prod configs alone
-- [ ] `pnpm validate` + `pnpm pack-app` against a catalog fork
-- [ ] User confirms manifest → PR to `appflare/catalog` (push back on stars if needed)
+- [x] `pnpm validate` + `pnpm pack-app` against a catalog fork
+- [x] PR to `appflare/catalog` — [#536](https://github.com/appflare/catalog/pull/536) (0★ noted in PR body)
 - [ ] After merge: optional Install badge on README
 
 ## Out of scope right now
