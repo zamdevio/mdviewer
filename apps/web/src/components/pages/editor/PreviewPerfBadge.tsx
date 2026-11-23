@@ -9,7 +9,7 @@ import {
 } from "@/lib/performance/preview-status";
 import { cn } from "@/lib/utils";
 
-/** Editor-tools Virtualization control — only rendered in the expanded toolbar. */
+/** Virtualization control for editor tools + share view (gated by doc size / memory). */
 export function PreviewPerfBadge({ markdown }: { markdown: string }) {
   const [open, setOpen] = useState(false);
   const status = useMemo(() => getPreviewPerfStatus(markdown), [markdown]);

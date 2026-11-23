@@ -8,12 +8,15 @@ import {
     Copy,
     Check,
     ArrowLeft,
+    ArrowUp,
+    FileText,
     GitFork,
     FolderPlus,
     Info,
 } from "lucide-react";
 import { MarkdownViewer } from "@/components/markdown";
 import { VirtualMarkdownViewer } from "@/components/markdown/virtual-viewer";
+import { PreviewPerfBadge } from "@/components/pages/editor/PreviewPerfBadge";
 import { shouldVirtualizePreview } from "@/lib/markdown/split-chunks";
 import {
     fetchSharedMarkdown,
@@ -157,7 +160,9 @@ export default function ShareViewPage(): React.JSX.Element {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [copiedMarkdown, setCopiedMarkdown] = useState(false);
     const [previewScrollEl, setPreviewScrollEl] = useState<HTMLDivElement | null>(null);
+    const [showScrollTop, setShowScrollTop] = useState(false);
     const [shareId, setShareId] = useState<string | null>(null);
     const [importing, setImporting] = useState(false);
     const [needsPassword, setNeedsPassword] = useState(false);
@@ -266,11 +271,37 @@ export default function ShareViewPage(): React.JSX.Element {
         try {
             await navigator.clipboard.writeText(window.location.href);
             setCopied(true);
+            toast.success("Link copied");
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            /* ignore */
+            toast.error("Failed to copy link");
         }
     };
+
+    const handleCopyMarkdown = async () => {
+        if (!content?.trim()) return;
+        try {
+            await navigator.clipboard.writeText(content);
+            setCopiedMarkdown(true);
+            toast.success("Markdown copied");
+            setTimeout(() => setCopiedMarkdown(false), 2000);
+        } catch {
+            toast.error("Failed to copy markdown");
+        }
+    };
+
+    useEffect(() => {
+        if (!previewScrollEl) {
+            setShowScrollTop(false);
+            return;
+        }
+        const onScroll = () => {
+            setShowScrollTop(previewScrollEl.scrollTop > 100);
+        };
+        onScroll();
+        previewScrollEl.addEventListener("scroll", onScroll, { passive: true });
+        return () => previewScrollEl.removeEventListener("scroll", onScroll);
+    }, [previewScrollEl, content]);
 
     const handleImportProject = () => {
         if (!projectPack) return;
@@ -468,20 +499,51 @@ export default function ShareViewPage(): React.JSX.Element {
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
                     Shared Markdown
                 </h1>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     {detailsButton}
-                    <Button variant="outline" size="sm" onClick={handleCopyUrl} className="gap-2">
-                        {copied ? (
-                            <>
-                                <Check className="w-4 h-4" />
-                                <span className="hidden sm:inline">Copied!</span>
-                            </>
+                    {content ? <PreviewPerfBadge markdown={content} /> : null}
+                    {showScrollTop && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            title="Scroll to top"
+                            aria-label="Scroll to top"
+                            onClick={() => {
+                                previewScrollEl?.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                        >
+                            <ArrowUp className="w-4 h-4" />
+                        </Button>
+                    )}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleCopyMarkdown()}
+                        disabled={!content?.trim()}
+                        className="gap-2"
+                        title="Copy markdown"
+                    >
+                        {copiedMarkdown ? (
+                            <Check className="w-4 h-4" />
                         ) : (
-                            <>
-                                <Copy className="w-4 h-4" />
-                                <span className="hidden sm:inline">Copy URL</span>
-                            </>
+                            <FileText className="w-4 h-4" />
                         )}
+                        <span className="hidden sm:inline">
+                            {copiedMarkdown ? "Copied!" : "Copy markdown"}
+                        </span>
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => void handleCopyUrl()}
+                        className="gap-2"
+                        title="Copy share URL"
+                    >
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        <span className="hidden sm:inline">{copied ? "Copied!" : "Copy URL"}</span>
                     </Button>
                     <Link to={`/editor?load=${shareId}`}>
                         <Button variant="default" size="sm" className="gap-2">
