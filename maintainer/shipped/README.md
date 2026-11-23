@@ -4,6 +4,7 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Protocol 3 manage token | Worker Bearer manage + view-only password; rotate-manage; SPA `#token`; Shares Edit; llms/docs; prod smoke + R2 clear |
 | 2026-11 | knip + madge + vitest | Root knip/madge; worker+web vitest for TTL/password/fair-use/debounce |
 | 2026-11 | llms generate + perf slice 2 | SPA→worker llms generator; lazy Mermaid/LRU/throttle/autosave |
 | 2026-11 | Phase E MCP + worker llms | `POST /mcp` tools; worker `/llms.txt` + `/llms-full.txt`; compatibility `features.mcp` |

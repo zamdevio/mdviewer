@@ -71,8 +71,8 @@ See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`pha
 - [x] View password disposable per share; mutate uses Bearer manage token only
 - [x] Already-shared UX core; Shares page Edit = editor dialog
 - [x] Compatibility protocol 3 + llms + OpenAPI/MCP docs
-- [ ] Local + prod smoke (health / compatibility 3 / upload+mutate with manage token / view protect GET)
-- [ ] **Wipe Worker R2** (share objects / bucket) before real **v4.0.0** deploy — start fresh; no protocol-2 leftovers
+- [x] Local + prod smoke (health / compatibility 3 / upload+mutate with manage token / view protect GET / rotate / delete) — 2026-11-23 after protocol 3 deploy
+- [x] **Wipe Worker R2** share objects before protocol 3 smoke (list empty via Worker binding + API; bucket info metrics may lag)
 - [ ] Appflare **Then** ([`phases/06-appflare.md`](./phases/06-appflare.md)) — declared; catalog describes protocol 3 once live
 
 ## 7. Loose ends (**Parked**)

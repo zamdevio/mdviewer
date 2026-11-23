@@ -1,9 +1,9 @@
 # Showcase — feature surface honesty
 
-**Focus label:** **Next** ([`focus.md`](./focus.md)) — right after 07 lands  
+**Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after protocol 3 (07); before remaining perf (04)  
 **Goal:** Keep README, home, and `docs/` aligned with what we actually ship — especially agent-native surfaces that obey the same share rules as humans.  
-**Status:** Waiting on 07 — do not rewrite for protocol 2
+**Status:** Ready — 07 shipped + prod smoke; verify home/README still match manage vs view (docs/llms already updated in 07D)
 
 ## Slices
 

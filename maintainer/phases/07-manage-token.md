@@ -2,7 +2,7 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** Slice A–D implemented; E smoke / Focus promote **Next** (05) after local+prod check + R2 wipe before real v4  
+**Status:** A–E done (prod smoke 2026-11-23). Promote Focus **Next** → showcase ([`05-showcase.md`](./05-showcase.md)).  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
 **Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
