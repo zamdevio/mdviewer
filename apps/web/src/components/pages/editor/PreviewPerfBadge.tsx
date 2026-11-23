@@ -1,67 +1,104 @@
 import { useMemo, useState } from "react";
-import { Activity, Info } from "lucide-react";
+import { Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import {
   formatBytes,
   getPreviewPerfStatus,
+  previewLoadTone,
 } from "@/lib/performance/preview-status";
+import { cn } from "@/lib/utils";
 
 export function PreviewPerfBadge({
   markdown,
-  variant = "icon",
+  variant = "toolbar",
 }: {
   markdown: string;
-  /** icon = toolbar; chip = status bar next to Auto */
-  variant?: "icon" | "chip";
+  /** toolbar = editor tools row; compact = collapsed chrome */
+  variant?: "toolbar" | "compact";
 }) {
   const [open, setOpen] = useState(false);
   const status = useMemo(() => getPreviewPerfStatus(markdown), [markdown]);
+  const tone = previewLoadTone(status.level);
 
   if (!status.showBadge) return null;
 
-  const label = status.virtualized ? "Virt" : "Sync";
+  const modeLabel = status.virtualized ? "Virtualization" : "Sync preview";
+  const title = `${modeLabel} · ${status.levelLabel}`;
 
   return (
     <>
-      {variant === "chip" ? (
+      {variant === "compact" ? (
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 flex-shrink-0"
-          title="Preview performance"
+          className={cn(
+            "flex items-center gap-1 px-1.5 py-0.5 rounded border flex-shrink-0 transition-colors",
+            tone.badge,
+          )}
+          title={title}
         >
-          <Activity className="w-3 h-3 flex-shrink-0" />
-          <span className="font-bold uppercase tracking-wider text-[8px] sm:text-[9px]">
-            {label}
+          <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", tone.dot)} />
+          <span className="font-semibold tracking-wide text-[9px] sm:text-[10px]">
+            Virtualization
           </span>
         </button>
       ) : (
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => setOpen(true)}
-          className="h-8 w-8 p-0 flex-shrink-0"
-          title={`Preview: ${label}`}
+          className={cn(
+            "h-8 gap-1.5 px-2 flex-shrink-0 border",
+            tone.badge,
+          )}
+          title={title}
         >
-          <Info className="w-4 h-4" />
+          <Layers className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="hidden sm:inline text-xs font-medium">Virtualization</span>
+          <span
+            className={cn(
+              "hidden md:inline text-[10px] font-semibold uppercase tracking-wide opacity-80",
+              tone.accent,
+            )}
+          >
+            {status.levelLabel}
+          </span>
         </Button>
       )}
 
       <ModalShell
         open={open}
         onClose={() => setOpen(false)}
-        title="Preview performance"
+        title="Virtualization"
         className="max-w-sm"
       >
-        <div className="space-y-3 pr-6">
-          <h3 className="font-semibold text-lg">Preview performance</h3>
+        <div className={cn("space-y-3 pr-6 rounded-lg border p-3 -mx-1", tone.panel)}>
+          <div className="flex items-start gap-2">
+            <span
+              className={cn(
+                "mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0",
+                tone.dot,
+              )}
+            />
+            <div className="min-w-0">
+              <h3 className={cn("font-semibold text-lg", tone.accent)}>
+                Virtualization
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Load: <span className={cn("font-medium", tone.accent)}>{status.levelLabel}</span>
+                {" · "}
+                {status.virtualized ? "virtual preview on" : "sync preview"}
+              </p>
+            </div>
+          </div>
+
           <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">Mode</dt>
               <dd className="font-medium">
-                {status.virtualized ? "Virtual preview" : "Sync preview"}
+                {status.virtualized ? "Virtualized preview" : "Sync preview"}
               </dd>
             </div>
             <div className="flex justify-between gap-4">

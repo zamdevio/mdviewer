@@ -60,15 +60,13 @@ export function EditorControls({
                         </h1>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 overflow-x-auto scrollbar-none sm:justify-end">
-                        {/* Theme Toggle - Only show when navbar is scrolled out of view */}
+                        {/* Theme + virt sit together when chrome is scrolled away */}
                         {showThemeToggle && (
                             <div className="flex items-center flex-shrink-0">
                                 <ThemeToggle />
                             </div>
                         )}
-                        {showThemeToggle && (
-                            <PreviewPerfBadge markdown={markdown} variant="icon" />
-                        )}
+                        <PreviewPerfBadge markdown={markdown} variant="toolbar" />
                         {/* Scroll to Top Button - Only show when navbar is scrolled out of view */}
                         {showThemeToggle && (
                             <Button
@@ -213,7 +211,7 @@ export function EditorControls({
             {/* Collapse/Expand Button - Always visible when collapsed, on the right */}
             {isCollapsed && (
                 <div className="flex items-center gap-1">
-                    <PreviewPerfBadge markdown={markdown} variant="chip" />
+                    <PreviewPerfBadge markdown={markdown} variant="compact" />
                     <div className="flex gap-2 border rounded-lg p-1 bg-muted/50">
                         <Button
                             variant="ghost"

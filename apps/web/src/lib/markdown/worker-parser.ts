@@ -15,7 +15,32 @@ export type ChunkPlan = {
   hash: string;
   markdown: string;
   hast: Root | null;
+  /** Hash the current hast was parsed from; may lag `hash` while refreshing (stale-while-revalidate). */
+  hastHash: string | null;
 };
+
+export function chunkNeedsParse(plan: ChunkPlan): boolean {
+  return !plan.hast || plan.hastHash !== plan.hash;
+}
+
+/** Keep prior hast on-screen while a chunk’s content-hash is refreshing. */
+export function mergePlansKeepStale(
+  prev: ChunkPlan[],
+  next: ChunkPlan[],
+): ChunkPlan[] {
+  return next.map((plan, i) => {
+    if (!chunkNeedsParse(plan)) return plan;
+    const prior = prev[i];
+    if (prior?.hast) {
+      return {
+        ...plan,
+        hast: prior.hast,
+        hastHash: prior.hastHash,
+      };
+    }
+    return plan;
+  });
+}
 
 let worker: Worker | null = null;
 let workerFailed = false;
@@ -88,12 +113,18 @@ export function planDocumentChunks(content: string): ChunkPlan[] {
   return splitMarkdownChunks(content).map((markdown) => {
     const hash = hashChunkMarkdown(markdown);
     const hit = chunkHastCache.get(hash);
-    return { hash, markdown, hast: hit ?? null };
+    return {
+      hash,
+      markdown,
+      hast: hit ?? null,
+      hastHash: hit ? hash : null,
+    };
   });
 }
 
 /**
  * Ensure the given plan indices have hast (worker for misses). Returns a new array.
+ * Re-parses when hast is missing or still showing a stale hastHash.
  */
 export async function ensureChunkHasts(
   plans: ChunkPlan[],
@@ -101,9 +132,10 @@ export async function ensureChunkHasts(
   options?: { signal?: AbortSignal },
 ): Promise<ChunkPlan[]> {
   const next = plans.map((p) => ({ ...p }));
-  const unique = [...new Set(indices)].filter(
-    (i) => i >= 0 && i < next.length && next[i] && !next[i]!.hast,
-  );
+  const unique = [...new Set(indices)].filter((i) => {
+    const plan = next[i];
+    return i >= 0 && i < next.length && plan && chunkNeedsParse(plan);
+  });
   if (unique.length === 0) return next;
 
   if (options?.signal?.aborted) {
@@ -135,7 +167,12 @@ export async function ensureChunkHasts(
     const hast = byId.get(miss.id);
     if (!hast) continue;
     chunkHastCache.set(miss.hash, hast);
-    next[miss.index] = { hash: miss.hash, markdown: miss.markdown, hast };
+    next[miss.index] = {
+      hash: miss.hash,
+      markdown: miss.markdown,
+      hast,
+      hastHash: miss.hash,
+    };
   }
   return next;
 }
@@ -150,8 +187,10 @@ export async function parseDocumentChunks(
   const planned = planDocumentChunks(content);
   const indices = planned.map((_, i) => i);
   const filled = await ensureChunkHasts(planned, indices, options);
-  return filled.map((c, i) => {
-    if (c.hast) return { hash: c.hash, markdown: c.markdown, hast: c.hast };
+  return filled.map((c) => {
+    if (c.hast && c.hastHash === c.hash) {
+      return { hash: c.hash, markdown: c.markdown, hast: c.hast };
+    }
     const hast = parseMarkdownToHast(c.markdown);
     chunkHastCache.set(c.hash, hast);
     return { hash: c.hash, markdown: c.markdown, hast };

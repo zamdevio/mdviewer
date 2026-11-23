@@ -5,7 +5,9 @@ import { MarkdownDocument } from "./viewer";
 import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
 import { splitMarkdownChunks } from "@/lib/markdown/split-chunks";
 import {
+  chunkNeedsParse,
   ensureChunkHasts,
+  mergePlansKeepStale,
   planDocumentChunks,
   type ChunkPlan,
 } from "@/lib/markdown/worker-parser";
@@ -15,6 +17,7 @@ const INITIAL_PARSE_COUNT = 6;
 /**
  * Virtualized markdown preview for large docs.
  * Splits immediately; parses near-viewport chunks via worker + content-hash cache.
+ * Keeps prior hast on-screen while a chunk re-parses so edits don’t flicker blank.
  */
 export function VirtualMarkdownViewer({
   content,
@@ -31,22 +34,28 @@ export function VirtualMarkdownViewer({
   const articleRef = useRef<HTMLElement>(null);
   const plansRef = useRef(plans);
   plansRef.current = plans;
+  const contentGen = useRef(0);
 
-  // Resplit when content changes; keep cache hits
+  // Resplit when content changes; keep stale hast until fresh parse lands
   useEffect(() => {
-    const next = planDocumentChunks(content);
-    setPlans(next);
+    const gen = ++contentGen.current;
+    const planned = planDocumentChunks(content);
+    setPlans((prev) => mergePlansKeepStale(prev, planned));
     setParseFailed(false);
     const ac = new AbortController();
-    const initial = Math.min(INITIAL_PARSE_COUNT, next.length);
-    const indices = Array.from({ length: initial }, (_, i) => i);
-    void ensureChunkHasts(next, indices, { signal: ac.signal })
+    const initial = Math.min(INITIAL_PARSE_COUNT, planned.length);
+    const indices = Array.from({ length: initial }, (_, i) => i).filter((i) =>
+      chunkNeedsParse(planned[i]!),
+    );
+    if (indices.length === 0) return () => ac.abort();
+
+    void ensureChunkHasts(planned, indices, { signal: ac.signal })
       .then((filled) => {
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted || gen !== contentGen.current) return;
         setPlans(filled);
       })
       .catch((err: unknown) => {
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted || gen !== contentGen.current) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
         setParseFailed(true);
       });
@@ -74,17 +83,21 @@ export function VirtualMarkdownViewer({
     if (parseFailed || plans.length === 0) return;
     const indices = items.map((i) => i.index);
     if (indices.length === 0) return;
-    const needs = indices.some((i) => !plansRef.current[i]?.hast);
+    const needs = indices.some((i) => {
+      const plan = plansRef.current[i];
+      return plan ? chunkNeedsParse(plan) : false;
+    });
     if (!needs) return;
 
+    const gen = contentGen.current;
     const ac = new AbortController();
     void ensureChunkHasts(plansRef.current, indices, { signal: ac.signal })
       .then((filled) => {
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted || gen !== contentGen.current) return;
         setPlans(filled);
       })
       .catch((err: unknown) => {
-        if (ac.signal.aborted) return;
+        if (ac.signal.aborted || gen !== contentGen.current) return;
         if (err instanceof DOMException && err.name === "AbortError") return;
       });
     return () => ac.abort();
@@ -153,7 +166,7 @@ export function VirtualMarkdownViewer({
         const plan = plans[item.index];
         return (
           <div
-            key={plan?.hash ?? item.key}
+            key={item.index}
             data-index={item.index}
             ref={virtualizer.measureElement}
             style={{
