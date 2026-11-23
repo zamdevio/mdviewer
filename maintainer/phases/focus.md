@@ -8,7 +8,7 @@
 
 **Rule:** Labels below are the order — **Now → Next → Parked**. One vertical at a time unless a note says parallel-safe. New chat: open this file, take **Now**.
 
-Completed phase docs live under [`../shipped/`](../shipped/) — `phases/` stubs only point there. **Open** phase docs stay in `phases/`.
+Completed phases are **deleted** from `phases/` — receipts only under [`../shipped/`](../shipped/). Open docs here: `focus`, `04`, `06`.
 
 ---
 

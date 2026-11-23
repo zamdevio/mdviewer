@@ -43,4 +43,4 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
 | [`agents/tree.md`](agents/tree.md) | Directory conventions |
 
-`phases/01`–`03`, `05`, `07`, `08` are **stubs** → `shipped/`. Do not extend stubs.
+Folded phases are **removed** from `phases/` — read receipts in [`shipped/`](shipped/). Only open work stays in `phases/` (`focus`, `04`, `06`).
