@@ -332,7 +332,7 @@ app.post("/mcp", async (c) => {
         protocolVersion,
         capabilities: { tools: {} },
         serverInfo: {
-          name: "mdviewer-api",
+          name: "mdviewer",
           title: "MDViewer",
           version: "2.0.0",
           // SEP-973 — clients that brand MCP UIs (Cursor may still fall back to generic)
@@ -382,7 +382,7 @@ app.get("/mcp", (c) => {
   const icons = mcpIcons(apiOrigin);
   c.header("Link", `<${apiOrigin}/favicon.svg>; rel="icon"; type="image/svg+xml"`);
   return c.json({
-    name: "mdviewer-api",
+    name: "mdviewer",
     title: "MDViewer",
     transport: "streamable-http-jsonrpc",
     endpoint: "POST /mcp",

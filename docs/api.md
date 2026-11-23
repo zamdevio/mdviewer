@@ -75,7 +75,7 @@ Hashes the new token **once**, writes metadata only, returns `{ updated, failed 
 
 ```json
 {
-  "name": "mdviewer-api",
+  "name": "mdviewer",
   "version": "3.0.0",
   "protocol": 3,
   "features": {

@@ -21,7 +21,7 @@ const EndpointSchema = z.object({
 });
 
 const CompatibilitySchema = z.object({
-  name: z.literal("mdviewer-api"),
+  name: z.literal("mdviewer"),
   version: z.string(),
   protocol: z.number().int(),
   endpoints: z.array(EndpointSchema),
@@ -71,7 +71,7 @@ app.openapi(compatibilityRoute, (c) => {
   const allowed = parseAllowedOrigins(c.env);
   return c.json(
     {
-      name: "mdviewer-api" as const,
+      name: "mdviewer" as const,
       version: "3.0.0",
       protocol: 3,
       endpoints: [
