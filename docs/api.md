@@ -71,6 +71,10 @@ Metadata includes `manageTokenHash` (required) and optional view `passwordHash`.
 `POST /share/rotate-manage` with Bearer **old** manage token and JSON `{ "shareIds": [...], "newManageToken": "..." }`.  
 Hashes the new token **once**, writes metadata only, returns `{ updated, failed }`. Cap: `limits.rotateManageMaxIds` (default **50**).
 
+Failure codes per id: `not_found`, `expired`, `unauthorized`. SPA Settings shows a scrollable results panel (View per id). It **persists** the new manage token when any id was re-keyed (those hashes already expect the new secret), or when failures are only tombstones; otherwise it keeps the previous token. Local Shares rows for gone/orphan ids can be pruned from that panel.
+
+**SPA Share UX:** Manage (bound link) → Compose (TTL / view protect) → Distribute (success sheet with Back). Content update = `PUT` (does not slide TTL). View password = `PATCH`. Delete = `DELETE`; HTTP **404** is treated as already gone and the SPA still clears its local binding.
+
 ## Compatibility handshake
 
 ```json

@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, KeyRound, Loader2, Share2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Copy,
+  ExternalLink,
+  KeyRound,
+  Loader2,
+  Share2,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import {
@@ -27,6 +36,8 @@ export type ShareComposeConfirm = {
   viewProtected: boolean;
 };
 
+export type ShareComposeStep = "manage" | "compose";
+
 type Props = {
   open: boolean;
   title?: string;
@@ -35,11 +46,20 @@ type Props = {
   existingShareId?: string | null;
   /** Last view password stored locally for that share */
   existingViewPassword?: string | null;
-  /** When false (e.g. Shares page without file content), only “use existing link”. */
+  /** Known wipe time for bound share (PUT does not slide it). */
+  existingExpiresAt?: string | null;
+  /** When false (e.g. Shares page without file content), Update is disabled. */
   allowMutate?: boolean;
+  /** Why Update is disabled when allowMutate is false. */
+  mutateDisabledReason?: string | null;
   submitting?: boolean;
+  deleting?: boolean;
+  /** Force open on compose (e.g. Back from distribute). */
+  initialStep?: ShareComposeStep;
   onClose: () => void;
   onConfirm: (opts: ShareComposeConfirm) => void;
+  /** Delete remote + local share binding (not Files/Editor body). */
+  onDeleteShare?: () => void | Promise<void>;
 };
 
 export function ShareComposeDialog({
@@ -48,11 +68,17 @@ export function ShareComposeDialog({
   filename,
   existingShareId,
   existingViewPassword,
+  existingExpiresAt,
   allowMutate = true,
+  mutateDisabledReason = null,
   submitting = false,
+  deleting = false,
+  initialStep,
   onClose,
   onConfirm,
+  onDeleteShare,
 }: Props) {
+  const [step, setStep] = useState<ShareComposeStep>("compose");
   const [mode, setMode] = useState<ShareComposeMode>("create");
   const [manageToken, setManageToken] = useState(
     () => getSettings()?.manageToken ?? "",
@@ -72,7 +98,18 @@ export function ShareComposeDialog({
     setTtlSeconds(SHARE_TTL_DEFAULT);
     setCustomTtl("");
     setViewProtected(Boolean(existingViewPassword));
-    setMode(existingShareId ? "existing" : "create");
+    setMode(existingShareId ? "replace" : "create");
+
+    const preferManage =
+      Boolean(existingShareId) &&
+      (initialStep === "manage" || initialStep == null);
+    setStep(
+      initialStep === "compose"
+        ? "compose"
+        : preferManage
+          ? "manage"
+          : "compose",
+    );
 
     let cancelled = false;
     void (async () => {
@@ -89,7 +126,7 @@ export function ShareComposeDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, existingShareId, existingViewPassword]);
+  }, [open, existingShareId, existingViewPassword, initialStep]);
 
   const wipePreview = useMemo(
     () => formatWipeTime(previewExpiresAt(ttlSeconds)),
@@ -114,12 +151,33 @@ export function ShareComposeDialog({
     }
   };
 
+  const goCompose = (nextMode: ShareComposeMode) => {
+    setMode(nextMode);
+    setStep("compose");
+  };
+
+  const busy = submitting || deleting;
+
   return (
     <ModalShell open={open} onClose={onClose} title={title} className="max-w-lg">
       <div className="flex items-start gap-3 mb-4 pr-6">
-        <div className="p-2 rounded-lg bg-primary/10">
-          <Share2 className="w-5 h-5 text-primary" />
-        </div>
+        {step === "compose" && existingShareId ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="flex-shrink-0 -ml-2"
+            disabled={busy}
+            onClick={() => setStep("manage")}
+            aria-label="Back to manage share"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        ) : (
+          <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+            <Share2 className="w-5 h-5 text-primary" />
+          </div>
+        )}
         <div className="min-w-0">
           <h3 className="font-semibold text-lg">{title}</h3>
           <p className="text-sm text-muted-foreground truncate">
@@ -128,7 +186,7 @@ export function ShareComposeDialog({
         </div>
       </div>
 
-      {noManageToken && (
+      {noManageToken && step === "compose" && (
         <div className="mb-4 flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <div className="space-y-2">
@@ -141,7 +199,7 @@ export function ShareComposeDialog({
                 type="button"
                 size="sm"
                 onClick={ensureManageToken}
-                disabled={submitting}
+                disabled={busy}
               >
                 Auto-generate token
               </Button>
@@ -156,50 +214,20 @@ export function ShareComposeDialog({
         </div>
       )}
 
-      {existingShareId && (
-        <div className="mb-4 space-y-2">
-          <p className="text-xs text-muted-foreground font-mono truncate">
-            Bound share: {existingShareId}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "existing" ? "default" : "outline"}
-              onClick={() => setMode("existing")}
-              disabled={submitting}
-            >
-              Use existing link
-            </Button>
-            {allowMutate && (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={mode === "replace" ? "default" : "outline"}
-                  onClick={() => setMode("replace")}
-                  disabled={submitting || noManageToken}
-                >
-                  Update existing
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={mode === "create" ? "default" : "outline"}
-                  onClick={() => setMode("create")}
-                  disabled={submitting || noManageToken}
-                >
-                  New link
-                </Button>
-              </>
-            )}
-          </div>
-          {mode === "existing" && frontendShareUrl && (
-            <div className="flex flex-wrap gap-2 pt-1">
+      {step === "manage" && existingShareId && frontendShareUrl && (
+        <div className="space-y-4">
+          <div>
+            <label className="text-sm font-medium mb-2 block">Last shared link</label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 px-3 py-2 rounded-md border border-input bg-muted/50 text-sm font-mono break-all min-h-[2.5rem] flex items-center">
+                {frontendShareUrl}
+              </div>
               <Button
                 type="button"
-                size="sm"
                 variant="outline"
+                size="sm"
+                className="flex-shrink-0 gap-1"
+                disabled={busy}
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(frontendShareUrl);
@@ -208,25 +236,74 @@ export function ShareComposeDialog({
                   }
                 }}
               >
-                Copy link
-              </Button>
-              <Button type="button" size="sm" variant="outline" asChild>
-                <a href={frontendShareUrl} target="_blank" rel="noopener noreferrer">
-                  Open
-                </a>
+                <Copy className="w-3 h-3" />
+                Copy
               </Button>
             </div>
-          )}
-          {mode === "replace" && (
-            <p className="text-xs text-muted-foreground">
-              Replaces content on the same id. Wipe time stays the same on the
-              server. Manage token authorizes the update.
-            </p>
-          )}
+            {existingExpiresAt && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Wipes: {new Date(existingExpiresAt).toLocaleString()} (PUT does not
+                extend this)
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              disabled={busy || !allowMutate || noManageToken}
+              onClick={() => goCompose("replace")}
+              className="w-full"
+            >
+              Update same link
+            </Button>
+            {!allowMutate && (
+              <p className="text-xs text-muted-foreground">
+                {mutateDisabledReason ||
+                  "Open this file in the Editor to update content on the same link."}
+              </p>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy || noManageToken}
+              onClick={() => goCompose("create")}
+              className="w-full"
+            >
+              Create new link
+            </Button>
+            {onDeleteShare && (
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={busy || noManageToken}
+                onClick={() => void onDeleteShare()}
+                className="w-full gap-2"
+              >
+                {deleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete share
+              </Button>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground">
+            Delete removes the remote object and this browser’s Shares record. Files /
+            Editor content stay put.
+          </p>
+
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+              Close
+            </Button>
+          </div>
         </div>
       )}
 
-      {mode !== "existing" && (
+      {step === "compose" && (
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
             Mutate uses your{" "}
@@ -240,6 +317,65 @@ export function ShareComposeDialog({
             </Link>
             . View password below is optional and disposable per share.
           </p>
+
+          {existingShareId && frontendShareUrl && (
+            <div className="space-y-2 rounded-md border border-border/60 p-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Existing link
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === "replace" ? "default" : "outline"}
+                  onClick={() => setMode("replace")}
+                  disabled={busy || !allowMutate || noManageToken}
+                >
+                  Use existing (PUT)
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mode === "create" ? "default" : "outline"}
+                  onClick={() => setMode("create")}
+                  disabled={busy || noManageToken}
+                >
+                  Create new link
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="gap-1"
+                  disabled={busy}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(frontendShareUrl);
+                    } catch {
+                      /* ignore */
+                    }
+                  }}
+                >
+                  <Copy className="w-3 h-3" />
+                  Copy link
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="gap-1" asChild>
+                  <a href={frontendShareUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-3 h-3" />
+                    Open
+                  </a>
+                </Button>
+              </div>
+              {mode === "replace" && (
+                <p className="text-xs text-muted-foreground">
+                  Replaces content on the same id. Wipe time stays the same on the
+                  server.
+                </p>
+              )}
+            </div>
+          )}
 
           {mode === "create" && (
             <div>
@@ -257,7 +393,7 @@ export function ShareComposeDialog({
                       setCustomTtl("");
                       setTtlSeconds(clampShareTtl(p.seconds));
                     }}
-                    disabled={submitting}
+                    disabled={busy}
                   >
                     {p.label}
                   </Button>
@@ -274,7 +410,7 @@ export function ShareComposeDialog({
                   const n = parseInt(e.target.value, 10);
                   if (Number.isFinite(n)) setTtlSeconds(clampShareTtl(n));
                 }}
-                disabled={submitting}
+                disabled={busy}
                 className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
               />
               <p className="text-xs text-muted-foreground mt-1">
@@ -288,7 +424,7 @@ export function ShareComposeDialog({
               type="checkbox"
               className="mt-1"
               checked={viewProtected}
-              disabled={submitting}
+              disabled={busy}
               onChange={(e) => onToggleProtect(e.target.checked)}
             />
             <span>Protect view (require disposable password to open)</span>
@@ -307,10 +443,10 @@ export function ShareComposeDialog({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  disabled={submitting}
+                  disabled={busy}
                   onClick={() => setViewPassword(generateSharePassword(16))}
                 >
-                  Regenerate
+                  Rotate view password
                 </Button>
               </div>
               <input
@@ -319,10 +455,13 @@ export function ShareComposeDialog({
                 autoComplete="off"
                 value={viewPassword}
                 onChange={(e) => setViewPassword(e.target.value)}
-                disabled={submitting}
+                disabled={busy}
                 placeholder="Auto-generated when protect is on"
                 className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                This is the disposable view password (PATCH), not the manage token.
+              </p>
             </div>
           )}
 
@@ -334,49 +473,43 @@ export function ShareComposeDialog({
               </div>
             </div>
           )}
+
+          <div className="mt-2 flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                busy ||
+                noManageToken ||
+                (mode === "replace" && !allowMutate) ||
+                (viewProtected && !viewPassword.trim())
+              }
+              onClick={() =>
+                onConfirm({
+                  mode,
+                  viewPassword: viewProtected ? viewPassword.trim() : "",
+                  ttlSeconds: clampShareTtl(ttlSeconds),
+                  viewProtected: viewProtected && Boolean(viewPassword.trim()),
+                })
+              }
+              className="gap-2"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Working…
+                </>
+              ) : mode === "replace" ? (
+                "Update share"
+              ) : (
+                "Create link"
+              )}
+            </Button>
+          </div>
         </div>
       )}
-
-      <div className="mt-6 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-          Cancel
-        </Button>
-        {mode !== "existing" && (
-          <Button
-            type="button"
-            disabled={
-              submitting ||
-              noManageToken ||
-              (viewProtected && !viewPassword.trim())
-            }
-            onClick={() =>
-              onConfirm({
-                mode,
-                viewPassword: viewProtected ? viewPassword.trim() : "",
-                ttlSeconds: clampShareTtl(ttlSeconds),
-                viewProtected: viewProtected && Boolean(viewPassword.trim()),
-              })
-            }
-            className="gap-2"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Working…
-              </>
-            ) : mode === "replace" ? (
-              "Update share"
-            ) : (
-              "Create link"
-            )}
-          </Button>
-        )}
-        {mode === "existing" && (
-          <Button type="button" onClick={onClose}>
-            Done
-          </Button>
-        )}
-      </div>
     </ModalShell>
   );
 }

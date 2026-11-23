@@ -20,6 +20,7 @@ import {
 import { isApiConfigured, getEffectiveApiConfig } from "@/lib/config";
 import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
 import { SharePanel } from "@/components/pages/editor/dialogs/Share";
+import { wipeShareRemoteAndLocal } from "@/lib/share/remote-delete";
 
 export default function FilesPage(): React.JSX.Element {
     const [files, setFiles] = useState<SavedFile[]>([]);
@@ -46,9 +47,16 @@ export default function FilesPage(): React.JSX.Element {
         | null
     >(null);
     const [shareSubmitting, setShareSubmitting] = useState(false);
+    const [shareDeleting, setShareDeleting] = useState(false);
+    const [shareComposeStep, setShareComposeStep] = useState<"manage" | "compose">("manage");
     const [shareSuccessUrl, setShareSuccessUrl] = useState<string | null>(null);
     const [shareSuccessExpires, setShareSuccessExpires] = useState<string | null>(null);
     const [shareSuccessName, setShareSuccessName] = useState<string | null>(null);
+    const [shareResumeTarget, setShareResumeTarget] = useState<
+        | { kind: "file"; file: SavedFile }
+        | { kind: "project"; project: Project }
+        | null
+    >(null);
 
     // Load items per page setting
     useEffect(() => {
@@ -700,6 +708,7 @@ export default function FilesPage(): React.JSX.Element {
                             toast.error("Nothing to share");
                             return;
                         }
+                        setShareComposeStep(file.shareId ? "manage" : "compose");
                         setShareTarget({ kind: "file", file });
                     }}
                     onShareProject={(project) => {
@@ -712,6 +721,7 @@ export default function FilesPage(): React.JSX.Element {
                             toast.error("Project has no files to share");
                             return;
                         }
+                        setShareComposeStep(project.shareId ? "manage" : "compose");
                         setShareTarget({ kind: "project", project });
                     }}
                 />
@@ -1036,8 +1046,60 @@ export default function FilesPage(): React.JSX.Element {
                           ? shareTarget.project.sharePassword
                           : null
                 }
+                initialStep={shareComposeStep}
                 submitting={shareSubmitting}
-                onClose={() => !shareSubmitting && setShareTarget(null)}
+                deleting={shareDeleting}
+                onClose={() =>
+                    !shareSubmitting && !shareDeleting && setShareTarget(null)
+                }
+                onDeleteShare={
+                    shareTarget &&
+                    (shareTarget.kind === "file"
+                        ? shareTarget.file.shareId
+                        : shareTarget.project.shareId)
+                        ? async () => {
+                              const shareId =
+                                  shareTarget.kind === "file"
+                                      ? shareTarget.file.shareId!
+                                      : shareTarget.project.shareId!;
+                              const manageToken =
+                                  getSettings()?.manageToken?.trim() ?? "";
+                              if (!manageToken) {
+                                  toast.error(
+                                      "Manage token required for remote delete",
+                                  );
+                                  return;
+                              }
+                              setShareDeleting(true);
+                              try {
+                                  const result = await wipeShareRemoteAndLocal(
+                                      shareId,
+                                      manageToken,
+                                  );
+                                  setShareTarget(null);
+                                  loadFiles();
+                                  setProjectsState(getProjects());
+                                  toast.success(
+                                      result.remote === "gone"
+                                          ? "Share already gone — removed locally"
+                                          : "Share deleted",
+                                  );
+                              } catch (error) {
+                                  if (isCorsFailure(error)) {
+                                      toast.error("CORS blocked remote delete");
+                                  } else {
+                                      toast.error(
+                                          error instanceof Error
+                                              ? error.message
+                                              : "Delete failed",
+                                      );
+                                  }
+                              } finally {
+                                  setShareDeleting(false);
+                              }
+                          }
+                        : undefined
+                }
                 onConfirm={async (opts: ShareComposeConfirm) => {
                     if (!shareTarget) return;
                     if (opts.mode === "existing") {
@@ -1173,6 +1235,7 @@ export default function FilesPage(): React.JSX.Element {
                             setProjectsState(getProjects());
                         }
                         loadFiles();
+                        setShareResumeTarget(shareTarget);
                         setShareTarget(null);
                         toast.success("Share ready");
                     } catch (error) {
@@ -1194,10 +1257,18 @@ export default function FilesPage(): React.JSX.Element {
                 shareUrl={shareSuccessUrl ?? ""}
                 fileName={shareSuccessName}
                 expiresAt={shareSuccessExpires}
+                onBack={() => {
+                    setShareSuccessUrl(null);
+                    setShareSuccessExpires(null);
+                    setShareSuccessName(null);
+                    setShareComposeStep("compose");
+                    if (shareResumeTarget) setShareTarget(shareResumeTarget);
+                }}
                 onClose={() => {
                     setShareSuccessUrl(null);
                     setShareSuccessExpires(null);
                     setShareSuccessName(null);
+                    setShareResumeTarget(null);
                 }}
             />
         </div>

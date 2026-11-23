@@ -8,7 +8,7 @@
   - `GET /share/:id` — content; `X-Share-Password` only if `viewProtected`
   - `GET /share/:id/meta` — anon meta (no hashes)
   - `PUT|PATCH|DELETE /share/:id` — **Bearer / X-Share-Manage-Token** only
-  - `POST /share/rotate-manage` — bulk re-key `manageTokenHash` (hash once, parallel meta, cap from config)
+  - `POST /share/rotate-manage` — bulk re-key `manageTokenHash` (hash once, parallel meta, cap from config); partial `{ updated, failed }` with `not_found` / `expired` / `unauthorized` — SPA results UI in [`web.md`](web.md)
   - `POST /mcp` — MCP JSON-RPC tools (same share store; manageToken for mutate/upload); `initialize.serverInfo.icons` (PNG data URI + `/favicon.png` + SVG)
   - `GET /favicon.svg`, `GET /favicon.png` — brand for MCP / browsers
   - `GET /llms.txt`, `GET /llms-full.txt` — agent briefs

@@ -66,7 +66,13 @@ import {
 } from "@/lib/api";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import {
+    RotateManageResultsDialog,
+    type RotateManageResults,
+} from "@/components/share/RotateManageResultsDialog";
 import { generateSharePassword } from "@/lib/share/ttl";
+import { clearLocalShareBinding } from "@/lib/share/remote-delete";
+import { shouldPersistNewManageToken } from "@/lib/share/rotate-manage";
 import type { SavedFile } from "@/lib/storage";
 import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 
@@ -145,6 +151,7 @@ export default function SettingsPage(): React.JSX.Element {
     const [showManageToken, setShowManageToken] = useState(false);
     const [pendingTokenRotate, setPendingTokenRotate] = useState<string | null>(null);
     const [rotatingToken, setRotatingToken] = useState(false);
+    const [rotateResults, setRotateResults] = useState<RotateManageResults | null>(null);
     const [clearDataConfirmText, setClearDataConfirmText] = useState("");
     const [cacheVersion, setCacheVersion] = useState<string | null>(null);
     const [updateStatus, setUpdateStatus] = useState<{ hasUpdate: boolean; waiting: boolean; installing: boolean } | null>(null);
@@ -1843,18 +1850,22 @@ export default function SettingsPage(): React.JSX.Element {
                                             newToken,
                                             maxBatch,
                                         );
-                                        updateSetting("manageToken", newToken);
-                                        setManageToken(newToken);
-                                        setPendingTokenRotate(null);
-                                        if (result.failed.length === 0) {
-                                            toast.success(
-                                                `Token rotated on ${result.updated.length} share(s)`,
-                                            );
+                                        const persist = shouldPersistNewManageToken(
+                                            result.updated,
+                                            result.failed,
+                                        );
+                                        if (persist) {
+                                            updateSetting("manageToken", newToken);
+                                            setManageToken(newToken);
                                         } else {
-                                            toast.warning(
-                                                `Updated ${result.updated.length}, failed ${result.failed.length}`,
-                                            );
+                                            setManageToken(oldToken);
                                         }
+                                        setPendingTokenRotate(null);
+                                        setRotateResults({
+                                            updated: result.updated,
+                                            failed: result.failed,
+                                            tokenPersisted: persist,
+                                        });
                                     } catch (error) {
                                         if (isCorsFailure(error)) {
                                             toast.error("CORS blocked rotate");
@@ -1874,7 +1885,7 @@ export default function SettingsPage(): React.JSX.Element {
                                 {rotatingToken ? (
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : null}
-                                Confirm rotate & save
+                                Confirm rotate
                             </Button>
                             <Button
                                 variant="outline"
@@ -1891,6 +1902,20 @@ export default function SettingsPage(): React.JSX.Element {
                     </div>
                 </div>
             </ModalShell>
+
+            <RotateManageResultsDialog
+                open={rotateResults != null}
+                results={rotateResults}
+                onClose={() => setRotateResults(null)}
+                onPruneLocal={(shareIds) => {
+                    for (const id of shareIds) clearLocalShareBinding(id);
+                    toast.success(
+                        shareIds.length === 1
+                            ? "Removed local share binding"
+                            : `Removed ${shareIds.length} local share bindings`,
+                    );
+                }}
+            />
 
             <ModalShell
                 open={showResetShareWarning}

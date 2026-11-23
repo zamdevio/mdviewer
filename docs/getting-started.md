@@ -46,12 +46,16 @@ Build-time `VITE_*` values remain the fallback when no override is stored.
 
 ## Manage token (protocol 3)
 
-Sharing requires a **manage token** (Settings → Manage token, `/settings#token`). The SPA auto-generates one; you can rotate it (bulk re-key for local share ids, batch size from `/compatibility`).
+Sharing requires a **manage token** (Settings → Manage token, `/settings#token`). The SPA auto-generates one; you can **rotate the manage token** (bulk re-key for local share ids, batch size from `/compatibility`). After rotate, Settings shows which ids succeeded/failed (View each link); gone shares can be removed from the local list.
 
 | Secret | Used for |
 |--------|----------|
-| Manage token | Create / update / protect toggle / delete |
-| View password | Optional per-share GET protect (disposable; never authorizes mutate) |
+| Manage token | Create / update / protect toggle / delete / rotate-manage |
+| View password | Optional per-share GET protect (disposable; never authorizes mutate). “Rotate view password” in the share dialog is **PATCH**, not manage-token rotate. |
+
+### Share dialogs
+
+Already-shared docs open **Manage** first (last link, update / new / delete). Compose sets TTL + view protect. After create/update, **Distribute** (copy / Web Share) has **Back** to Compose. Shares page **Edit** follows the same flow; Update needs a local file/project still bound to that `shareId`. Remote delete **404** just clears the local row.
 
 ## Agents: MCP + llms.txt
 

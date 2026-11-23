@@ -2,8 +2,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { isApiConfigured } from "@/lib/config";
 import { toast } from "sonner";
-import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, getSavedFiles } from "@/lib/storage";
+import { getSettings, onStorageChange, getActivateButtonDismissed, setActivateButtonDismissed, getEditingFileFromSavedFiles, clearAllEditingFlags, setFileAsEditing, getSavedFiles, getSharedLinks } from "@/lib/storage";
 import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
+import { wipeShareRemoteAndLocal } from "@/lib/share/remote-delete";
+import { isCorsFailure } from "@/lib/api";
 import { autoSaveDebounceMs } from "@/lib/performance/preview-debounce";
 import { startMemoryMonitor } from "@/lib/performance/memory-monitor";
 import { getShowDefaultContent, getTempFile, clearTempFile } from "@/lib/storage/helpers";
@@ -90,6 +92,8 @@ export default function EditorPage() {
     const [shareUrl, setShareUrl] = useState<string | null>(null);
     const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
     const [showShareCompose, setShowShareCompose] = useState(false);
+    const [shareComposeStep, setShareComposeStep] = useState<"manage" | "compose">("manage");
+    const [shareDeleting, setShareDeleting] = useState(false);
     const [showSharePanel, setShowSharePanel] = useState(false);
     const [lastSharedContent, setLastSharedContent] = useState<string | null>(null);
     const [lastSharedFileName, setLastSharedFileName] = useState<string | null>(null);
@@ -1101,6 +1105,7 @@ export default function EditorPage() {
             setShowApiWarning(true);
             return;
         }
+        setShareComposeStep(boundShareFile?.shareId ? "manage" : "compose");
         setShowShareCompose(true);
     };
 
@@ -1672,15 +1677,66 @@ export default function EditorPage() {
                 filename={currentFileName}
                 existingShareId={boundShareFile?.shareId}
                 existingViewPassword={boundShareFile?.sharePassword}
+                existingExpiresAt={
+                    boundShareFile?.shareId
+                        ? getSharedLinks().find((l) => l.shareId === boundShareFile.shareId)
+                              ?.expiresAt ?? shareExpiresAt
+                        : null
+                }
+                initialStep={shareComposeStep}
                 submitting={isSharing}
-                onClose={() => !isSharing && setShowShareCompose(false)}
+                deleting={shareDeleting}
+                onClose={() => !isSharing && !shareDeleting && setShowShareCompose(false)}
                 onConfirm={handleShareComposeConfirm}
+                onDeleteShare={
+                    boundShareFile?.shareId
+                        ? async () => {
+                              const manageToken = getSettings()?.manageToken?.trim() ?? "";
+                              if (!manageToken) {
+                                  toast.error("Manage token required for remote delete");
+                                  return;
+                              }
+                              setShareDeleting(true);
+                              try {
+                                  const result = await wipeShareRemoteAndLocal(
+                                      boundShareFile.shareId!,
+                                      manageToken,
+                                  );
+                                  setShowShareCompose(false);
+                                  setShareUrl(null);
+                                  setShareExpiresAt(null);
+                                  toast.success(
+                                      result.remote === "gone"
+                                          ? "Share already gone — removed locally"
+                                          : "Share deleted",
+                                  );
+                              } catch (error) {
+                                  if (isCorsFailure(error)) {
+                                      toast.error("CORS blocked remote delete");
+                                  } else {
+                                      toast.error(
+                                          error instanceof Error
+                                              ? error.message
+                                              : "Delete failed",
+                                      );
+                                  }
+                              } finally {
+                                  setShareDeleting(false);
+                              }
+                          }
+                        : undefined
+                }
             />
             <SharePanel
                 show={showSharePanel}
                 shareUrl={shareUrl ?? ''}
                 fileName={currentFileName}
                 expiresAt={shareExpiresAt}
+                onBack={() => {
+                    setShowSharePanel(false);
+                    setShareComposeStep("compose");
+                    setShowShareCompose(true);
+                }}
                 onClose={() => setShowSharePanel(false)}
                 onCopy={() => {
                     // Copy handled in SharePanel component

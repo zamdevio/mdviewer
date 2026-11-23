@@ -8,7 +8,7 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 |---------|--------|
 | Browser localStorage (files, settings) | Same-origin XSS is the main risk |
 | Markdown preview (editor + `/share`) | Untrusted Markdown/HTML from user or shared links |
-| Share Worker (`POST /upload`, `GET /share/:id`, mutate routes) | Public GET by default; optional disposable view password; mutate/upload require **manage token** (protocol 3) |
+| Share Worker (`POST /upload`, `GET /share/:id`, mutate routes) | Public GET by default; optional disposable view password; mutate/upload/delete/rotate-manage require **manage token** (protocol 3). SPA treats DELETE 404 as already-gone and prunes local bindings only. |
 | Settings API override | Must not accept `javascript:` / opaque URLs |
 
 ## Hardened (with proof in code)

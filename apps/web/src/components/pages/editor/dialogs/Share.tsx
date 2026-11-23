@@ -1,5 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, Check, ExternalLink, Mail, MessageSquare } from "lucide-react";
+import {
+    Share2,
+    Copy,
+    Check,
+    ExternalLink,
+    Mail,
+    MessageSquare,
+    ArrowLeft,
+} from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ModalShell } from "@/components/ui/modal-shell";
@@ -12,6 +20,8 @@ export interface SharePanelProps {
     onClose: () => void;
     onCopy?: () => void;
     onWebShare?: () => void;
+    /** Back to compose (view protect / TTL / create vs existing). */
+    onBack?: () => void;
 }
 
 export function SharePanel({
@@ -22,6 +32,7 @@ export function SharePanel({
     onClose,
     onCopy,
     onWebShare,
+    onBack,
 }: SharePanelProps) {
     const [copied, setCopied] = useState(false);
 
@@ -86,17 +97,28 @@ export function SharePanel({
 
     return (
         <ModalShell open={show} onClose={onClose} title="Share document" className="max-w-lg">
-            <div className="flex items-start mb-4 pr-8">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
+            <div className="flex items-start mb-4 pr-8 gap-2">
+                {onBack ? (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="flex-shrink-0 -ml-2"
+                        onClick={onBack}
+                        aria-label="Back to share options"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                    </Button>
+                ) : (
+                    <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
                         <Share2 className="w-5 h-5 text-primary" />
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-lg text-foreground">Share Document</h3>
-                        <p className="text-sm text-muted-foreground">
-                            Share this markdown document with others
-                        </p>
-                    </div>
+                )}
+                <div>
+                    <h3 className="font-semibold text-lg text-foreground">Share Document</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Link ready — copy or send it. Back edits protect / create options.
+                    </p>
                 </div>
             </div>
 
