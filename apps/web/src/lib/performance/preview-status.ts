@@ -82,7 +82,7 @@ export function previewLoadTone(level: PreviewLoadLevel): {
     case "sync":
       return {
         badge:
-          "bg-muted/60 text-muted-foreground border-border hover:bg-muted",
+          "bg-muted/60 text-muted-foreground border-border hover:bg-muted hover:text-muted-foreground",
         panel: "border-border bg-muted/20",
         accent: "text-muted-foreground",
         dot: "bg-muted-foreground/70",
@@ -90,7 +90,7 @@ export function previewLoadTone(level: PreviewLoadLevel): {
     case "light":
       return {
         badge:
-          "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/15",
+          "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/15 hover:text-emerald-700 dark:hover:text-emerald-400",
         panel:
           "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-500/10",
         accent: "text-emerald-700 dark:text-emerald-400",
@@ -99,7 +99,7 @@ export function previewLoadTone(level: PreviewLoadLevel): {
     case "steady":
       return {
         badge:
-          "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/25 hover:bg-sky-500/15",
+          "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/25 hover:bg-sky-500/15 hover:text-sky-700 dark:hover:text-sky-400",
         panel: "border-sky-500/30 bg-sky-500/5 dark:bg-sky-500/10",
         accent: "text-sky-700 dark:text-sky-400",
         dot: "bg-sky-500",
@@ -107,7 +107,7 @@ export function previewLoadTone(level: PreviewLoadLevel): {
     case "elevated":
       return {
         badge:
-          "bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/15",
+          "bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/15 hover:text-amber-800 dark:hover:text-amber-400",
         panel: "border-amber-500/35 bg-amber-500/5 dark:bg-amber-500/10",
         accent: "text-amber-800 dark:text-amber-400",
         dot: "bg-amber-500",
@@ -115,7 +115,7 @@ export function previewLoadTone(level: PreviewLoadLevel): {
     case "heavy":
       return {
         badge:
-          "bg-orange-500/10 text-orange-800 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/15",
+          "bg-orange-500/10 text-orange-800 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/15 hover:text-orange-800 dark:hover:text-orange-400",
         panel: "border-orange-500/35 bg-orange-500/5 dark:bg-orange-500/10",
         accent: "text-orange-800 dark:text-orange-400",
         dot: "bg-orange-500",
@@ -123,7 +123,7 @@ export function previewLoadTone(level: PreviewLoadLevel): {
     case "critical":
       return {
         badge:
-          "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/35 hover:bg-rose-500/15",
+          "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/35 hover:bg-rose-500/15 hover:text-rose-700 dark:hover:text-rose-400",
         panel: "border-rose-500/40 bg-rose-500/5 dark:bg-rose-500/10",
         accent: "text-rose-700 dark:text-rose-400",
         dot: "bg-rose-500",

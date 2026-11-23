@@ -66,7 +66,7 @@ export function EditorControls({
                                 <ThemeToggle />
                             </div>
                         )}
-                        <PreviewPerfBadge markdown={markdown} variant="toolbar" />
+                        <PreviewPerfBadge markdown={markdown} />
                         {/* Scroll to Top Button - Only show when navbar is scrolled out of view */}
                         {showThemeToggle && (
                             <Button
@@ -211,7 +211,6 @@ export function EditorControls({
             {/* Collapse/Expand Button - Always visible when collapsed, on the right */}
             {isCollapsed && (
                 <div className="flex items-center gap-1">
-                    <PreviewPerfBadge markdown={markdown} variant="compact" />
                     <div className="flex gap-2 border rounded-lg p-1 bg-muted/50">
                         <Button
                             variant="ghost"

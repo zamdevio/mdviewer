@@ -9,14 +9,8 @@ import {
 } from "@/lib/performance/preview-status";
 import { cn } from "@/lib/utils";
 
-export function PreviewPerfBadge({
-  markdown,
-  variant = "toolbar",
-}: {
-  markdown: string;
-  /** toolbar = editor tools row; compact = collapsed chrome */
-  variant?: "toolbar" | "compact";
-}) {
+/** Editor-tools Virtualization control — only rendered in the expanded toolbar. */
+export function PreviewPerfBadge({ markdown }: { markdown: string }) {
   const [open, setOpen] = useState(false);
   const status = useMemo(() => getPreviewPerfStatus(markdown), [markdown]);
   const tone = previewLoadTone(status.level);
@@ -28,45 +22,21 @@ export function PreviewPerfBadge({
 
   return (
     <>
-      {variant === "compact" ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn(
-            "flex items-center gap-1 px-1.5 py-0.5 rounded border flex-shrink-0 transition-colors",
-            tone.badge,
-          )}
-          title={title}
-        >
-          <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", tone.dot)} />
-          <span className="font-semibold tracking-wide text-[9px] sm:text-[10px]">
-            Virtualization
-          </span>
-        </button>
-      ) : (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setOpen(true)}
-          className={cn(
-            "h-8 gap-1.5 px-2 flex-shrink-0 border",
-            tone.badge,
-          )}
-          title={title}
-        >
-          <Layers className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="hidden sm:inline text-xs font-medium">Virtualization</span>
-          <span
-            className={cn(
-              "hidden md:inline text-[10px] font-semibold uppercase tracking-wide opacity-80",
-              tone.accent,
-            )}
-          >
-            {status.levelLabel}
-          </span>
-        </Button>
-      )}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title={title}
+        className={cn(
+          "inline-flex h-8 flex-shrink-0 items-center gap-1.5 rounded-md border px-2 text-sm font-medium transition-colors",
+          tone.badge,
+        )}
+      >
+        <Layers className="h-3.5 w-3.5 flex-shrink-0" />
+        <span className="hidden text-xs font-medium sm:inline">Virtualization</span>
+        <span className="hidden text-[10px] font-semibold uppercase tracking-wide opacity-80 md:inline">
+          {status.levelLabel}
+        </span>
+      </button>
 
       <ModalShell
         open={open}
@@ -87,7 +57,10 @@ export function PreviewPerfBadge({
                 Virtualization
               </h3>
               <p className="text-sm text-muted-foreground">
-                Load: <span className={cn("font-medium", tone.accent)}>{status.levelLabel}</span>
+                Load:{" "}
+                <span className={cn("font-medium", tone.accent)}>
+                  {status.levelLabel}
+                </span>
                 {" · "}
                 {status.virtualized ? "virtual preview on" : "sync preview"}
               </p>
