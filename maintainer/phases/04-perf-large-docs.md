@@ -75,8 +75,15 @@
 |-------|--------|--------|
 | **0** | Size-aware preview debounce, Mermaid debounce/lazy/LRU, scroll throttle, auto-save scaling, memory warn | **Shipped** |
 | **1** | Virtual scroll preview + lazy viewport blocks | **Shipped** (preview + share); editor virt **deferred** (textarea — no rewrite) |
-| **2** | Chunked markdown parse in Web Worker + diff/incremental for &gt;1MB | Open |
-| **3** | Per-component opts (code / Mermaid / math / tables / images) | Open (P2) |
-| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open |
+| **2** | Chunked markdown parse in Web Worker + diff/incremental for &gt;1MB | **Open — start here** (Focus Now) |
+| **3** | Per-component opts (code / Mermaid / math / tables / images) | Open (P2) — **after** slice 2 |
+| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open — after 2–3 |
+
+### Slice 2 acceptance (for the next agent)
+
+- [ ] `worker-parser.ts` (or equiv.) parses markdown off the main thread for large docs
+- [ ] Diff / incremental re-parse path for content &gt;1MB (avoid full re-parse on every debounce tick)
+- [ ] Preview path uses worker output without regressing &lt;100KB docs (keep sync path or fast threshold)
+- [ ] Unit/smoke coverage for splitter/worker boundary; no Appflare / v4 in this slice
 
 v4 claim for 5–10MB needs **at least slices 1–2** (or an explicit defer note in release notes).  

@@ -4,7 +4,8 @@ Closed slices (newest first).
 
 | When | Slice | Notes |
 |------|-------|-------|
-| 2026-11 | Showcase honesty + hex share ids | README/home/docs agent parity; share ids lowercase hex (double-click copy) |
+| 2026-11 | Preview virt + showcase visibility + `mdviewer` naming | Virtualized preview/share ≥100KB; home agent band; MCP/compat/`wrangler` name `mdviewer` (Pages `markview`); editor virt deferred |
+| 2026-11 | Showcase honesty + hex share ids | Protocol 3 honesty on README/home/docs; share ids lowercase hex (double-click copy) |
 | 2026-11 | Protocol 3 manage token | Worker Bearer manage + view-only password; rotate-manage; SPA `#token`; Shares Edit; llms/docs; prod smoke + R2 clear |
 | 2026-11 | knip + madge + vitest | Root knip/madge; worker+web vitest for TTL/password/fair-use/debounce |
 | 2026-11 | llms generate + perf slice 2 | SPA→worker llms generator; lazy Mermaid/LRU/throttle/autosave |

@@ -10,6 +10,16 @@
 
 ---
 
+## Handoff (2026-11-23) — start here in a new chat
+
+1. Read **this file**, then [`04-perf-large-docs.md`](./04-perf-large-docs.md) slice **2** only.
+2. **Do next:** chunked markdown parse in a Web Worker + diff/incremental for docs &gt;1MB (`apps/web/src/lib/markdown/worker-parser.ts`, wire through preview). v4 5–10MB claim needs slices **1–2** (1 already shipped).
+3. **Do not:** Appflare pack (`06`), editor virtualization (textarea — deferred), v4 bump, or 04 slices 3–4 until slice 2 lands (or Focus says otherwise).
+4. **Names:** product + Wrangler Worker script = `mdviewer` (`mdviewer.<account>.workers.dev`); Pages = `markview`; public API custom domain = `api.mdviewer.zamdev.dev`. MCP/`/compatibility.name` = `mdviewer`.
+5. **Systems:** [`../systems/worker.md`](../systems/worker.md) · [`../systems/README.md`](../systems/README.md). Protocol 3 manage/view rules unchanged.
+
+---
+
 ## Focus order
 
 | Label | Vertical | Doc |
@@ -22,7 +32,7 @@
 | **Shipped** | Share protocol 2 | [`01-share-protocol.md`](./01-share-protocol.md) |
 | **Shipped** | Unified share dialog | [`02-share-dialog.md`](./02-share-dialog.md) |
 | **Shipped** | Agent surfaces (MCP / llms) | [`03-agent-surfaces.md`](./03-agent-surfaces.md) |
-| **Shipped** | Perf slice 1 (size-aware preview / Mermaid debounce) | folded into [`04-perf-large-docs.md`](./04-perf-large-docs.md) checklist |
+| **Shipped** | Perf 0–1 (debounce/LRU + preview virt; editor deferred) | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
 
 ---
 
