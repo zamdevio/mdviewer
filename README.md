@@ -146,7 +146,7 @@ Env names: see [`.env.example`](./.env.example). Worker CORS / share origins: `A
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md). Maintainer Focus / pre–v4.0 checklist: [`maintainer/phases/focus.md`](./maintainer/phases/focus.md), [`maintainer/final.md`](./maintainer/final.md).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md). Maintainer Focus: [`maintainer/phases/focus.md`](./maintainer/phases/focus.md).
 
 ## License
 

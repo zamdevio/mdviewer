@@ -66,13 +66,12 @@ Share viewer exposes metadata via `GET /share/:id/meta` (Details control in the 
 
 In-doc fragment links (`#heading`) work in editor preview and share viewer (first matching heading wins).
 
-## Still open (pre-v4.0)
+## Version / honesty
 
-- Large-doc performance (virtual scroll / lazy heavy blocks) — `maintainer/phases/04-perf-large-docs.md`
-- Nested projects / CSP nonce / ModalShell leftovers — `maintainer/final.md` §7
-- Wipe Worker R2 before real v4 deploy (protocol 3-only objects)
-
-Track release readiness in `maintainer/final.md`. Do **not** bump to v4.0 until that checklist is cleared and approved. Stay on **3.x.x** until then.
+- Product line: **v4.0.0** (2026-11-23). Protocol remains **3**.
+- Large-doc claim: ~**2MB** virtualized preview (machine-dependent); editor textarea is not virtualized; no 5–10MB claim.
+- Parked follow-ups: `maintainer/phases/parked.md` (perf-4, editor-virt, nested projects, CSP nonce, ModalShell).
+- Next packaging: `maintainer/phases/appflare.md`. Focus: `maintainer/phases/focus.md`.
 
 ## Security notes
 

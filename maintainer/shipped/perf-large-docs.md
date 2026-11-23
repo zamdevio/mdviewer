@@ -4,7 +4,7 @@
 **Order:** after protocol 3 + showcase visibility  
 **Goal (original):** Smooth edit/preview toward large markdown.  
 **Status:** Slices **0–3 shipped**; **slice 4 parked post-v4** (IndexedDB AST / table row virt / metrics). Editor textarea virt stays deferred.  
-**Honest size claim (v4):** virtualized **preview** proven around **~2MB** (machine-dependent scroll/smoothness); **do not** advertise 5–10MB until slice 4 + editor virt revisit.
+**Honest size claim (v4):** virtualized **preview** proven around **~2MB** (machine-dependent scroll/smoothness); **do not** advertise 5–10MB until [`../phases/parked.md`](../phases/parked.md) **perf-4** / **editor-virt**.
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -87,5 +87,5 @@
 - [x] &lt;100KB keeps sync `ReactMarkdown` via `MarkdownViewer`
 - [x] Unit coverage: `chunk-cache` / `parse-pipeline` / `worker-parser`; no Appflare / v4 in this slice
 
-v4 ships with a **~2MB practical** large-preview claim (virt + worker); 5–10MB stays aspirational until slice 4 / editor virt. Clear [`../final.md`](../final.md) before **v4.0.0**.  
+v4 ships with a **~2MB practical** large-preview claim (virt + worker); 5–10MB stays aspirational until [`../phases/parked.md`](../phases/parked.md) **perf-4** / **editor-virt**.
 

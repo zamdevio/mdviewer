@@ -2,7 +2,7 @@
 
 **Focus label:** **Shipped** ([`focus.md`](./focus.md))  
 **Order:** 01 (implement first)  
-**Status:** Shipped (worker protocol 2) — superseded for *new* work by [`07-manage-token.md`](./07-manage-token.md) (protocol 3)  
+**Status:** Shipped (worker protocol 2) — superseded for *new* work by [`manage-token.md`](./manage-token.md) (protocol 3)  
 **Depends on:** Phases A–B shipped
 
 ## Goals

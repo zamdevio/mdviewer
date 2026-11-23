@@ -8,7 +8,7 @@
 |------|--------|
 | Source | `apps/web/src/pwa/sw.template.js` |
 | Emitted | `/sw.js` via Vite plugin (`CACHE_VERSION` = full semver from `apps/web/package.json`) |
-| Active cache name | `mdviewer-${CACHE_VERSION}` e.g. `mdviewer-v3.8.6` |
+| Active cache name | `mdviewer-${CACHE_VERSION}` e.g. `mdviewer-v4.0.0` |
 | Install | `skipWaiting()`; precache offline shell only (not SPA HTML routes) |
 | Activate | delete **every** Cache Storage entry except the active name, then `clients.claim()` |
 | HTML / navigations | network-only when online (offline → `/offline.html`) |

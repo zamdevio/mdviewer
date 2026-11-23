@@ -80,7 +80,7 @@ Failure codes per id: `not_found`, `expired`, `unauthorized`. SPA Settings shows
 ```json
 {
   "name": "mdviewer",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "protocol": 3,
   "features": {
     "manageToken": true,

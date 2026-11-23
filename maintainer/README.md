@@ -11,7 +11,7 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | Need | Where |
 |------|--------|
 | **What to build next** | [`phases/focus.md`](phases/focus.md) |
-| **Pre–v4.0 checklist** | [`final.md`](final.md) |
+| **Parked follow-ups** | [`phases/parked.md`](phases/parked.md) |
 | **What not to redo** | [`shipped/README.md`](shipped/README.md) |
 | **How subsystems wire** | [`systems/README.md`](systems/README.md) |
 | **Session scratch** | `temp/` (**gitignored**) |
@@ -19,7 +19,7 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 
 **Engine truth:** SPA in `apps/web` (Vite + React), Worker in `apps/worker` (Hono + OpenAPI), public notes in `docs/`.
 
-**Versioning:** **3.x** until `final.md` is clear; release bump is **v4.0.0**.
+**Versioning:** **v4.0.0** line after the 2026-11-23 bump.
 
 ---
 
@@ -28,19 +28,19 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | Doc | Role |
 |-----|------|
 | [`phases/focus.md`](phases/focus.md) | Focus order (Now / Next / Parked) |
-| [`final.md`](final.md) | Pre–v4.0 release checklist |
-| [`phases/06-appflare.md`](phases/06-appflare.md) | **After v4** — Appflare catalog readiness |
-| [`shipped/04-perf-large-docs.md`](shipped/04-perf-large-docs.md) | Folded — perf 0–3; slice 4 parked; ~2MB claim |
-| [`shipped/README.md`](shipped/README.md) | Closed-slice timeline + folded phase receipts |
-| [`shipped/01-share-protocol.md`](shipped/01-share-protocol.md) | Folded — Phase C protocol |
-| [`shipped/02-share-dialog.md`](shipped/02-share-dialog.md) | Folded — Phase D share dialog |
-| [`shipped/03-agent-surfaces.md`](shipped/03-agent-surfaces.md) | Folded — Phase E MCP / agents |
-| [`shipped/05-showcase.md`](shipped/05-showcase.md) | Folded — showcase honesty |
-| [`shipped/07-manage-token.md`](shipped/07-manage-token.md) | Folded — protocol 3 manage token |
-| [`shipped/08-share-ux.md`](shipped/08-share-ux.md) | Folded — share UX polish |
+| [`phases/appflare.md`](phases/appflare.md) | **Next** — Appflare catalog (after v4) |
+| [`phases/parked.md`](phases/parked.md) | Deferred slices (perf-4, editor-virt, …) |
+| [`shipped/README.md`](shipped/README.md) | Closed-slice timeline + receipts |
+| [`shipped/share-protocol.md`](shipped/share-protocol.md) | Share protocol (historical → protocol 3) |
+| [`shipped/share-dialog.md`](shipped/share-dialog.md) | Unified share dialog |
+| [`shipped/agent-surfaces.md`](shipped/agent-surfaces.md) | MCP / agent surfaces |
+| [`shipped/showcase.md`](shipped/showcase.md) | Showcase honesty |
+| [`shipped/perf-large-docs.md`](shipped/perf-large-docs.md) | Perf 0–3; ~2MB claim; slice 4 → parked |
+| [`shipped/manage-token.md`](shipped/manage-token.md) | Protocol 3 manage token |
+| [`shipped/share-ux.md`](shipped/share-ux.md) | Share UX polish |
 | [`systems/web.md`](systems/web.md) | Web app map |
 | [`systems/worker.md`](systems/worker.md) | Worker API map |
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
 | [`agents/tree.md`](agents/tree.md) | Directory conventions |
 
-Folded phases are **removed** from `phases/` — read receipts in [`shipped/`](shipped/). Open: `focus`, `06` (after v4).
+Open `phases/`: `focus`, `appflare`, `parked` only. Receipts have **no** `NN-` prefixes.

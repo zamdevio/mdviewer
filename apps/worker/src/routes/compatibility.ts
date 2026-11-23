@@ -72,7 +72,7 @@ app.openapi(compatibilityRoute, (c) => {
   return c.json(
     {
       name: "mdviewer" as const,
-      version: "3.0.0",
+      version: "4.0.0",
       protocol: 3,
       endpoints: [
         { method: "GET", path: "/health", description: "Liveness" },

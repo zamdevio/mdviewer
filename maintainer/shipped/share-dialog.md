@@ -2,8 +2,8 @@
 
 **Focus label:** **Shipped** ([`focus.md`](./focus.md))  
 **Order:** 02  
-**Status:** Shipped — UX evolves under [`07-manage-token.md`](./07-manage-token.md) (already-shared + disposable view pw)  
-**Depends on:** Phase C ([`01-share-protocol.md`](./01-share-protocol.md))
+**Status:** Shipped — UX evolves under [`manage-token.md`](./manage-token.md) (already-shared + disposable view pw)  
+**Depends on:** Phase C ([`share-protocol.md`](./share-protocol.md))
 
 ## Goals
 

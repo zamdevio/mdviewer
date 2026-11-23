@@ -44,4 +44,4 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 
 Follow [`SECURITY.md`](../SECURITY.md) (private advisory preferred). Please do not post private exploit PoCs against production share hosts without coordination.
 
-Pre–v4.0 tracking: [`maintainer/final.md`](../maintainer/final.md).
+Maintainer Focus / parked follow-ups: [`maintainer/phases/focus.md`](../maintainer/phases/focus.md), [`maintainer/phases/parked.md`](../maintainer/phases/parked.md).

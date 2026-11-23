@@ -3,7 +3,7 @@
 **Focus label:** **Shipped** ([`focus.md`](./focus.md))  
 **Order:** ahead of remaining 04 / Appflare  
 **Status:** Shipped — compact one-dialog + bound-share heal; share view virt/copy/scroll on `main`  
-**Depends on:** Protocol 3 ([`07-manage-token.md`](./07-manage-token.md)), dialog shell ([`02-share-dialog.md`](./02-share-dialog.md))
+**Depends on:** Protocol 3 ([`manage-token.md`](./manage-token.md)), dialog shell ([`share-dialog.md`](./share-dialog.md))
 
 ## Goals
 

@@ -19,11 +19,12 @@ See [`docs/getting-started.md`](./docs/getting-started.md) and [`docs/deploy.md`
 
 Maintainer planning lives under [`maintainer/`](./maintainer/):
 
-- **Focus (max 3):** [`maintainer/phases/focus.md`](./maintainer/phases/focus.md)
-- **Pre–v4.0 checklist:** [`maintainer/final.md`](./maintainer/final.md)
+- **Focus:** [`maintainer/phases/focus.md`](./maintainer/phases/focus.md)
+- **Parked:** [`maintainer/phases/parked.md`](./maintainer/phases/parked.md)
+- **Appflare (after v4):** [`maintainer/phases/appflare.md`](./maintainer/phases/appflare.md)
 - **Shipped log:** [`maintainer/shipped/README.md`](./maintainer/shipped/README.md)
 
-Do not start queued phases until Focus has a free slot. Product docs for users: [`docs/`](./docs/).
+Do not start queued work until Focus promotes it. Product docs for users: [`docs/`](./docs/).
 
 ## Pull requests
 

@@ -1,11 +1,10 @@
 # Phase 07 — Manage token + view-password split (protocol 3)
 
-**Focus label:** **Now** ([`focus.md`](./focus.md))  
-**Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
+**Focus label:** **Shipped** ([`../phases/focus.md`](../phases/focus.md))  
 **Status:** A–E done (prod smoke 2026-11-23). Follow-ups folded: R2 wipe done; share ids → hex; manage/view secret gen unbiased.  
-**Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
+**Depends on:** Protocol 2 live; SPA shares binding  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
-**Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
+**Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. R2 wipe done before protocol 3 smoke.  
 **Systems map:** [`../systems/worker.md`](../systems/worker.md)
 
 ---
@@ -165,7 +164,7 @@ Headers: manage = `Authorization: Bearer <token>` (preferred) or `X-Share-Manage
 ### Hard cut / ops
 
 - No protocol-2 dual auth in Worker or public docs.
-- Wipe Worker R2 before real **v4.0.0** (`final.md` checkbox).
+- Wipe Worker R2 before protocol 3 smoke — **done** 2026-11-23.
 - SPA (B/E): migrate settings `#password` → `#token` locally.
 
 ### Slice A tests
@@ -230,7 +229,7 @@ Headers: manage = `Authorization: Bearer <token>` (preferred) or `X-Share-Manage
 
 ## Related
 
-- Protocol 2 baseline (historical): [`01-share-protocol.md`](./01-share-protocol.md), [`02-share-dialog.md`](./02-share-dialog.md)
+- Protocol 2 baseline (historical): [`share-protocol.md`](./share-protocol.md), [`share-dialog.md`](./share-dialog.md)
 - Worker systems map: [`../systems/worker.md`](../systems/worker.md)
-- Appflare: [`06-appflare.md`](./06-appflare.md) (after this protocol stabilizes)
-- Pre-v4 checklist: [`../final.md`](../final.md)
+- Appflare: [`../phases/appflare.md`](../phases/appflare.md) (after v4)
+- Focus: [`../phases/focus.md`](../phases/focus.md) · Parked: [`../phases/parked.md`](../phases/parked.md)

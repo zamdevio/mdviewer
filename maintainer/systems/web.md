@@ -9,7 +9,7 @@
 
 ## Share UX (protocol 3)
 
-Dialog ([`../shipped/08-share-ux.md`](../shipped/08-share-ux.md) → compact polish):
+Dialog ([`../shipped/share-ux.md`](../shipped/share-ux.md) → compact polish):
 
 | Surface | Role |
 |---------|------|
@@ -47,5 +47,5 @@ Do not confuse with **rotate view password** (per-share PATCH in Compose).
 - **Connection:** single shared `/health` probe — once on load, Recheck, `online`, retry only while unhealthy (no Connected spam)
 - **Temp / Files editing:** empty or exact Settings default sample is *baseline* — not unsaved temp; does not trip Load warning; clears Files “Editing” mark on New / empty / no saved file
 - **Load tiers (virt badge):** Sync → Light → Steady → Elevated (≥1MB) → Heavy (≥2MB / high heap) → Critical — ~1.8–2MB ⇒ Elevated is expected
-- **Size honesty:** practical large-preview bar ~**2MB** (machine-dependent); editor textarea not virt; no 5–10MB claim; slice 4 parked post-v4 ([`../shipped/04-perf-large-docs.md`](../shipped/04-perf-large-docs.md))
+- **Size honesty:** practical large-preview bar ~**2MB** (machine-dependent); editor textarea not virt; no 5–10MB claim; follow-ups in [`../phases/parked.md`](../phases/parked.md) · receipt [`../shipped/perf-large-docs.md`](../shipped/perf-large-docs.md)
 - **Stress fixtures:** `node scripts/gen-large-md.mjs --mb 2` (local only)

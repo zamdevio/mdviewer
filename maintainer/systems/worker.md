@@ -3,7 +3,7 @@
 - Framework: Hono `OpenAPIHono`
 - Config: [`wrangler.jsonc`](../../apps/worker/wrangler.jsonc)
 - **Tunable caps:** `src/lib/config.ts` (TTL bounds, max file bytes, rotate-manage max ids, fair-use defaults). Self-host: edit + redeploy; SPA adapts via `GET /compatibility` `ttl` / `limits`. Env `RATE_LIMIT_*` still overrides fair-use window/max.
-- Routes (target **protocol 3** — [`../shipped/07-manage-token.md`](../shipped/07-manage-token.md)):
+- Routes (target **protocol 3** — [`../shipped/manage-token.md`](../shipped/manage-token.md)):
   - `POST /upload` — create under `shares/{id}/` + metadata; **manage token required**; optional view password if protect on; fair-use DO
   - `GET /share/:id` — content; `X-Share-Password` only if `viewProtected`
   - `GET /share/:id/meta` — anon meta (no hashes)
@@ -26,4 +26,4 @@
 - R2: `shares/{id}/metadata.json` + `shares/{id}/files/...` — `manageTokenHash` required; `passwordHash` view-only optional
 - Cron: `0 4 * * *` → sweep expired shares
 - Secrets: PBKDF2-SHA256 hashes in metadata only; never in public responses
-- Pre-v4 ops: wipe R2 before real v4 deploy ([`../final.md`](../final.md))
+- R2 wipe before protocol 3 smoke — done 2026-11-23; see [`../shipped/manage-token.md`](../shipped/manage-token.md)

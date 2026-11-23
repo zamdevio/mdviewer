@@ -1,8 +1,8 @@
 {
   "name": "mdviewer",
   "private": true,
-  "version": "3.8.6",
-  "description": "Modern markdown viewer — Vite SPA + Cloudflare Workers share API.",
+  "version": "4.0.0",
+  "description": "Modern markdown viewer \u2014 Vite SPA + Cloudflare Workers share API.",
   "type": "module",
   "packageManager": "pnpm@12.21.0",
   "scripts": {

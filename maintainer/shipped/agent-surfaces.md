@@ -2,8 +2,8 @@
 
 **Focus label:** **Shipped** ([`focus.md`](./focus.md))  
 **Order:** 03  
-**Status:** Shipped — protocol 3 copy/MCP args refresh is slice D of [`07-manage-token.md`](./07-manage-token.md)  
-**Depends on:** Phase C ([`01-share-protocol.md`](./01-share-protocol.md)); preferably after D ([`02-share-dialog.md`](./02-share-dialog.md))
+**Status:** Shipped — protocol 3 copy/MCP args refresh is slice D of [`manage-token.md`](./manage-token.md)  
+**Depends on:** Phase C ([`share-protocol.md`](./share-protocol.md)); preferably after D ([`share-dialog.md`](./share-dialog.md))
 
 ## Goals
 

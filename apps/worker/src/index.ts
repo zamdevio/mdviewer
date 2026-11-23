@@ -76,7 +76,7 @@ app.doc("/openapi.json", {
   openapi: "3.1.0",
   info: {
     title: "MDViewer API",
-    version: "3.0.0",
+    version: "4.0.0",
     description:
       "Edge API for sharing markdown via Cloudflare Workers + R2. Protocol 3: manage token for mutate/upload; optional disposable view password for GET; fixed TTL; fair-use (IP+UA). Caps via GET /compatibility.",
   },
