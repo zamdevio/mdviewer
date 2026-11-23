@@ -79,9 +79,9 @@ import type { ExportImportData, ConflictFile, ConflictAction } from "@/types";
 export default function SettingsPage(): React.JSX.Element {
     // Use lazy initialization to load settings from localStorage without useEffect
     const [showDefaultContent, setShowDefaultContent] = useState(() => {
-        if (typeof window === 'undefined') return false;
+        if (typeof window === 'undefined') return true;
         const settings = getSettings();
-        return settings?.showDefaultContent ?? false;
+        return settings?.showDefaultContent ?? true;
     });
     const [keyboardShortcuts, setKeyboardShortcuts] = useState(() => {
         if (typeof window === 'undefined') return true;
@@ -731,7 +731,8 @@ export default function SettingsPage(): React.JSX.Element {
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium mb-1">Show default content</p>
                             <p className="text-xs text-muted-foreground">
-                                Example markdown when the editor is empty or a new file is created
+                                Example markdown when the editor is empty or a new file is created.
+                                Default is On; the first-visit dialog asks once, then use this toggle.
                             </p>
                         </div>
                         <Button

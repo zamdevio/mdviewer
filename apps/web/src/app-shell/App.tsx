@@ -8,6 +8,7 @@ import { GlobalKeyboardShortcuts } from "@/components/layout/global-keyboard-sho
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { PWAInstallPrompt } from "@/components/pwa/install-prompt";
 import { UpdatePrompt } from "@/components/pwa/update-prompt";
+import { FirstRunDefaultsDialog } from "@/components/onboarding/first-run-defaults-dialog";
 import { Loader2 } from "lucide-react";
 
 const HomePage = lazy(() => import("@/components/pages/home"));
@@ -67,6 +68,7 @@ export function App() {
       <ThemeProvider>
         <AppShell />
         <Toaster />
+        <FirstRunDefaultsDialog />
         <PWAInstallPrompt />
         <UpdatePrompt />
       </ThemeProvider>

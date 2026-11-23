@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { ModalShell } from "@/components/ui/modal-shell";
 import {
   SHARE_TTL_DEFAULT,
-  SHARE_TTL_MAX,
-  SHARE_TTL_MIN,
   SHARE_TTL_PRESETS,
+  formatDurationHuman,
+  resolveShareTtlInput,
   clampShareTtl,
   previewExpiresAt,
   formatWipeTime,
@@ -78,9 +78,8 @@ export function ShareComposeDialog({
   );
   const [viewPassword, setViewPassword] = useState("");
   const [ttlSeconds, setTtlSeconds] = useState(SHARE_TTL_DEFAULT);
-  const [ttlMin, setTtlMin] = useState(SHARE_TTL_MIN);
-  const [ttlMax, setTtlMax] = useState(SHARE_TTL_MAX);
   const [viewProtected, setViewProtected] = useState(false);
+  /** Free-text duration (`5h`, `60min`, …). Empty = using a preset. */
   const [customTtl, setCustomTtl] = useState("");
 
   useEffect(() => {
@@ -98,9 +97,7 @@ export function ShareComposeDialog({
       try {
         const compat = await fetchCompatibility();
         if (cancelled || !compat.ttl) return;
-        setTtlMin(compat.ttl.minSeconds);
-        setTtlMax(compat.ttl.maxSeconds);
-        setTtlSeconds(compat.ttl.defaultSeconds);
+        setTtlSeconds(clampShareTtl(compat.ttl.defaultSeconds));
       } catch {
         /* keep local defaults */
       }
@@ -110,9 +107,21 @@ export function ShareComposeDialog({
     };
   }, [open, existingShareId, existingViewPassword, allowMutate]);
 
+  const ttlSummary = useMemo(() => {
+    if (customTtl.trim()) {
+      return resolveShareTtlInput(customTtl, ttlSeconds);
+    }
+    return {
+      seconds: clampShareTtl(ttlSeconds),
+      label: formatDurationHuman(ttlSeconds),
+      capped: false,
+      rawSeconds: ttlSeconds,
+    };
+  }, [customTtl, ttlSeconds]);
+
   const wipePreview = useMemo(
-    () => formatWipeTime(previewExpiresAt(ttlSeconds)),
-    [ttlSeconds],
+    () => formatWipeTime(previewExpiresAt(ttlSummary.seconds)),
+    [ttlSummary.seconds],
   );
 
   const noManageToken = !manageToken.trim();
@@ -150,10 +159,13 @@ export function ShareComposeDialog({
       </div>
 
       {noManageToken && (
-        <div className="mb-4 flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <div className="mb-4 flex gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-stone-900 dark:border-orange-500/50 dark:bg-orange-950/50 dark:text-orange-50">
+          <AlertTriangle
+            className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-700 dark:text-orange-200"
+            aria-hidden
+          />
           <div className="space-y-2">
-            <p>
+            <p className="text-stone-900 dark:text-orange-50">
               A manage token is required to create or update shares. Stored only
               in this browser.
             </p>
@@ -288,7 +300,9 @@ export function ShareComposeDialog({
                   type="button"
                   size="sm"
                   variant={
-                    ttlSeconds === p.seconds && !customTtl ? "default" : "outline"
+                    !customTtl.trim() && ttlSeconds === p.seconds
+                      ? "default"
+                      : "outline"
                   }
                   onClick={() => {
                     setCustomTtl("");
@@ -301,20 +315,24 @@ export function ShareComposeDialog({
               ))}
             </div>
             <input
-              type="number"
-              min={ttlMin}
-              max={ttlMax}
-              placeholder={`Custom seconds (${ttlMin}–${ttlMax})`}
+              type="text"
+              inputMode="text"
+              placeholder="Or type a duration — 5m, 2h, 3d, 1w…"
               value={customTtl}
               onChange={(e) => {
-                setCustomTtl(e.target.value);
-                const n = parseInt(e.target.value, 10);
-                if (Number.isFinite(n)) setTtlSeconds(clampShareTtl(n));
+                const v = e.target.value;
+                setCustomTtl(v);
+                const parsed = resolveShareTtlInput(v, SHARE_TTL_DEFAULT);
+                if (v.trim()) setTtlSeconds(parsed.seconds);
               }}
               disabled={busy}
               className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm"
+              aria-describedby="share-ttl-summary"
             />
-            <p className="text-xs text-muted-foreground mt-1">
+            <p id="share-ttl-summary" className="text-xs text-muted-foreground mt-1">
+              {ttlSummary.label}
+              {ttlSummary.capped ? " (capped to 1 min–30 days)" : ""}
+              {" · "}
               Wipes around: {wipePreview}
             </p>
           </div>
@@ -364,11 +382,14 @@ export function ShareComposeDialog({
         )}
 
         {!viewProtected && mode === "create" && (
-          <div className="flex gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <div>
+          <div className="flex gap-2 rounded-md border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-stone-900 dark:border-orange-500/50 dark:bg-orange-950/50 dark:text-orange-50">
+            <AlertTriangle
+              className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-700 dark:text-orange-200"
+              aria-hidden
+            />
+            <p className="font-medium leading-snug text-stone-900 dark:text-orange-50">
               View is public — anyone with the link can read until wipe time.
-            </div>
+            </p>
           </div>
         )}
 
@@ -388,7 +409,7 @@ export function ShareComposeDialog({
               onConfirm({
                 mode,
                 viewPassword: viewProtected ? viewPassword.trim() : "",
-                ttlSeconds: clampShareTtl(ttlSeconds),
+                ttlSeconds: ttlSummary.seconds,
                 viewProtected: viewProtected && Boolean(viewPassword.trim()),
               })
             }

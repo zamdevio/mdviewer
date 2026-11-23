@@ -33,7 +33,14 @@ export function ModalShell({
 }) {
     const panelRef = useRef<HTMLDivElement>(null);
     const previousFocusRef = useRef<HTMLElement | null>(null);
+    const onCloseRef = useRef(onClose);
+    const closeOnEscapeRef = useRef(closeOnEscape);
 
+    onCloseRef.current = onClose;
+    closeOnEscapeRef.current = closeOnEscape;
+
+    // Only run open/close lifecycle when `open` flips — not when parent
+    // recreates onClose each render (that was stealing focus from inputs).
     useEffect(() => {
         if (!open) return;
 
@@ -41,25 +48,20 @@ export function ModalShell({
             document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
         const panel = panelRef.current;
-        const focusables = panel ? Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)) : [];
-        const initial =
-            focusables.find((el) => el.tagName === "INPUT" || el.tagName === "TEXTAREA") ??
-            focusables.find((el) => !el.hasAttribute("disabled")) ??
-            panel;
-        requestAnimationFrame(() => initial?.focus());
+        requestAnimationFrame(() => panel?.focus());
 
         const onKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape" && closeOnEscape) {
+            if (e.key === "Escape" && closeOnEscapeRef.current) {
                 e.preventDefault();
                 e.stopPropagation();
-                onClose();
+                onCloseRef.current();
                 return;
             }
 
             if (e.key !== "Tab" || !panel) return;
 
             const items = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-                (el) => !el.hasAttribute("disabled") && el.tabIndex !== -1
+                (el) => !el.hasAttribute("disabled") && el.tabIndex !== -1,
             );
             if (items.length === 0) {
                 e.preventDefault();
@@ -89,7 +91,7 @@ export function ModalShell({
             document.body.style.overflow = prevOverflow;
             previousFocusRef.current?.focus?.();
         };
-    }, [open, onClose, closeOnEscape]);
+    }, [open]);
 
     if (!open || typeof document === "undefined") return null;
 
@@ -143,6 +145,6 @@ export function ModalShell({
                 {children}
             </Card>
         </div>,
-        document.body
+        document.body,
     );
 }
