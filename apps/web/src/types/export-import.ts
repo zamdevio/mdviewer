@@ -34,6 +34,8 @@ export interface ExportSettings {
     showSpellChecker?: boolean;
     filesLayout?: 'grid' | 'tree';
     trashEnabled?: boolean;
+    manageToken?: string;
+    /** @deprecated migrated to manageToken */
     defaultSharePassword?: string;
 }
 

@@ -125,7 +125,7 @@ function ShareDetailsDialog({
                             {meta.viewProtected
                                 ? "View password required"
                                 : meta.hasPassword
-                                  ? "Mutate password set"
+                                  ? "View password set"
                                   : "Open"}
                         </dd>
                     </div>

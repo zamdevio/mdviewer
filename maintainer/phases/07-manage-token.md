@@ -2,7 +2,7 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** Slice A implemented (Worker); B–E open  
+**Status:** Slice A–C implemented; D–E open (docs/MCP llms + migrate smoke)  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
 **Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
@@ -189,13 +189,13 @@ Headers: manage = `Authorization: Bearer <token>` (preferred) or `X-Share-Manage
 
 ### SPA
 
-- [ ] Settings `#token`: generate, show/copy, rotate with confirm + bulk rotate of local share ids
-- [ ] Block share without manage token
-- [ ] Compose: view-protect → auto-gen disposable password field
-- [ ] Already-shared dialog (existing link / new link / edit protect / delete)
-- [ ] Shares page: Edit → same dialog; mobile-friendly
-- [ ] Local storage: bind `shareId` + manage-token era; store view password for creator convenience only (optional)
-- [ ] Adapt TTL / rotate batch size from `/compatibility` for configured API URL
+- [x] Settings `#token`: generate, show/copy, rotate with confirm + bulk rotate of local share ids
+- [x] Block share without manage token
+- [x] Compose: view-protect → auto-gen disposable password field
+- [x] Already-shared dialog (existing link / new link / update + view protect)
+- [x] Shares page: Edit → same dialog (existing-link mode); mobile-friendly icon+label
+- [x] Local storage: `manageToken` (+ migrate from `defaultSharePassword`); view password on file/link optional
+- [x] Adapt TTL / rotate batch size from `/compatibility` for configured API URL
 
 ### Worker
 

@@ -1122,10 +1122,16 @@ export default function EditorPage() {
                 stateForShare = named;
             }
 
+            if (opts.mode === "existing") {
+                toast.dismiss("sharing");
+                setShowShareCompose(false);
+                return;
+            }
+
             const result = await handleShareLogic(markdown, stateForShare, {
                 mode: opts.mode,
                 existingShareId: boundShareFile?.shareId,
-                password: opts.password || undefined,
+                viewPassword: opts.viewPassword || undefined,
                 ttlSeconds: opts.ttlSeconds,
                 viewProtected: opts.viewProtected,
             });
@@ -1665,7 +1671,7 @@ export default function EditorPage() {
                 open={showShareCompose}
                 filename={currentFileName}
                 existingShareId={boundShareFile?.shareId}
-                existingPassword={boundShareFile?.sharePassword}
+                existingViewPassword={boundShareFile?.sharePassword}
                 submitting={isSharing}
                 onClose={() => !isSharing && setShowShareCompose(false)}
                 onConfirm={handleShareComposeConfirm}

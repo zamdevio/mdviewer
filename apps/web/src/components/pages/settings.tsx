@@ -45,6 +45,7 @@ import {
     purgeTrashEntry,
     emptyTrash,
     onStorageChange,
+    collectBoundShareIds,
     type TrashEntry,
 } from "@/lib/storage";
 import { encryptData } from "@/lib/utils";
@@ -57,7 +58,12 @@ import {
     hasApiOverride,
     setApiOverride,
 } from "@/lib/config";
-import { isCorsFailure, testShareConnection } from "@/lib/api";
+import {
+    fetchCompatibility,
+    isCorsFailure,
+    rotateManageTokensBatched,
+    testShareConnection,
+} from "@/lib/api";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { generateSharePassword } from "@/lib/share/ttl";
@@ -132,11 +138,13 @@ export default function SettingsPage(): React.JSX.Element {
         return getEffectiveApiConfig().FRONTEND_URL;
     });
     const [testingShare, setTestingShare] = useState(false);
-    const [defaultSharePassword, setDefaultSharePassword] = useState(() => {
+    const [manageToken, setManageToken] = useState(() => {
         if (typeof window === "undefined") return "";
-        return getSettings()?.defaultSharePassword ?? "";
+        return getSettings()?.manageToken ?? "";
     });
-    const [showSharePassword, setShowSharePassword] = useState(false);
+    const [showManageToken, setShowManageToken] = useState(false);
+    const [pendingTokenRotate, setPendingTokenRotate] = useState<string | null>(null);
+    const [rotatingToken, setRotatingToken] = useState(false);
     const [clearDataConfirmText, setClearDataConfirmText] = useState("");
     const [cacheVersion, setCacheVersion] = useState<string | null>(null);
     const [updateStatus, setUpdateStatus] = useState<{ hasUpdate: boolean; waiting: boolean; installing: boolean } | null>(null);
@@ -160,8 +168,18 @@ export default function SettingsPage(): React.JSX.Element {
 
     useEffect(() => {
         if (!isMounted) return;
-        if (window.location.hash !== "#share") return;
-        const el = document.getElementById("share");
+        const hash = window.location.hash;
+        if (hash === "#password") {
+            window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#token`);
+        }
+        const target =
+            hash === "#share"
+                ? "share"
+                : hash === "#token" || hash === "#password"
+                  ? "token"
+                  : null;
+        if (!target) return;
+        const el = document.getElementById(target);
         el?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, [isMounted]);
 
@@ -308,6 +326,7 @@ export default function SettingsPage(): React.JSX.Element {
                     showDefaultContent,
                     theme: theme as 'light' | 'dark' | 'system',
                     trashEnabled,
+                    manageToken: getSettings()?.manageToken ?? manageToken,
                 },
                 files: [],
                 currentContent: getContent(),
@@ -539,36 +558,37 @@ export default function SettingsPage(): React.JSX.Element {
                 </div>
             </Card>
 
-            {/* Share password — deep link /settings#password */}
-            <Card id="password" className="p-6 scroll-mt-24">
+            {/* Manage token — deep link /settings#token (#password redirects here) */}
+            <Card id="token" className="p-6 scroll-mt-24">
                 <div className="flex items-center gap-3 mb-1">
                     <Lock className="w-5 h-5 text-primary" />
-                    <h2 className="text-xl font-semibold">Share password</h2>
+                    <h2 className="text-xl font-semibold">Manage token</h2>
                 </div>
                 <p className="text-xs text-muted-foreground mb-4">
-                    Default password offered when you create a share. Stored only in this browser.
-                    Required on the Worker for update/delete; optional protect-view for GET.
+                    Creator secret for this device. Required to create, update, or delete shares.
+                    Stored only in this browser — never put it in the public link. View passwords are
+                    separate and disposable per share.
                 </p>
                 <div className="space-y-3">
                     <div className="flex gap-2">
                         <input
-                            type={showSharePassword ? "text" : "password"}
+                            type={showManageToken ? "text" : "password"}
                             autoComplete="new-password"
-                            value={defaultSharePassword}
-                            onChange={(e) => setDefaultSharePassword(e.target.value)}
+                            value={manageToken}
+                            onChange={(e) => setManageToken(e.target.value)}
                             disabled={!isMounted}
-                            placeholder="Leave empty for public create (no remote mutate)"
-                            className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm"
+                            placeholder="Required to share"
+                            className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm font-mono"
                         />
                         <Button
                             type="button"
                             size="sm"
                             variant="outline"
                             disabled={!isMounted}
-                            onClick={() => setShowSharePassword((v) => !v)}
-                            aria-label={showSharePassword ? "Hide password" : "Show password"}
+                            onClick={() => setShowManageToken((v) => !v)}
+                            aria-label={showManageToken ? "Hide token" : "Show token"}
                         >
-                            {showSharePassword ? (
+                            {showManageToken ? (
                                 <EyeOff className="w-4 h-4" />
                             ) : (
                                 <Eye className="w-4 h-4" />
@@ -579,10 +599,17 @@ export default function SettingsPage(): React.JSX.Element {
                         <Button
                             size="sm"
                             className="gap-2"
-                            disabled={!isMounted}
+                            disabled={!isMounted || !manageToken.trim()}
                             onClick={() => {
-                                updateSetting("defaultSharePassword", defaultSharePassword);
-                                toast.success("Share password saved", { id: "settings-saved" });
+                                const next = manageToken.trim();
+                                const prev = getSettings()?.manageToken ?? "";
+                                const bound = collectBoundShareIds();
+                                if (prev && next && prev !== next && bound.length > 0) {
+                                    setPendingTokenRotate(next);
+                                    return;
+                                }
+                                updateSetting("manageToken", next);
+                                toast.success("Manage token saved", { id: "settings-saved" });
                             }}
                         >
                             <Check className="w-4 h-4" />
@@ -593,9 +620,15 @@ export default function SettingsPage(): React.JSX.Element {
                             variant="outline"
                             disabled={!isMounted}
                             onClick={() => {
-                                const next = generateSharePassword();
-                                setDefaultSharePassword(next);
-                                updateSetting("defaultSharePassword", next);
+                                const next = generateSharePassword(24);
+                                const prev = getSettings()?.manageToken ?? "";
+                                const bound = collectBoundShareIds();
+                                setManageToken(next);
+                                if (prev && bound.length > 0) {
+                                    setPendingTokenRotate(next);
+                                    return;
+                                }
+                                updateSetting("manageToken", next);
                                 toast.success("Generated and saved");
                             }}
                         >
@@ -604,10 +637,10 @@ export default function SettingsPage(): React.JSX.Element {
                         <Button
                             size="sm"
                             variant="ghost"
-                            disabled={!isMounted || !defaultSharePassword}
+                            disabled={!isMounted || !manageToken}
                             onClick={async () => {
                                 try {
-                                    await navigator.clipboard.writeText(defaultSharePassword);
+                                    await navigator.clipboard.writeText(manageToken);
                                     toast.success("Copied");
                                 } catch {
                                     toast.error("Copy failed");
@@ -1767,6 +1800,97 @@ export default function SettingsPage(): React.JSX.Element {
                 }}
                 onCancel={() => setConfirmPurgeTrashId(null)}
             />
+
+            <ModalShell
+                open={pendingTokenRotate != null}
+                onClose={() => {
+                    if (rotatingToken) return;
+                    setPendingTokenRotate(null);
+                    setManageToken(getSettings()?.manageToken ?? "");
+                }}
+                title="Rotate manage token"
+            >
+                <div className="flex items-start gap-3 mb-4 pr-8">
+                    <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                            This will re-key{" "}
+                            <strong>{collectBoundShareIds().length}</strong> locally
+                            tracked share(s) on the Worker. Shares that fail stay on the
+                            old token until wiped or rotated again.
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            <Button
+                                disabled={rotatingToken || !pendingTokenRotate}
+                                onClick={async () => {
+                                    if (!pendingTokenRotate) return;
+                                    const oldToken = getSettings()?.manageToken ?? "";
+                                    const newToken = pendingTokenRotate;
+                                    const ids = collectBoundShareIds();
+                                    setRotatingToken(true);
+                                    try {
+                                        let maxBatch = 50;
+                                        try {
+                                            const compat = await fetchCompatibility();
+                                            maxBatch =
+                                                compat.limits?.rotateManageMaxIds ?? 50;
+                                        } catch {
+                                            /* default */
+                                        }
+                                        const result = await rotateManageTokensBatched(
+                                            ids,
+                                            oldToken,
+                                            newToken,
+                                            maxBatch,
+                                        );
+                                        updateSetting("manageToken", newToken);
+                                        setManageToken(newToken);
+                                        setPendingTokenRotate(null);
+                                        if (result.failed.length === 0) {
+                                            toast.success(
+                                                `Token rotated on ${result.updated.length} share(s)`,
+                                            );
+                                        } else {
+                                            toast.warning(
+                                                `Updated ${result.updated.length}, failed ${result.failed.length}`,
+                                            );
+                                        }
+                                    } catch (error) {
+                                        if (isCorsFailure(error)) {
+                                            toast.error("CORS blocked rotate");
+                                        } else {
+                                            toast.error(
+                                                error instanceof Error
+                                                    ? error.message
+                                                    : "Rotate failed",
+                                            );
+                                        }
+                                    } finally {
+                                        setRotatingToken(false);
+                                    }
+                                }}
+                                className="w-full gap-2"
+                            >
+                                {rotatingToken ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : null}
+                                Confirm rotate & save
+                            </Button>
+                            <Button
+                                variant="outline"
+                                disabled={rotatingToken}
+                                onClick={() => {
+                                    setPendingTokenRotate(null);
+                                    setManageToken(getSettings()?.manageToken ?? "");
+                                }}
+                                className="w-full"
+                            >
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </ModalShell>
 
             <ModalShell
                 open={showResetShareWarning}

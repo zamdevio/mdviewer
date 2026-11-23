@@ -17,8 +17,11 @@ export interface SettingsData {
     filesLayout: 'grid' | 'tree';
     /** Soft-delete files/projects into Trash (default on). */
     trashEnabled: boolean;
-    /** Default password offered in Share compose (also Settings #password). */
-    defaultSharePassword: string;
+    /**
+     * Device manage token (Settings #token). Required to create/mutate shares.
+     * Migrated from legacy `defaultSharePassword` on read.
+     */
+    manageToken: string;
 }
 
 export interface Project {
@@ -27,7 +30,7 @@ export interface Project {
     createdAt: string;
     /** Bound remote share id (Phase D) */
     shareId?: string;
-    /** Local-only password for mutate/delete of that share */
+    /** Local-only copy of disposable view password (creator convenience) */
     sharePassword?: string;
 }
 
@@ -40,7 +43,7 @@ export interface SavedFile {
     projectId?: string; // Virtual project / folder (optional)
     /** Bound remote share id (Phase D) */
     shareId?: string;
-    /** Local-only password for mutate/delete of that share */
+    /** Local-only copy of disposable view password (creator convenience) */
     sharePassword?: string;
 }
 
@@ -70,7 +73,7 @@ export interface SharedLink {
     preview?: string; // First 100 chars of content
     filename?: string;
     timestamp: string;
-    /** Local-only — enables remote DELETE from Shares page */
+    /** Local-only disposable view password (not manage token) */
     password?: string;
     expiresAt?: string;
 }
@@ -117,8 +120,15 @@ class StorageManager {
             const data = localStorage.getItem(this.KEYS.SETTINGS);
             if (!data) return null;
             
-            const parsed = JSON.parse(data) as Partial<SettingsData>;
-            
+            const parsed = JSON.parse(data) as Partial<SettingsData> & {
+                defaultSharePassword?: string;
+            };
+
+            const manageToken =
+                parsed.manageToken ??
+                parsed.defaultSharePassword ??
+                '';
+
             // Return with defaults for missing values
             return {
                 showDefaultContent: parsed.showDefaultContent ?? true,
@@ -131,7 +141,7 @@ class StorageManager {
                 showSpellChecker: parsed.showSpellChecker ?? true,
                 filesLayout: parsed.filesLayout === 'tree' ? 'tree' : 'grid',
                 trashEnabled: parsed.trashEnabled ?? true,
-                defaultSharePassword: parsed.defaultSharePassword ?? '',
+                manageToken,
             };
         } catch {
             return null;
@@ -156,7 +166,7 @@ class StorageManager {
                 showSpellChecker: true,
                 filesLayout: 'grid',
                 trashEnabled: true,
-                defaultSharePassword: '',
+                manageToken: '',
             };
             return defaults[key];
         }
@@ -182,8 +192,7 @@ class StorageManager {
                 showSpellChecker: settings.showSpellChecker ?? current?.showSpellChecker ?? true,
                 filesLayout: settings.filesLayout ?? current?.filesLayout ?? 'grid',
                 trashEnabled: settings.trashEnabled ?? current?.trashEnabled ?? true,
-                defaultSharePassword:
-                    settings.defaultSharePassword ?? current?.defaultSharePassword ?? '',
+                manageToken: settings.manageToken ?? current?.manageToken ?? '',
             };
             
             localStorage.setItem(this.KEYS.SETTINGS, JSON.stringify(updated));
@@ -792,7 +801,7 @@ class StorageManager {
                 itemsPerPage: 12,
                 defaultEditorMode: 'both',
                 showEditorStatusBar: true,
-                defaultSharePassword: '',
+                manageToken: '',
                 showSpellChecker: true,
                 filesLayout: 'grid',
                 trashEnabled: true,
@@ -878,4 +887,19 @@ export const restoreTrashEntry = (entryId: string) => storage.restoreTrashEntry(
 export const purgeTrashEntry = (entryId: string) => storage.purgeTrashEntry(entryId);
 export const emptyTrash = () => storage.emptyTrash();
 export const restoreAllTrash = () => storage.restoreAllTrash();
+
+/** Unique remote share ids bound in local files, projects, or Shares list. */
+export function collectBoundShareIds(): string[] {
+    const ids = new Set<string>();
+    for (const f of getSavedFiles()) {
+        if (f.shareId) ids.add(f.shareId);
+    }
+    for (const p of getProjects()) {
+        if (p.shareId) ids.add(p.shareId);
+    }
+    for (const l of getSharedLinks()) {
+        if (l.shareId) ids.add(l.shareId);
+    }
+    return [...ids];
+}
 

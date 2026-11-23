@@ -11,7 +11,12 @@ import { truncateFilenameForDisplay, truncateFilename, validateFileName, sanitiz
 import { FilesTree } from "@/components/pages/files/FilesTree";
 import { ProjectPicker } from "@/components/pages/files/ProjectPicker";
 import { packProject } from "@/lib/project-pack";
-import { uploadMarkdown, replaceSharedMarkdown, isCorsFailure } from "@/lib/api";
+import {
+    uploadMarkdown,
+    replaceSharedMarkdown,
+    patchShareViewProtect,
+    isCorsFailure,
+} from "@/lib/api";
 import { isApiConfigured, getEffectiveApiConfig } from "@/lib/config";
 import { ShareComposeDialog, type ShareComposeConfirm } from "@/components/share/ShareComposeDialog";
 import { SharePanel } from "@/components/pages/editor/dialogs/Share";
@@ -1024,7 +1029,7 @@ export default function FilesPage(): React.JSX.Element {
                           ? shareTarget.project.shareId
                           : null
                 }
-                existingPassword={
+                existingViewPassword={
                     shareTarget?.kind === "file"
                         ? shareTarget.file.sharePassword
                         : shareTarget?.kind === "project"
@@ -1035,9 +1040,21 @@ export default function FilesPage(): React.JSX.Element {
                 onClose={() => !shareSubmitting && setShareTarget(null)}
                 onConfirm={async (opts: ShareComposeConfirm) => {
                     if (!shareTarget) return;
+                    if (opts.mode === "existing") {
+                        setShareTarget(null);
+                        return;
+                    }
+                    const manageToken = getSettings()?.manageToken?.trim() ?? "";
+                    if (!manageToken) {
+                        toast.error("Manage token required — open Settings → Manage token");
+                        return;
+                    }
                     setShareSubmitting(true);
                     try {
                         const { FRONTEND_URL } = getEffectiveApiConfig();
+                        const viewPassword = opts.viewProtected
+                            ? opts.viewPassword || undefined
+                            : undefined;
                         if (shareTarget.kind === "file") {
                             const file = shareTarget.file;
                             const content =
@@ -1045,23 +1062,24 @@ export default function FilesPage(): React.JSX.Element {
                             let id: string;
                             let url: string;
                             let expiresAt: string | undefined;
-                            if (
-                                opts.mode === "replace" &&
-                                file.shareId &&
-                                opts.password
-                            ) {
+                            if (opts.mode === "replace" && file.shareId) {
                                 const updated = await replaceSharedMarkdown(
                                     file.shareId,
                                     content,
-                                    opts.password,
+                                    manageToken,
                                     { filename: file.filename },
                                 );
                                 id = updated.id;
                                 expiresAt = updated.expiresAt;
                                 url = `${FRONTEND_URL}/share/${encodeURIComponent(id)}`;
+                                await patchShareViewProtect(id, manageToken, {
+                                    viewProtected: opts.viewProtected,
+                                    viewPassword,
+                                });
                             } else {
                                 const result = await uploadMarkdown(content, {
-                                    password: opts.password || undefined,
+                                    manageToken,
+                                    viewPassword,
                                     ttlSeconds: opts.ttlSeconds,
                                     viewProtected: opts.viewProtected,
                                     filename: file.filename,
@@ -1076,7 +1094,7 @@ export default function FilesPage(): React.JSX.Element {
                             upsertSavedFile({
                                 ...file,
                                 shareId: id,
-                                sharePassword: opts.password || file.sharePassword,
+                                sharePassword: viewPassword,
                             });
                             addSharedLink({
                                 id: `link_${Date.now()}`,
@@ -1085,7 +1103,7 @@ export default function FilesPage(): React.JSX.Element {
                                 preview: content.slice(0, 100),
                                 filename: file.filename,
                                 timestamp: new Date().toISOString(),
-                                password: opts.password || undefined,
+                                password: viewPassword,
                                 expiresAt,
                             });
                             setShareSuccessUrl(url);
@@ -1105,23 +1123,24 @@ export default function FilesPage(): React.JSX.Element {
                             let id: string;
                             let url: string;
                             let expiresAt: string | undefined;
-                            if (
-                                opts.mode === "replace" &&
-                                project.shareId &&
-                                opts.password
-                            ) {
+                            if (opts.mode === "replace" && project.shareId) {
                                 const updated = await replaceSharedMarkdown(
                                     project.shareId,
                                     pack,
-                                    opts.password,
+                                    manageToken,
                                     { filename: `${project.name}.project.md` },
                                 );
                                 id = updated.id;
                                 expiresAt = updated.expiresAt;
                                 url = `${FRONTEND_URL}/share/${encodeURIComponent(id)}`;
+                                await patchShareViewProtect(id, manageToken, {
+                                    viewProtected: opts.viewProtected,
+                                    viewPassword,
+                                });
                             } else {
                                 const result = await uploadMarkdown(pack, {
-                                    password: opts.password || undefined,
+                                    manageToken,
+                                    viewPassword,
                                     ttlSeconds: opts.ttlSeconds,
                                     viewProtected: opts.viewProtected,
                                     filename: `${project.name}.project.md`,
@@ -1136,7 +1155,7 @@ export default function FilesPage(): React.JSX.Element {
                             upsertProject({
                                 ...project,
                                 shareId: id,
-                                sharePassword: opts.password || project.sharePassword,
+                                sharePassword: viewPassword,
                             });
                             addSharedLink({
                                 id: `link_${Date.now()}`,
@@ -1145,7 +1164,7 @@ export default function FilesPage(): React.JSX.Element {
                                 preview: `Project: ${project.name} (${kids.length} files)`,
                                 filename: `${project.name}.project`,
                                 timestamp: new Date().toISOString(),
-                                password: opts.password || undefined,
+                                password: viewPassword,
                                 expiresAt,
                             });
                             setShareSuccessUrl(url);

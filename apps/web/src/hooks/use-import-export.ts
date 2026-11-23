@@ -32,7 +32,10 @@ export function useImportExport() {
                     showSpellChecker: data.settings.showSpellChecker ?? true,
                     filesLayout: data.settings.filesLayout === 'tree' ? 'tree' : 'grid',
                     trashEnabled: data.settings.trashEnabled ?? true,
-                    defaultSharePassword: data.settings.defaultSharePassword ?? '',
+                    manageToken:
+                        data.settings.manageToken ??
+                        data.settings.defaultSharePassword ??
+                        '',
                 };
                 updateSettings(settings);
 

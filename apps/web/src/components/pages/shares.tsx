@@ -3,11 +3,19 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Share2, ExternalLink, Copy, X, Trash2, Loader2, CloudOff } from "lucide-react";
+import { Share2, ExternalLink, Copy, X, Trash2, Loader2, CloudOff, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { getSharedLinks, removeSharedLink, clearSharedLinks, onStorageChange, type SharedLink } from "@/lib/storage";
+import {
+    getSharedLinks,
+    removeSharedLink,
+    clearSharedLinks,
+    onStorageChange,
+    getSettings,
+    type SharedLink,
+} from "@/lib/storage";
 import { truncateFilenameForDisplay } from "@/lib/editor";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { ShareComposeDialog } from "@/components/share/ShareComposeDialog";
 import { deleteRemoteShare, isCorsFailure } from "@/lib/api";
 import { isApiConfigured } from "@/lib/config";
 
@@ -17,8 +25,8 @@ export default function SharesPage(): React.JSX.Element {
     const [showClearWarning, setShowClearWarning] = useState(false);
     const [deleteLinkId, setDeleteLinkId] = useState<string | null>(null);
     const [deleteRemote, setDeleteRemote] = useState(true);
-    const [deletePassword, setDeletePassword] = useState("");
     const [deleting, setDeleting] = useState(false);
+    const [editLink, setEditLink] = useState<SharedLink | null>(null);
 
     useEffect(() => {
         const loadSharedLinks = async () => {
@@ -48,23 +56,24 @@ export default function SharesPage(): React.JSX.Element {
     };
 
     const handleDeleteLink = (shareId: string) => {
-        const link = getSharedLinks().find((l) => l.shareId === shareId);
         setDeleteLinkId(shareId);
-        setDeletePassword(link?.password ?? "");
-        setDeleteRemote(Boolean(link?.password) && isApiConfigured());
+        const hasManage = Boolean(getSettings()?.manageToken?.trim());
+        setDeleteRemote(hasManage && isApiConfigured());
     };
 
     const handleDeleteConfirm = async () => {
         if (!deleteLinkId) return;
         setDeleting(true);
         try {
-            if (deleteRemote && deletePassword.trim()) {
-                await deleteRemoteShare(deleteLinkId, deletePassword.trim());
+            const manageToken = getSettings()?.manageToken?.trim() ?? "";
+            if (deleteRemote) {
+                if (!manageToken) {
+                    toast.error("Manage token required for remote delete");
+                    setDeleting(false);
+                    return;
+                }
+                await deleteRemoteShare(deleteLinkId, manageToken);
                 toast.success("Remote share wiped");
-            } else if (deleteRemote && !deletePassword.trim()) {
-                toast.error("Password required for remote delete");
-                setDeleting(false);
-                return;
             }
             removeSharedLink(deleteLinkId);
             setSharedLinks(getSharedLinks());
@@ -197,12 +206,33 @@ export default function SharesPage(): React.JSX.Element {
                                         <span className="hidden sm:inline">Copy</span>
                                         <span className="sm:hidden">Copy Link</span>
                                     </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setEditLink(link)}
+                                        className="gap-2 flex-1 sm:flex-initial"
+                                        aria-label="Edit share"
+                                    >
+                                        <Pencil className="w-3 h-3 flex-shrink-0" />
+                                        <span className="hidden sm:inline">Edit</span>
+                                    </Button>
                                 </div>
                             </Card>
                         ))}
                     </div>
                 </>
             )}
+
+            <ShareComposeDialog
+                open={!!editLink}
+                title="Shared link"
+                filename={editLink?.filename}
+                existingShareId={editLink?.shareId}
+                existingViewPassword={editLink?.password}
+                allowMutate={false}
+                onClose={() => setEditLink(null)}
+                onConfirm={() => setEditLink(null)}
+            />
 
             <ModalShell
                 open={!!deleteLinkId}
@@ -227,22 +257,16 @@ export default function SharesPage(): React.JSX.Element {
                             type="checkbox"
                             className="mt-1"
                             checked={deleteRemote}
-                            disabled={deleting}
+                            disabled={deleting || !getSettings()?.manageToken?.trim()}
                             onChange={(e) => setDeleteRemote(e.target.checked)}
                         />
-                        <span>Also delete on Worker (requires share password)</span>
+                        <span>Also delete on Worker (uses manage token from Settings)</span>
                     </label>
                 )}
-                {deleteRemote && (
-                    <input
-                        type="password"
-                        autoComplete="off"
-                        value={deletePassword}
-                        onChange={(e) => setDeletePassword(e.target.value)}
-                        disabled={deleting}
-                        placeholder="X-Share-Password"
-                        className="w-full mb-3 px-3 py-2 rounded-md border border-input bg-background text-sm"
-                    />
+                {deleteRemote && !getSettings()?.manageToken?.trim() && (
+                    <p className="text-xs text-amber-700 dark:text-amber-200 mb-3">
+                        Set a manage token in Settings → Manage token first.
+                    </p>
                 )}
                 {!deleteRemote && (
                     <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">

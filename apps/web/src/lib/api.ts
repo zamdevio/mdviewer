@@ -1,5 +1,5 @@
 /**
- * API client for markdown sharing
+ * API client for markdown sharing (protocol 3)
  */
 
 import { getEffectiveApiConfig } from "./config";
@@ -13,7 +13,6 @@ export interface UploadResponse {
   contentUrl?: string;
   size: number;
   uploadedAt: string;
-  /** Protocol 2+ — fixed wipe time */
   expiresAt?: string;
   viewProtected?: boolean;
   hasPassword?: boolean;
@@ -33,13 +32,12 @@ export interface CompatibilityResponse {
   cors: {
     allowedOriginsConfigured: boolean;
   };
-  /** Protocol 2+ */
   features?: {
-    password: boolean;
-    fixedTtl: boolean;
-    viewProtected: boolean;
-    fairUseFingerprint: boolean;
-    legacyFlatKeys: boolean;
+    manageToken?: boolean;
+    viewPasswordSeparate?: boolean;
+    fixedTtl?: boolean;
+    viewProtected?: boolean;
+    fairUseFingerprint?: boolean;
     mcp?: boolean;
     llmsTxt?: boolean;
   };
@@ -47,6 +45,10 @@ export interface CompatibilityResponse {
     defaultSeconds: number;
     minSeconds: number;
     maxSeconds: number;
+  };
+  limits?: {
+    maxFileBytes: number;
+    rotateManageMaxIds: number;
   };
 }
 
@@ -77,38 +79,48 @@ async function toApiRequestError(
   );
 }
 
+function manageHeaders(manageToken: string): Record<string, string> {
+  return {
+    Authorization: `Bearer ${manageToken}`,
+    "X-Share-Manage-Token": manageToken,
+  };
+}
+
 export type UploadShareOptions = {
-  password?: string;
+  manageToken: string;
+  /** Disposable view password (only when viewProtected) */
+  viewPassword?: string;
   ttlSeconds?: number;
   viewProtected?: boolean;
   filename?: string;
   type?: "file" | "project";
 };
 
-function shareMutationHeaders(opts?: UploadShareOptions): HeadersInit {
+function shareCreateHeaders(opts: UploadShareOptions): HeadersInit {
   const headers: Record<string, string> = {
     "Content-Type": "text/plain",
+    ...manageHeaders(opts.manageToken),
   };
-  if (opts?.password) headers["X-Share-Password"] = opts.password;
-  if (opts?.ttlSeconds != null) {
+  if (opts.viewPassword) headers["X-Share-Password"] = opts.viewPassword;
+  if (opts.ttlSeconds != null) {
     headers["X-Share-TTL-Seconds"] = String(opts.ttlSeconds);
   }
-  if (opts?.viewProtected) headers["X-Share-View-Protected"] = "true";
-  if (opts?.filename) headers["X-Share-Filename"] = opts.filename;
-  if (opts?.type) headers["X-Share-Type"] = opts.type;
+  if (opts.viewProtected) headers["X-Share-View-Protected"] = "true";
+  if (opts.filename) headers["X-Share-Filename"] = opts.filename;
+  if (opts.type) headers["X-Share-Type"] = opts.type;
   return headers;
 }
 
 export async function uploadMarkdown(
   content: string,
-  opts?: UploadShareOptions,
+  opts: UploadShareOptions,
 ): Promise<UploadResponse> {
   const base = apiBase();
   const uploadUrl = `${base}/upload`;
   try {
     const response = await fetch(uploadUrl, {
       method: "POST",
-      headers: shareMutationHeaders(opts),
+      headers: shareCreateHeaders(opts),
       body: content,
     });
 
@@ -133,7 +145,7 @@ export async function uploadMarkdown(
 export async function replaceSharedMarkdown(
   id: string,
   content: string,
-  password: string,
+  manageToken: string,
   opts?: Pick<UploadShareOptions, "filename">,
 ): Promise<{ id: string; size: number; expiresAt: string; updatedAt: string }> {
   const base = apiBase();
@@ -141,7 +153,7 @@ export async function replaceSharedMarkdown(
   try {
     const headers: Record<string, string> = {
       "Content-Type": "text/plain",
-      "X-Share-Password": password,
+      ...manageHeaders(manageToken),
     };
     if (opts?.filename) headers["X-Share-Filename"] = opts.filename;
     const response = await fetch(url, {
@@ -166,16 +178,49 @@ export async function replaceSharedMarkdown(
   }
 }
 
+export async function patchShareViewProtect(
+  id: string,
+  manageToken: string,
+  body: { viewProtected: boolean; viewPassword?: string },
+): Promise<PublicShareMeta> {
+  const base = apiBase();
+  const url = `${base}/share/${encodeURIComponent(id)}`;
+  try {
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...manageHeaders(manageToken),
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      let message = "Failed to update view protection";
+      try {
+        const error: ApiError = await response.json();
+        message = error.message || message;
+      } catch {
+        /* ignore */
+      }
+      throw new ApiRequestError("http", message, response.status);
+    }
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${base}/health`, "Failed to patch share");
+  }
+}
+
 export async function deleteRemoteShare(
   id: string,
-  password: string,
+  manageToken: string,
 ): Promise<void> {
   const base = apiBase();
   const url = `${base}/share/${encodeURIComponent(id)}`;
   try {
     const response = await fetch(url, {
       method: "DELETE",
-      headers: { "X-Share-Password": password },
+      headers: manageHeaders(manageToken),
     });
     if (!response.ok) {
       let message = "Failed to delete remote share";
@@ -193,6 +238,58 @@ export async function deleteRemoteShare(
   }
 }
 
+export async function rotateManageTokens(
+  shareIds: string[],
+  oldManageToken: string,
+  newManageToken: string,
+): Promise<{ updated: string[]; failed: Array<{ id: string; error: string }> }> {
+  const base = apiBase();
+  const url = `${base}/share/rotate-manage`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...manageHeaders(oldManageToken),
+      },
+      body: JSON.stringify({ shareIds, newManageToken }),
+    });
+    if (!response.ok) {
+      let message = "Failed to rotate manage token";
+      try {
+        const error: ApiError = await response.json();
+        message = error.message || message;
+      } catch {
+        /* ignore */
+      }
+      throw new ApiRequestError("http", message, response.status);
+    }
+    return response.json();
+  } catch (error) {
+    if (error instanceof ApiRequestError) throw error;
+    throw await toApiRequestError(error, `${base}/health`, "Failed to rotate manage token");
+  }
+}
+
+/** Chunk rotate calls using compatibility limit (default 50). */
+export async function rotateManageTokensBatched(
+  shareIds: string[],
+  oldManageToken: string,
+  newManageToken: string,
+  maxPerBatch = 50,
+): Promise<{ updated: string[]; failed: Array<{ id: string; error: string }> }> {
+  const updated: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
+  const size = Math.max(1, maxPerBatch);
+  for (let i = 0; i < shareIds.length; i += size) {
+    const chunk = shareIds.slice(i, i + size);
+    const result = await rotateManageTokens(chunk, oldManageToken, newManageToken);
+    updated.push(...result.updated);
+    failed.push(...result.failed);
+  }
+  return { updated, failed };
+}
+
 export type PublicShareMeta = {
   id: string;
   type: "file" | "project";
@@ -203,8 +300,7 @@ export type PublicShareMeta = {
   expiresAt: string;
   viewProtected: boolean;
   hasPassword: boolean;
-  protocol: 2;
-  legacy?: boolean;
+  protocol: 3;
 };
 
 export async function fetchShareMeta(
@@ -229,13 +325,13 @@ export async function fetchShareMeta(
 
 export async function fetchSharedMarkdown(
   id: string,
-  password?: string,
+  viewPassword?: string,
 ): Promise<string> {
   const base = apiBase();
   const shareUrl = `${base}/share/${id}`;
   try {
     const headers: Record<string, string> = {};
-    if (password) headers["X-Share-Password"] = password;
+    if (viewPassword) headers["X-Share-Password"] = viewPassword;
     const response = await fetch(shareUrl, {
       method: "GET",
       headers,
