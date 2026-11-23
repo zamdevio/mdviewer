@@ -41,6 +41,18 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 | **MCP** | [api.mdviewer.zamdev.dev/mcp](https://api.mdviewer.zamdev.dev/mcp) | JSON-RPC tools on the share Worker |
 | **GitHub** | [github.com/zamdevio/mdviewer](https://github.com/zamdevio/mdviewer) | Source and issues |
 
+| Home | Files (tree) |
+|:---:|:---:|
+| <img src="./docs/images/home.png" alt="Home" width="360" /> | <img src="./docs/images/files.png" alt="Files tree" width="360" /> |
+| **Editor** | **Settings** |
+| <img src="./docs/images/editor.png" alt="Editor" width="360" /> | <img src="./docs/images/settings.png" alt="Settings" width="360" /> |
+
+<p align="center">
+  <img src="./docs/images/share-dialog.png" alt="Share dialog with TTL presets" width="480" />
+  <br />
+  <em>Share — lifetime presets + smart duration · optional view password</em>
+</p>
+
 ## Why MDViewer
 
 ### Local-first writing
@@ -90,8 +102,10 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 ### Appflare (one Worker)
 - Install SPA + share API on **one** Cloudflare Worker via [Appflare](https://appflare.dev/) — `/` for the app, `/api/*` for the Worker
 - From your Appflare: Catalog → **From a repository** → `zamdevio/mdviewer` → build command `pnpm run appflare:build`
+- **ALLOWED_ORIGINS** defaults to `{{appUrl}}` (Appflare fills the install URL). Unified build bakes `/api` + same-origin — no Vite secrets on the Worker form
 - Deep link: `https://<your-appflare>/install/github/zamdevio/mdviewer`
 - Guide: [`docs/appflare.md`](./docs/appflare.md) · local: `pnpm appflare:build` && `pnpm appflare:dev`
+- Screenshots: drop into [`docs/images/`](./docs/images/) (see checklist there)
 
 ## Quick start
 
