@@ -1,9 +1,9 @@
 # Showcase — feature surface honesty
 
-**Focus label:** **Shipped** ([`focus.md`](./focus.md))  
+**Focus label:** **Shipped** (visibility follow-up 2026-11-23) ([`focus.md`](./focus.md))  
 **Order:** after protocol 3 (07); before remaining perf (04)  
 **Goal:** Keep README, home, and `docs/` aligned with what we actually ship — especially agent-native surfaces that obey the same share rules as humans.  
-**Status:** Done 2026-11-23 — README/home/docs/llms match protocol 3 manage vs view
+**Status:** Honesty pass 2026-11-23; **visibility** pass same day — MCP/llms not buried
 
 ## Slices
 
@@ -12,6 +12,7 @@
 | **1** | README + home bullets = protocol 3 + MCP truth | [x] |
 | **2** | `docs/api.md` / `security.md` + SPA/Worker `llms*` parity | [x] (07D + follow-up) |
 | **3** | Compatibility flags / agent parity blurb (manage vs view) | [x] |
+| **4** | Visibility — README header MCP + favicon + llms badges; home MCP card + hero links; getting-started manage/MCP | [x] |
 
 ## Principle
 
@@ -30,7 +31,9 @@ Agents get the **same API**, same fair-use, same manage/view/TTL rules as the SP
 ## Checklist (run before each minor/major)
 
 - [x] README “features / Now Available” matches shipped protocol 3 + MCP
-- [x] Home page bullets match README (no orphan claims)
+- [x] README header badges include MCP (+ API favicon) and llms.txt
+- [x] Home page: agent band (MCP / llms.txt) + 6 feature tiles match README (no orphan claims)
+- [x] `docs/getting-started.md` covers manage token + MCP / llms
 - [x] `docs/api.md` lists `/mcp`, `/llms*`, manage Bearer + view `X-Share-Password`, TTL, bulk rotate
 - [x] `docs/security.md` fair-use + agent-shaped traffic + manage vs view
 - [x] `llms-full.txt` regenerated into Worker after SPA edit

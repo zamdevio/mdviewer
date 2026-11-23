@@ -1,9 +1,9 @@
 # Large-doc performance
 
-**Focus label:** **After that** ([`focus.md`](./focus.md)) — after 07 + 05  
-**Order:** remaining work after protocol 3 honesty  
+**Focus label:** **Now** ([`focus.md`](./focus.md))  
+**Order:** after protocol 3 + showcase visibility  
 **Goal:** Smooth edit/preview for 5–10MB markdown.  
-**Status:** Slice 1 shipped (size-aware preview + Mermaid debounce / lazy Mermaid / LRU); virtual scroll + worker parse still open  
+**Status:** Slices 0–1 shipped (debounce/LRU + preview virt); editor virt deferred; **slice 2** worker parse open  
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -25,8 +25,8 @@
 
 ## P1 — Critical
 
-- [ ] Virtual scroll preview — `apps/web/src/components/pages/editor/PreviewSection.tsx`
-- [ ] Virtual scroll editor (optional) — `EditorSection.tsx`
+- [x] Virtual scroll preview — `@tanstack/react-virtual` + h1/h2 chunks (`VirtualMarkdownViewer`); threshold `VIRTUALIZE_PREVIEW_BYTES` (100KB); editor PreviewSection + share page
+- [ ] ~~Virtual scroll editor (optional)~~ — **Deferred**: editor is a plain `<textarea>` with cursor/spellcheck sync; real virt needs CodeMirror/Monaco (or custom line buffer). Revisit only if we replace the textarea.
 - [x] IntersectionObserver lazy Mermaid (Code/Math still eager)
 - [ ] Chunked markdown parse in a Web Worker — `apps/web/src/lib/markdown/worker-parser.ts`
 - [ ] Diff-based re-parse for files &gt; 1MB — `viewer.tsx`
@@ -74,7 +74,7 @@
 | Slice | Scope | Status |
 |-------|--------|--------|
 | **0** | Size-aware preview debounce, Mermaid debounce/lazy/LRU, scroll throttle, auto-save scaling, memory warn | **Shipped** |
-| **1** | Virtual scroll preview (+ optional editor) + lazy viewport blocks | **Open** — start here when Focus says After that |
+| **1** | Virtual scroll preview + lazy viewport blocks | **Shipped** (preview + share); editor virt **deferred** (textarea — no rewrite) |
 | **2** | Chunked markdown parse in Web Worker + diff/incremental for &gt;1MB | Open |
 | **3** | Per-component opts (code / Mermaid / math / tables / images) | Open (P2) |
 | **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open |

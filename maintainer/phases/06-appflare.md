@@ -61,8 +61,8 @@ Custom builder under `scripts/appflare/` that builds Vite + emits Worker assets 
 ```jsonc
 {
   "$schema": "https://appflare.github.io/catalog/schema/v1.json",
-  "slug": "mdviewer-api",
-  "name": "MDViewer API",
+  "slug": "mdviewer",
+  "name": "MDViewer",
   "summary": "Protocol-3 markdown share API on Workers + R2 with manage token, optional view password, fixed TTL, and MCP.",
   "tagline": "Share markdown from your own Worker",
   "repo": "zamdevio/mdviewer",

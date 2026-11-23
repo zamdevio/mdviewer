@@ -12,7 +12,9 @@
   - `POST /mcp` — MCP JSON-RPC tools (same share store; manageToken for mutate/upload); `initialize.serverInfo.icons` (PNG data URI + `/favicon.png` + SVG)
   - `GET /favicon.svg`, `GET /favicon.png` — brand for MCP / browsers
   - `GET /llms.txt`, `GET /llms-full.txt` — agent briefs
-  - `GET /health`, `GET /compatibility` (`protocol: 3`, features + `ttl` + `limits`)
+  - `GET /health`, `GET /compatibility` (`protocol: 3`, features + `ttl` + `limits`; product `name: "mdviewer"`)
+
+**Product vs deploy name:** MCP `serverInfo.name`, `GET /mcp`, and `/compatibility.name` are **`mdviewer`**. Cloudflare Worker script / Wrangler `name` stays **`mdviewer-api`** (infra).
 
 **Protocol 3 (Slice A):** manage token on create/mutate; view password GET-only; `POST /share/rotate-manage`; no flat-key fallback. SPA Slice B must send Bearer manage token before prod share UX works against a protocol-3 Worker.
 
