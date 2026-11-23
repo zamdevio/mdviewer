@@ -2,9 +2,10 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** Spec’d — not started  
+**Status:** Design locked — [`docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md`](../../docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md); Slice A not started  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
-**Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.
+**Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
+**Hard cut:** Protocol **3 only** in code/docs — no protocol-2 mutate path, no flat-key legacy. Wipe Worker R2 before real v4 (`final.md`).
 
 ---
 
@@ -119,10 +120,11 @@ Do **not** overload `X-Share-Password` for mutate after this ships.
 
 - Operator can wipe any share by ID out-of-band (R2 / admin script). Independent of user tokens. Document in `docs/security.md` + self-host notes.
 
-### Migration from protocol 2
+### Migration / hard cut
 
-- Old shares: mutate still accepts create-time `X-Share-Password` **or** freeze mutate until re-upload — pick one in implementation and document in `/compatibility`. Prefer: accept legacy password as manage for protocol 2 objects tagged `protocol: 2`, new objects `protocol: 3` manage-only.
-- SPA: migrate settings key; map old default share password → manage token once with confirm if needed.
+- **No** protocol-2 dual auth in the Worker. Objects without `manageTokenHash` fail manage; do not document legacy mutate.
+- Ops: wipe Worker R2 before real **v4.0.0** deploy (`final.md`).
+- SPA (slices B/E): migrate settings key `#password` → `#token`; map old default share password → manage token once with confirm if needed (local only).
 
 ---
 

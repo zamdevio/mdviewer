@@ -65,12 +65,14 @@ See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
 
 ## 6b. Protocol 3 — manage token (**Now**)
 
-See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`phases/focus.md`](./phases/focus.md).
+See [`phases/07-manage-token.md`](./phases/07-manage-token.md) · order in [`phases/focus.md`](./phases/focus.md).  
+Design: [`docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md`](../docs/superpowers/specs/2026-11-23-protocol-3-manage-token-design.md) (protocol 3 only; no dual auth).
 
 - [ ] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
 - [ ] View password disposable per share; mutate uses Bearer manage token only
 - [ ] Already-shared UX core; Shares page Edit = editor dialog
 - [ ] Compatibility protocol 3 + llms + OpenAPI/MCP docs
+- [ ] **Wipe Worker R2** (share objects / bucket) before real **v4.0.0** deploy — start fresh; no protocol-2 leftovers
 - [ ] Appflare **Then** ([`phases/06-appflare.md`](./phases/06-appflare.md)) — declared; catalog describes protocol 3 once live
 
 ## 7. Loose ends (**Parked**)
