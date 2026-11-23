@@ -33,12 +33,12 @@ const features = [
   {
     icon: Share2,
     title: "Edge share",
-    body: "Optional Cloudflare Workers + R2. Share a file or a whole project pack.",
+    body: "Optional Workers + R2. Manage token to create/update; optional disposable view password. Same rules for SPA, curl, and MCP.",
   },
   {
     icon: Wifi,
     title: "Bring your own API",
-    body: "Point Settings → Share at your worker. Compatibility handshake and connection dialogs.",
+    body: "Point Settings → Share at your worker. Protocol 3 compatibility handshake and connection dialogs.",
   },
   {
     icon: Download,

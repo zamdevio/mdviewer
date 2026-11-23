@@ -29,11 +29,25 @@ export function previewExpiresAt(ttlSeconds: number): string {
   return new Date(Date.now() + clampShareTtl(ttlSeconds) * 1000).toISOString();
 }
 
+/** Ambiguous-char-free alphabet (no 0/O/1/I/l). Length must stay < 256. */
+const SECRET_ALPHABET =
+  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+
+/**
+ * Unbiased random secret for manage tokens / disposable view passwords.
+ * Uses rejection sampling so `byte % alphabet.length` does not skew.
+ */
 export function generateSharePassword(length = 16): string {
-  const alphabet =
-    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  const n = SECRET_ALPHABET.length;
+  const limit = Math.floor(256 / n) * n;
   let out = "";
-  for (const b of bytes) out += alphabet[b % alphabet.length];
+  while (out.length < length) {
+    const bytes = crypto.getRandomValues(new Uint8Array(32));
+    for (const b of bytes) {
+      if (b >= limit) continue;
+      out += SECRET_ALPHABET[b % n];
+      if (out.length >= length) break;
+    }
+  }
   return out;
 }

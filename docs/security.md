@@ -23,7 +23,8 @@ MDViewer is a **local-first** Markdown studio with an optional public share Work
 | Hostile import filenames | `validateFileName` + `sanitizeFileName` on import | `file-helpers.ts` |
 | Frame clickjacking / MIME sniff | `X-Frame-Options: DENY`, `nosniff` | `_headers` |
 | Upload abuse (baseline) | Per-IP Durable Object rate limit | `apps/worker` rate limiter |
-| Share IDs | 128-bit `crypto.getRandomValues` | `apps/worker/src/lib/content.ts` |
+| Share IDs | 128-bit `crypto.getRandomValues`, lowercase hex (easy double-click copy) | `apps/worker/src/lib/content.ts` |
+| Manage / view secret generation | Rejection-sampled alphabet (no ambiguous glyphs; no modulo bias) | `apps/web/src/lib/share/ttl.ts` |
 | Export encryption (current) | AES-GCM + PBKDF2 | `apps/web/src/lib/utils.ts` |
 
 ## Known / intentional gaps

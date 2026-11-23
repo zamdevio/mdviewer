@@ -8,14 +8,16 @@ export const ALLOWED_CONTENT_TYPES = [
   "application/x-markdown",
 ] as const;
 
+/**
+ * Share id — 128-bit entropy, lowercase hex only.
+ * No `-` / `+` / `/` so a double-click selects the whole id in most UIs.
+ */
 export function generateId(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
-
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
+  let out = "";
+  for (const b of bytes) out += b.toString(16).padStart(2, "0");
+  return out;
 }
 
 export async function extractContent(

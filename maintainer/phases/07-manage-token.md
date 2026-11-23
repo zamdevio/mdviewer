@@ -2,7 +2,7 @@
 
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after 01–03 shipped; before 05 / 04 remaining / 06  
-**Status:** A–E done (prod smoke 2026-11-23). Promote Focus **Next** → showcase ([`05-showcase.md`](./05-showcase.md)).  
+**Status:** A–E done (prod smoke 2026-11-23). Follow-ups folded: R2 wipe done; share ids → hex; manage/view secret gen unbiased.  
 **Depends on:** Protocol 2 live (01–03); SPA shares binding (02)  
 **Goal:** Split **view** vs **manage** capabilities. Stop using one password hash for both GET-protect and mutate/delete.  
 **Hard cut:** Protocol **3 only** in code/docs — no protocol-2 dual auth, no flat-key legacy. Wipe Worker R2 before real v4 ([`../final.md`](../final.md)). Stay on **3.x.x** until `final.md` clears; then **v4.0.0**.  
@@ -53,7 +53,7 @@ So a “view password” shared with a reader is also the admin secret. That is 
 
 | Capability | What | Who |
 |------------|------|-----|
-| **View** | Share ID (~130-bit) in the public link | Anyone with the URL |
+| **View** | Share ID (128-bit hex) in the public link | Anyone with the URL |
 | **View-protect** | Optional **per-share disposable password** (auto-generated when protect is turned on; user may edit) | People the creator trusts to *read* |
 | **Manage** | **Manage token** (settings-scoped, required to share) | Creator device / SPA / MCP client |
 

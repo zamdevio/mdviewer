@@ -7,6 +7,8 @@ Machine-readable: **`/openapi.json`**
 
 **Protocol:** `3` — manage token for create/mutate; optional disposable view password for GET; fixed TTL; caps via `/compatibility`.
 
+Share ids are **32-char lowercase hex** (128-bit). SPA, curl, and MCP use the **same** manage/view rules — no privileged agent path.
+
 ## Auth
 
 | Concern | Header |

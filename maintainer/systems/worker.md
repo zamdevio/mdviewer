@@ -20,6 +20,7 @@
 - Docs: `GET /docs`, `GET /openapi.json`
 - CORS from `ALLOWED_ORIGINS` (include `Authorization`, manage + view password / TTL headers)
 - Fair-use Durable Object: `RateLimiter` keyed by IP+UA (+ CF country); stricter for agent-shaped UA / `X-MDViewer-Client: mcp`
+- Share ids: 32-char lowercase hex (`generateId` in `lib/content.ts`) — double-click friendly
 - R2: `shares/{id}/metadata.json` + `shares/{id}/files/...` — `manageTokenHash` required; `passwordHash` view-only optional
 - Cron: `0 4 * * *` → sweep expired shares
 - Secrets: PBKDF2-SHA256 hashes in metadata only; never in public responses

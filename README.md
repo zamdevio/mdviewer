@@ -65,7 +65,8 @@ Client-side Markdown studio with an optional Cloudflare Workers share API. The S
 ### Edge share
 - Workers + R2, CORS allowlist, fair-use (IP+UA), fixed TTL, **manage token** (mutate) + optional disposable **view password** (GET), OpenAPI `/docs`
 - Protocol **3** — Settings → Manage token (`#token`); SPA reads `/compatibility` for TTL/`limits`
-- SPA + Worker ship [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) / [`/llms-full.txt`](https://api.mdviewer.zamdev.dev/llms-full.txt); MCP at [`POST /mcp`](https://api.mdviewer.zamdev.dev/mcp) (`manageToken` on mutate tools)
+- **Agents and humans share the same manage/view rules** — MCP (`POST /mcp`) is not a privileged path
+- SPA + Worker ship [`/llms.txt`](https://mdviewer.zamdev.dev/llms.txt) / [`/llms-full.txt`](https://api.mdviewer.zamdev.dev/llms-full.txt); MCP tools take `manageToken` for mutate
 - Roadmap until **v4.0**: [`maintainer/final.md`](./maintainer/final.md) · Focus [`04-perf-large-docs`](./maintainer/phases/04-perf-large-docs.md)
 
 ### Security
