@@ -31,3 +31,11 @@ Rules:
 - Tombstones / unauthorized rows: optional local prune from results panel
 
 Do not confuse with **rotate view password** (per-share PATCH in Compose).
+
+## Markdown preview
+
+- **&lt;100KB:** sync `MarkdownViewer` / `ReactMarkdown` (`components/markdown/viewer.tsx`)
+- **≥100KB (`VIRTUALIZE_PREVIEW_BYTES`):** `VirtualMarkdownViewer` — h1/h2 `splitMarkdownChunks`, `@tanstack/react-virtual`
+- **Worker parse (04 slice 2):** `lib/markdown/worker-parser.ts` + `parser.worker.ts` → **hast**; main renders via `HastDocument` (`hast-util-to-jsx-runtime` + shared `MarkdownComponents`)
+- **Incremental:** content-hash LRU (`chunk-cache.ts`, ~200) — unchanged chunk text reuses hast even if indices shift
+- Fallback: if Worker fails, virtual path falls back to sync `MarkdownDocument` per chunk

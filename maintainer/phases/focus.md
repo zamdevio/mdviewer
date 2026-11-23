@@ -12,11 +12,11 @@
 
 ## Handoff (2026-11-23) — start here in a new chat
 
-1. Read **this file**, then [`04-perf-large-docs.md`](./04-perf-large-docs.md) slice **2** only.
-2. **Do next:** restore stash / finish chunked markdown parse in a Web Worker + content-hash incremental (`apps/web/src/lib/markdown/worker-parser.ts`). Branch: `perf/worker-parse` (stash was `wip: 04 slice 2 worker parse`).
-3. **Do not:** Appflare pack (`06`) until Focus promotes **Next**; editor virt (textarea deferred); v4 bump; 04 slices 3–4 until slice 2 lands.
+1. Read **this file**, then [`04-perf-large-docs.md`](./04-perf-large-docs.md) slice **3** only.
+2. **Do next:** per-component opts (code / Mermaid / math / tables / images) — P2 in the phase doc. Slices 0–2 shipped.
+3. **Do not:** Appflare pack (`06`) until Focus promotes **Next**; editor virt (textarea deferred); v4 bump; slice 4 until 3 lands.
 4. **Names:** product + Wrangler Worker script = `mdviewer`; Pages = `markview`; API = `api.mdviewer.zamdev.dev`. MCP/`/compatibility.name` = `mdviewer`.
-5. **Systems:** [`../systems/web.md`](../systems/web.md) · [`../systems/worker.md`](../systems/worker.md). Share UX: manage→compose→distribute + rotate results (08 shipped).
+5. **Systems:** [`../systems/web.md`](../systems/web.md) · [`../systems/worker.md`](../systems/worker.md). Share UX 08 shipped.
 
 ---
 
@@ -31,7 +31,7 @@
 | **Shipped** | Showcase honesty + visibility (MCP/llms) | [`05-showcase.md`](./05-showcase.md) |
 | **Shipped** | Protocol 3 manage token | [`07-manage-token.md`](./07-manage-token.md) |
 | **Shipped** | Share protocol 2 / dialog / agents | [`01`](./01-share-protocol.md)–[`03`](./03-agent-surfaces.md) |
-| **Shipped** | Perf 0–1 (debounce/LRU + preview virt; editor deferred) | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
+| **Shipped** | Perf 0–2 (debounce/LRU + preview virt + worker parse; editor deferred) | [`04-perf-large-docs.md`](./04-perf-large-docs.md) |
 
 ---
 
@@ -39,7 +39,7 @@
 
 ```txt
 01–03 + 07 + 05 + 08 Share UX   (shipped)
-  → 04 preview virt shipped; worker parse next  ← Now (v4 claim gate)
+  → 04 slices 0–2 shipped; slice 3 per-component next  ← Now (v4 claim: 1–2 done)
     → 06 Appflare pack + catalog PR     ← Next
   Parked: final.md §7
 ```
@@ -50,7 +50,7 @@
 
 ## Next task (do not guess)
 
-1. [`04-perf-large-docs.md`](./04-perf-large-docs.md) — slice **2** worker parse (stash on `perf/worker-parse`) → then 3….
+1. [`04-perf-large-docs.md`](./04-perf-large-docs.md) — slice **3** per-component opts. Editor virt deferred.
 2. Do **not** scaffold Appflare pack code until Focus promotes **Next**.
 3. Do **not** bump **v4.0.0** until [`../final.md`](../final.md) is clear.
 
@@ -60,7 +60,7 @@
 
 | Doc | Label | Slices / notes |
 |-----|-------|----------------|
-| [`04-perf-large-docs.md`](./04-perf-large-docs.md) | **Now** | 0–1 shipped → **2** worker parse → 3 per-component → 4 |
+| [`04-perf-large-docs.md`](./04-perf-large-docs.md) | **Now** | 0–2 **shipped** → **3** per-component → 4 |
 | [`06-appflare.md`](./06-appflare.md) | **Next** / Declared | Pack → validate → catalog PR |
 | [`08-share-ux.md`](./08-share-ux.md) | **Shipped** | 404 prune · rotate results · manage/compose/distribute |
 | [`../final.md`](../final.md) §7 | **Parked** | Nested projects, CSP nonce, ModalShell |

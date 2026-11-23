@@ -34,7 +34,7 @@ import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
 import type { Components } from "react-markdown";
 
 let katexCssRequested = false;
-function ensureKatexCss() {
+export function ensureKatexCss() {
   if (katexCssRequested) return;
   katexCssRequested = true;
   void import("katex/dist/katex.min.css");
@@ -58,7 +58,8 @@ function headingComponent(Tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"): Compone
     );
 }
 
-const MarkdownComponents: Components = {
+/** Shared by ReactMarkdown and hast-util-to-jsx-runtime paths. */
+export const MarkdownComponents: Components = {
     h1: headingComponent("h1"),
     h2: headingComponent("h2"),
     h3: headingComponent("h3"),

@@ -3,7 +3,7 @@
 **Focus label:** **Now** ([`focus.md`](./focus.md))  
 **Order:** after protocol 3 + showcase visibility  
 **Goal:** Smooth edit/preview for 5–10MB markdown.  
-**Status:** Slices 0–1 shipped (debounce/LRU + preview virt); editor virt deferred; **slice 2** worker parse open  
+**Status:** Slices 0–2 shipped (debounce/LRU + preview virt + worker hast parse); editor virt deferred; **slice 3** next  
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -28,8 +28,8 @@
 - [x] Virtual scroll preview — `@tanstack/react-virtual` + h1/h2 chunks (`VirtualMarkdownViewer`); threshold `VIRTUALIZE_PREVIEW_BYTES` (100KB); editor PreviewSection + share page
 - [ ] ~~Virtual scroll editor (optional)~~ — **Deferred**: editor is a plain `<textarea>` with cursor/spellcheck sync; real virt needs CodeMirror/Monaco (or custom line buffer). Revisit only if we replace the textarea.
 - [x] IntersectionObserver lazy Mermaid (Code/Math still eager)
-- [ ] Chunked markdown parse in a Web Worker — `apps/web/src/lib/markdown/worker-parser.ts`
-- [ ] Diff-based re-parse for files &gt; 1MB — `viewer.tsx`
+- [x] Chunked markdown parse in a Web Worker — `apps/web/src/lib/markdown/worker-parser.ts` + `parser.worker.ts` → hast; `HastDocument` in virtual preview
+- [x] Content-hash incremental re-parse — `chunk-cache.ts` LRU (~200); unchanged chunks reuse hast (works for &gt;1MB and mid-doc edits)
 - [ ] Progressive render: structure → text → heavy blocks
 - [x] Cleanup Mermaid on unmount (abort in-flight + clear SVG DOM); KaTeX/highlighter still eager
 - [x] LRU Mermaid cache (cap ~50)
@@ -75,15 +75,15 @@
 |-------|--------|--------|
 | **0** | Size-aware preview debounce, Mermaid debounce/lazy/LRU, scroll throttle, auto-save scaling, memory warn | **Shipped** |
 | **1** | Virtual scroll preview + lazy viewport blocks | **Shipped** (preview + share); editor virt **deferred** (textarea — no rewrite) |
-| **2** | Chunked markdown parse in Web Worker + diff/incremental for &gt;1MB | **Open — start here** (Focus Now) |
-| **3** | Per-component opts (code / Mermaid / math / tables / images) | Open (P2) — **after** slice 2 |
-| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open — after 2–3 |
+| **2** | Chunked markdown parse in Web Worker + content-hash incremental | **Shipped** |
+| **3** | Per-component opts (code / Mermaid / math / tables / images) | **Open — start here** (Focus Now) |
+| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) | Open — after 3 |
 
-### Slice 2 acceptance (for the next agent)
+### Slice 2 acceptance
 
-- [ ] `worker-parser.ts` (or equiv.) parses markdown off the main thread for large docs
-- [ ] Diff / incremental re-parse path for content &gt;1MB (avoid full re-parse on every debounce tick)
-- [ ] Preview path uses worker output without regressing &lt;100KB docs (keep sync path or fast threshold)
-- [ ] Unit/smoke coverage for splitter/worker boundary; no Appflare / v4 in this slice
+- [x] `worker-parser.ts` + `parser.worker.ts` parse off the main thread for virtualized docs
+- [x] Content-hash LRU reuses unchanged chunk hast (incremental; covers &gt;1MB edits)
+- [x] &lt;100KB keeps sync `ReactMarkdown` via `MarkdownViewer`
+- [x] Unit coverage: `chunk-cache` / `parse-pipeline` / `worker-parser`; no Appflare / v4 in this slice
 
-v4 claim for 5–10MB needs **at least slices 1–2** (or an explicit defer note in release notes).  
+v4 claim for 5–10MB needs **at least slices 1–2** (shipped) — still clear `final.md` / dual approval before **v4.0.0**.  
