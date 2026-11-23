@@ -1,9 +1,10 @@
 # Shipped
 
-Closed slices (newest first). Full folded phase receipts live beside this index (`01`–`03`, `05`, `07`, `08`). Open work stays in [`../phases/`](../phases/) (`focus`, `04`, `06` only).
+Closed slices (newest first). Folded phase receipts live beside this index. Open work: [`../phases/focus.md`](../phases/focus.md) + [`../phases/06-appflare.md`](../phases/06-appflare.md) (after v4).
 
 | When | Slice | Notes |
 |------|-------|-------|
+| 2026-11 | Fold perf 04 → `shipped/`; park slice 4 | Honest v4 claim ~2MB virt preview; no 5–10MB; Appflare after v4 |
 | 2026-11 | Fold phases 01–03 / 05 / 07 / 08 → `shipped/` | Deleted from `phases/`; receipts here only |
 | 2026-11 | Editor baseline / Files editing mark | Default sample + empty ≠ unsaved; clear Files “Editing” when New/empty/temp baseline |
 | 2026-11 | Perf slice 3 per-component | Code collapse/lazy HL; Mermaid current-theme + size warn; skip-math pipeline; image lazy/async + size warn; table row virt deferred to 4 |

@@ -46,4 +46,6 @@ Do not confuse with **rotate view password** (per-share PATCH in Compose).
 - **Share view helpers:** Copy markdown, scroll-to-top (after preview scrolled), Virtualization dialog (same badge)
 - **Connection:** single shared `/health` probe — once on load, Recheck, `online`, retry only while unhealthy (no Connected spam)
 - **Temp / Files editing:** empty or exact Settings default sample is *baseline* — not unsaved temp; does not trip Load warning; clears Files “Editing” mark on New / empty / no saved file
-- **Load tiers (virt badge):** Sync → Light → Steady → Elevated (≥1MB) → Heavy (≥2MB / high heap) → Critical — 1.8MB ⇒ Elevated is expected
+- **Load tiers (virt badge):** Sync → Light → Steady → Elevated (≥1MB) → Heavy (≥2MB / high heap) → Critical — ~1.8–2MB ⇒ Elevated is expected
+- **Size honesty:** practical large-preview bar ~**2MB** (machine-dependent); editor textarea not virt; no 5–10MB claim; slice 4 parked post-v4 ([`../shipped/04-perf-large-docs.md`](../shipped/04-perf-large-docs.md))
+- **Stress fixtures:** `node scripts/gen-large-md.mjs --mb 2` (local only)

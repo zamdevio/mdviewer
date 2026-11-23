@@ -4,6 +4,8 @@ Clear every section before bumping to **v4.0.0**. Until then ship **3.x.x** only
 
 Focus order: [`phases/focus.md`](./phases/focus.md).
 
+**Rule:** deploy current `main` after this checklist is accepted; **only then** bump/tag **4.0.0** and redeploy. No v4 before that deploy.
+
 ---
 
 ## 1. Uncommitted / deploy debt
@@ -11,9 +13,9 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 - [x] Commit hygiene + C–E + perf slices (local; push when ready)
 - [x] Confirm no stale `apps/worker/wrangler.toml` (jsonc only)
 - [x] Redeploy Pages (`markview`) and Worker (`mdviewer`) (CI on main; cron on Paid Workers)
-- [x] Local smoke (`wrangler dev`): health, compatibility protocol 2, llms*, MCP tools/list+get_share, upload/meta/PUT/DELETE
+- [x] Local smoke (`wrangler dev`): health, compatibility, llms*, MCP, upload/meta/PUT/DELETE
 - [x] Prod smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml` (+ Worker `/health` `/compatibility` `/mcp`)
-- [ ] Manual: `#heading` fragment links in editor split preview + `/share`
+- [ ] Manual: `#heading` fragment links in editor split preview + `/share` — fixture: https://mdviewer.zamdev.dev/share/35668cac054792ba7ce8cc7ddb38b2fc (fork to editor or open share; click Contents links)
 - [x] Confirm Worker `/favicon.svg` + MCP `serverInfo.icons` after favicon deploy (`b0d9ca2`)
 
 ## 2. Docs honesty
@@ -29,12 +31,12 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 See [`shipped/01-share-protocol.md`](./shipped/01-share-protocol.md) (folded).
 
 - [x] R2 prefix layout + `metadata.json`
-- [x] Password hash; mutate/delete require `X-Share-Password`
+- [x] Password hash; mutate/delete require manage token (protocol 3)
 - [x] Optional `viewProtected` on GET
 - [x] Fixed TTL (default 7d / max 30d) + cron sweep
 - [x] Fair-use DO (IP+UA); stricter on agent-shaped traffic
 - [x] Bump `/compatibility` protocol; update `docs/api.md` + systems worker doc
-- [x] Redeploy Worker so protocol 2 is live on prod
+- [x] Redeploy Worker so protocol is live on prod
 
 ## 4. Phase D — unified share dialog
 
@@ -43,50 +45,53 @@ See [`shipped/02-share-dialog.md`](./shipped/02-share-dialog.md) (folded).
 - [x] One Share dialog (editor + file + project)
 - [x] Local `shareId` binding; new link vs replace
 - [x] TTL picker + wipe time; protect-view toggle → Settings `#password`
-- [x] Shares page remote DELETE with password
+- [x] Shares page remote DELETE with manage token
 
 ## 5. Phase E — agent surfaces
 
 See [`shipped/03-agent-surfaces.md`](./shipped/03-agent-surfaces.md) (folded).
 
-- [x] SPA `/llms.txt` + `/llms-full.txt` (done in 3.x)
-- [x] Worker MCP tools on same service (`get_share`, `upload_share`, …)
+- [x] SPA `/llms.txt` + `/llms-full.txt`
+- [x] Worker MCP tools on same service
 - [x] Worker-hosted `/llms*` routes
 - [x] Compatibility + `docs/api.md` when MCP ships
 - [x] Redeploy Worker so `/mcp` + `/llms*` are live on prod
-- [x] MCP brand icon (`/favicon.svg` + SEP-973 `serverInfo.icons`) live after `b0d9ca2` deploy
+- [x] MCP brand icon live after `b0d9ca2` deploy
 
 ## 6. Perf (large docs)
 
-See [`phases/04-perf-large-docs.md`](./phases/04-perf-large-docs.md).
+See [`shipped/04-perf-large-docs.md`](./shipped/04-perf-large-docs.md) (folded; slices 0–3 shipped).
 
 - [x] Size-aware preview / Mermaid debounce / lazy Mermaid / LRU / scroll throttle / auto-save scaling
-- [x] Virtual scroll preview + chunked worker parse + lazy visible chunks (04 slices 1–2 + polish)
-- [x] Slice 3 per-component (code/Mermaid/math/images); table row virt still in slice 4
-- [ ] **Still before a 5–10MB claim:** slice 4 leftovers / editor virt deferred — do not advertise full 5–10MB readiness until cleared or explicitly deferred in release notes
+- [x] Virtual scroll preview + chunked worker parse + lazy visible chunks
+- [x] Slice 3 per-component (code/Mermaid/math/images)
+- [x] **Honest claim for v4:** ~**2MB** virtualized preview is the practical bar we have evidence for (you’ve smoked ~1.8–2MB). Smoothness still depends on machine/CPU/RAM — editor textarea is **not** virtualized. **No 5–10MB claim.** Slice 4 (IndexedDB AST / table row virt / metrics) + editor virt = **parked post-v4**.
+- Generate local stress files (optional): `node scripts/gen-large-md.mjs --mb 2` (also `--mb 5` if you want to feel the cliff; don’t advertise).
 
-## 6b. Protocol 3 — manage token (**Now**)
+## 6b. Protocol 3 — manage token
 
-See [`shipped/07-manage-token.md`](./shipped/07-manage-token.md) (folded) · order in [`phases/focus.md`](./phases/focus.md) · systems [`systems/worker.md`](./systems/worker.md) (protocol 3 only; no dual auth).
+See [`shipped/07-manage-token.md`](./shipped/07-manage-token.md) (folded).
 
-- [x] Settings `#token` (auto-gen; required to share; rotate + confirm + bulk rotate)
+- [x] Settings `#token`; rotate + confirm + bulk rotate
 - [x] View password disposable per share; mutate uses Bearer manage token only
-- [x] Already-shared UX core; Shares page Edit = editor dialog
+- [x] Already-shared UX; Shares Edit = editor dialog
 - [x] Compatibility protocol 3 + llms + OpenAPI/MCP docs
-- [x] Local + prod smoke (health / compatibility 3 / upload+mutate with manage token / view protect GET / rotate / delete) — 2026-11-23 after protocol 3 deploy
-- [x] **Wipe Worker R2** share objects before protocol 3 smoke (list empty via Worker binding + API; bucket info metrics may lag)
-- [ ] Appflare **Then** ([`phases/06-appflare.md`](./phases/06-appflare.md)) — declared; catalog describes protocol 3 once live
+- [x] Local + prod smoke — 2026-11-23
+- [x] Wipe Worker R2 before protocol 3 smoke
+- [x] **Appflare deferred until after v4** ([`phases/06-appflare.md`](./phases/06-appflare.md))
 
-## 7. Loose ends (**Parked**)
+## 7. Loose ends (**Parked** — not v4 blockers)
 
-- [ ] Nested projects — **Parked** (optional follow-up; not a v4 blocker unless we advertise it)
-- [ ] CSP: prefer nonce over `script-src 'unsafe-inline'` for theme bootstrap — **Parked**
-- [ ] Settings portals → `ModalShell` migration where still open — **Parked**
-- [x] Root + `@mdviewer/web` package versions stay in sync (3.x line)
+- [ ] Nested projects — **Parked**
+- [ ] CSP nonce over `unsafe-inline` theme bootstrap — **Parked**
+- [ ] Settings portals → `ModalShell` where still open — **Parked**
+- [x] Root + `@mdviewer/web` package versions stay in sync (3.x until bump)
 
 ## 8. Release gate
 
-- [ ] Sections 1–7 accepted (or explicitly deferred with notes) — **needs human + agent approval**
-- [ ] Bump root + `apps/web` to **4.0.0**; tag release — **blocked until approval**
-- [ ] Update home / README “Now Available” to 4.0; refresh llms briefs for new protocol
+- [ ] §1 `#heading` smoke accepted by human
+- [ ] Sections 1–7 accepted (deferred notes above) — **needs human + agent approval**
+- [ ] Deploy current `main` (3.x) to prod and confirm green
+- [ ] Bump root + `apps/web` to **4.0.0**; tag release — **only after that deploy**
+- [ ] Update home / README “Now Available” to 4.0; refresh llms if needed
 - [ ] Append row to [`shipped/README.md`](./shipped/README.md)

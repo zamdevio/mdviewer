@@ -29,8 +29,8 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 |-----|------|
 | [`phases/focus.md`](phases/focus.md) | Focus order (Now / Next / Parked) |
 | [`final.md`](final.md) | Pre–v4.0 release checklist |
-| [`phases/04-perf-large-docs.md`](phases/04-perf-large-docs.md) | **Now** — large markdown perf (slice 4) |
-| [`phases/06-appflare.md`](phases/06-appflare.md) | **Next** — Appflare catalog readiness |
+| [`phases/06-appflare.md`](phases/06-appflare.md) | **After v4** — Appflare catalog readiness |
+| [`shipped/04-perf-large-docs.md`](shipped/04-perf-large-docs.md) | Folded — perf 0–3; slice 4 parked; ~2MB claim |
 | [`shipped/README.md`](shipped/README.md) | Closed-slice timeline + folded phase receipts |
 | [`shipped/01-share-protocol.md`](shipped/01-share-protocol.md) | Folded — Phase C protocol |
 | [`shipped/02-share-dialog.md`](shipped/02-share-dialog.md) | Folded — Phase D share dialog |
@@ -43,4 +43,4 @@ Contributor-only planning and systems maps. **`docs/`** is for public/helpful do
 | [`systems/pwa-cache.md`](systems/pwa-cache.md) | SW / Cache Storage migration rules |
 | [`agents/tree.md`](agents/tree.md) | Directory conventions |
 
-Folded phases are **removed** from `phases/` — read receipts in [`shipped/`](shipped/). Only open work stays in `phases/` (`focus`, `04`, `06`).
+Folded phases are **removed** from `phases/` — read receipts in [`shipped/`](shipped/). Open: `focus`, `06` (after v4).

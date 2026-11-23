@@ -1,9 +1,10 @@
 # Large-doc performance
 
-**Focus label:** **Now** ([`focus.md`](./focus.md))  
+**Focus label:** **Shipped / folded** ([`../phases/focus.md`](../phases/focus.md))  
 **Order:** after protocol 3 + showcase visibility  
-**Goal:** Smooth edit/preview for 5–10MB markdown.  
-**Status:** Slices 0–3 shipped (per-component: code collapse/lazy HL, Mermaid current-theme, skip math, image lazy+warn); editor virt deferred; table row virt → slice 4; **slice 4** next  
+**Goal (original):** Smooth edit/preview toward large markdown.  
+**Status:** Slices **0–3 shipped**; **slice 4 parked post-v4** (IndexedDB AST / table row virt / metrics). Editor textarea virt stays deferred.  
+**Honest size claim (v4):** virtualized **preview** proven around **~2MB** (machine-dependent scroll/smoothness); **do not** advertise 5–10MB until slice 4 + editor virt revisit.
 **Source:** Migrated from root `todo.md` (deleted). Paths updated for `apps/web`.
 
 ## Principles
@@ -77,7 +78,7 @@
 | **1** | Virtual scroll preview + lazy viewport blocks | **Shipped** (preview + share); editor virt **deferred** (textarea — no rewrite) |
 | **2** | Chunked markdown parse in Web Worker + content-hash incremental | **Shipped** |
 | **3** | Per-component opts (code / Mermaid / math / tables / images) | **Shipped** — scroll wrappers + virt badge; code collapse/lazy HL; Mermaid current-theme; skip-math; image lazy+warn; table *row* virt → 4 |
-| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) + table row virt | **Next** |
+| **4** | Heading chunking / IndexedDB AST / metrics / robustness (P3–P4) + table row virt | **Parked post-v4** |
 
 ### Slice 2 acceptance
 
@@ -86,4 +87,5 @@
 - [x] &lt;100KB keeps sync `ReactMarkdown` via `MarkdownViewer`
 - [x] Unit coverage: `chunk-cache` / `parse-pipeline` / `worker-parser`; no Appflare / v4 in this slice
 
-v4 claim for 5–10MB needs **at least slices 1–2** (shipped) — still clear `final.md` / dual approval before **v4.0.0**.  
+v4 ships with a **~2MB practical** large-preview claim (virt + worker); 5–10MB stays aspirational until slice 4 / editor virt. Clear [`../final.md`](../final.md) before **v4.0.0**.  
+

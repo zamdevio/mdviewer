@@ -1,9 +1,9 @@
 # Appflare catalog readiness
 
-**Focus label:** **Then** ([`focus.md`](./focus.md)) — after 07 / 05 / 04 remaining  
-**Order:** packaging + catalog after protocol 3 is live enough to describe honestly  
+**Focus label:** **Next after v4** ([`focus.md`](./focus.md))  
+**Order:** packaging + catalog **after** v4.0.0 ships  
 **Goal:** Make MDViewer installable via [Appflare](https://appflare.dev/) and submit to [appflare/catalog](https://github.com/appflare/catalog) when packaging is green.  
-**Status:** **Declared** — we will submit; design/docs ok to keep warm; **no pack code until Focus says Then**  
+**Status:** **Declared / deferred until after v4** — design/docs ok to keep warm; **no pack code until Focus promotes this after the v4 bump**  
 **Agent submit guide:** https://appflare.dev/agent/submit.md
 
 ## Slices
