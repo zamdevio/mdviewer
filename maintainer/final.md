@@ -15,7 +15,7 @@ Focus order: [`phases/focus.md`](./phases/focus.md).
 - [x] Redeploy Pages (`markview`) and Worker (`mdviewer`) (CI on main; cron on Paid Workers)
 - [x] Local smoke (`wrangler dev`): health, compatibility, llms*, MCP, upload/meta/PUT/DELETE
 - [x] Prod smoke: `/llms.txt`, `/llms-full.txt`, `/robots.txt`, `/sitemap.xml` (+ Worker `/health` `/compatibility` `/mcp`)
-- [ ] Manual: `#heading` fragment links in editor split preview + `/share` — fixture: https://mdviewer.zamdev.dev/share/35668cac054792ba7ce8cc7ddb38b2fc (fork to editor or open share; click Contents links)
+- [x] Manual: `#heading` fragment links in editor split preview + `/share` — smoked 2026-11-23; Back/Forward history via `pushState` (`79ca07e`+)
 - [x] Confirm Worker `/favicon.svg` + MCP `serverInfo.icons` after favicon deploy (`b0d9ca2`)
 
 ## 2. Docs honesty

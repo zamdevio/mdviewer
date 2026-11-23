@@ -31,7 +31,11 @@ import { MarkdownImage } from "./image";
 import { MarkdownMermaid } from "./mermaid";
 import { remarkEmoji } from "@/lib/remark-emoji";
 import { contentLikelyHasMath } from "@/lib/markdown/content-signals";
-import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
+import {
+    navigateToMarkdownHeading,
+    scrollToMarkdownHeading,
+    syncMarkdownHeadingFromLocation,
+} from "@/lib/markdown/heading-anchors";
 import type { Components } from "react-markdown";
 import type { PluggableList } from "unified";
 
@@ -147,16 +151,11 @@ export const MarkdownComponents: Components = {
                         onClick?.(event);
                         if (event.defaultPrevented) return;
                         event.preventDefault();
-                        const article = (event.currentTarget as HTMLElement).closest("article.markdown-body");
-                        const ok = scrollToMarkdownHeading(href, article);
-                        if (ok) {
-                            const id = href.slice(1);
-                            try {
-                                history.replaceState(null, "", `#${decodeURIComponent(id)}`);
-                            } catch {
-                                // ignore history failures (sandboxed / opaque origins)
-                            }
-                        }
+                        const article = (event.currentTarget as HTMLElement).closest(
+                            "article.markdown-body",
+                        );
+                        // pushState so browser Back restores the previous hash / scroll
+                        navigateToMarkdownHeading(href, article);
                     }}
                 >
                     {children}
@@ -238,13 +237,15 @@ export function MarkdownViewer({ content, className = "" }: MarkdownViewerProps)
     }, [content]);
 
     useEffect(() => {
-        const onHashChange = () => {
-            const hash = window.location.hash;
-            if (!hash || hash.length < 2) return;
-            scrollToMarkdownHeading(hash, articleRef.current, "smooth");
+        const sync = () => {
+            syncMarkdownHeadingFromLocation(articleRef.current, "smooth");
         };
-        window.addEventListener("hashchange", onHashChange);
-        return () => window.removeEventListener("hashchange", onHashChange);
+        window.addEventListener("hashchange", sync);
+        window.addEventListener("popstate", sync);
+        return () => {
+            window.removeEventListener("hashchange", sync);
+            window.removeEventListener("popstate", sync);
+        };
     }, []);
 
     return (

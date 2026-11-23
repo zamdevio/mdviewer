@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { HastDocument } from "./hast-document";
 import { MarkdownDocument } from "./viewer";
-import { scrollToMarkdownHeading } from "@/lib/markdown/heading-anchors";
+import {
+  scrollToMarkdownHeading,
+  syncMarkdownHeadingFromLocation,
+} from "@/lib/markdown/heading-anchors";
 import { splitMarkdownChunks } from "@/lib/markdown/split-chunks";
 import {
   chunkNeedsParse,
@@ -123,13 +126,15 @@ export function VirtualMarkdownViewer({
   }, [content, plans]);
 
   useEffect(() => {
-    const onHashChange = () => {
-      const hash = window.location.hash;
-      if (!hash || hash.length < 2) return;
-      scrollToMarkdownHeading(hash, articleRef.current, "smooth");
+    const sync = () => {
+      syncMarkdownHeadingFromLocation(articleRef.current, "smooth");
     };
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener("popstate", sync);
+    };
   }, []);
 
   if (parseFailed) {
