@@ -5,6 +5,7 @@
  */
 
 import { fetchSharedMarkdown } from '@/lib/api';
+import { getCachedViewPassword } from '@/lib/share/view-password-cache';
 import { isApiConfigured } from '@/lib/config';
 import { saveCurrentContentToFile } from './file-operations';
 import { hasUnsavedContent } from './validation';
@@ -62,7 +63,10 @@ export async function handleLoadSharedContent(
 
     try {
         // Load shared content
-        const content = await fetchSharedMarkdown(shareId);
+        const content = await fetchSharedMarkdown(
+            shareId,
+            getCachedViewPassword(shareId) ?? undefined,
+        );
 
         // Prepare state for shared content
         const newState = prepareSharedContentState(content);

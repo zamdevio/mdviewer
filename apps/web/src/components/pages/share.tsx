@@ -34,6 +34,7 @@ import {
 } from "@/lib/storage";
 import { truncateFilename } from "@/lib/editor";
 import { formatWipeTime } from "@/lib/share/ttl";
+import { getCachedViewPassword, setCachedViewPassword } from "@/lib/share/view-password-cache";
 import { toast } from "sonner";
 import { usePlatform } from "@/hooks/use-platform";
 
@@ -224,7 +225,10 @@ export default function ShareViewPage(): React.JSX.Element {
         setMetaError(null);
         const loadContent = async () => {
             try {
-                const markdown = await fetchSharedMarkdown(shareId);
+                const markdown = await fetchSharedMarkdown(
+                    shareId,
+                    getCachedViewPassword(shareId) ?? undefined,
+                );
                 applyMarkdown(markdown);
             } catch (err) {
                 if (err instanceof ApiRequestError && err.status === 401) {
@@ -259,6 +263,7 @@ export default function ShareViewPage(): React.JSX.Element {
         setPasswordSubmitting(true);
         try {
             const markdown = await fetchSharedMarkdown(shareId, viewPassword.trim());
+            setCachedViewPassword(shareId, viewPassword.trim());
             applyMarkdown(markdown);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Invalid password");

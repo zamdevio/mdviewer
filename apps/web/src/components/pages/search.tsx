@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Search, ExternalLink, FileText, Settings } from "lucide-react";
 import { fetchSharedMarkdown } from "@/lib/api";
+import { classifySearchError } from "@/lib/share/search-error";
+import { getCachedViewPassword, setCachedViewPassword } from "@/lib/share/view-password-cache";
 import { toast } from "sonner";
 import { getEffectiveApiConfig, isApiConfigured } from "@/lib/config";
 
@@ -13,6 +15,9 @@ export default function SearchPage(): React.JSX.Element {
     const [loading, setLoading] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [needsPassword, setNeedsPassword] = useState(false);
+    const [viewPassword, setViewPassword] = useState("");
+    const [passwordSubmitting, setPasswordSubmitting] = useState(false);
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-focus search input when page loads
@@ -70,17 +75,52 @@ export default function SearchPage(): React.JSX.Element {
         setLoading(true);
         setError(null);
         setPreview(null);
+        setNeedsPassword(false);
+        setViewPassword("");
+        setShareId(extractedId);
 
         try {
-            const content = await fetchSharedMarkdown(extractedId);
+            const content = await fetchSharedMarkdown(
+                extractedId,
+                getCachedViewPassword(extractedId) ?? undefined,
+            );
             const previewText = content.substring(0, 200);
             setPreview(previewText + (content.length > 200 ? "..." : ""));
-            setShareId(extractedId);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "Failed to load shared content");
-            toast.error("Content not found");
+            if (classifySearchError(err) === "password") {
+                setNeedsPassword(true);
+            } else {
+                setError(err instanceof Error ? err.message : "Failed to load shared content");
+                toast.error("Content not found");
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleViewPasswordSubmit = async () => {
+        const id = shareId.trim();
+        if (!id || !viewPassword.trim()) {
+            toast.error("Enter the share password");
+            return;
+        }
+        setPasswordSubmitting(true);
+        try {
+            const content = await fetchSharedMarkdown(id, viewPassword.trim());
+            setCachedViewPassword(id, viewPassword.trim());
+            const previewText = content.substring(0, 200);
+            setPreview(previewText + (content.length > 200 ? "..." : ""));
+            setNeedsPassword(false);
+            setViewPassword("");
+            setError(null);
+        } catch (err) {
+            if (classifySearchError(err) === "password") {
+                toast.error("Invalid password");
+            } else {
+                toast.error(err instanceof Error ? err.message : "Failed to load shared content");
+            }
+        } finally {
+            setPasswordSubmitting(false);
         }
     };
 
@@ -152,6 +192,39 @@ export default function SearchPage(): React.JSX.Element {
                     </Button>
                 </div>
             </Card>
+
+            {needsPassword && !preview && (
+                <Card className="p-6 max-w-2xl mx-auto w-full border-primary/20 bg-primary/5">
+                    <div className="flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        <h3 className="font-semibold">Protected share</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2 mb-4">
+                        This share is view-protected. Enter its password to preview the content.
+                    </p>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                            type="password"
+                            autoComplete="off"
+                            value={viewPassword}
+                            onChange={(e) => setViewPassword(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") void handleViewPasswordSubmit();
+                            }}
+                            placeholder="Share password"
+                            className="flex-1 px-3 py-2 rounded-md border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        <Button
+                            className="gap-2 shrink-0"
+                            disabled={passwordSubmitting || !viewPassword.trim()}
+                            onClick={() => void handleViewPasswordSubmit()}
+                        >
+                            {passwordSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                            Unlock
+                        </Button>
+                    </div>
+                </Card>
+            )}
 
             {error && (
                 <Card className="p-6 max-w-2xl mx-auto w-full border-destructive/40 bg-destructive/5">
